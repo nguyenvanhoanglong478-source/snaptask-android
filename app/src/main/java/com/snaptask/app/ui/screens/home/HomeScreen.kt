@@ -100,8 +100,9 @@ fun HomeScreen(
     var isSearchActive by remember { mutableStateOf(false) }
 
     val filteredTasks = remember(tasks, selectedTag, searchQuery) {
+        val currentTag = selectedTag
         tasks.filter { task ->
-            val matchesTag = selectedTag == null || task.tag == selectedTag.name
+            val matchesTag = currentTag == null || task.tag == currentTag.name
             val matchesSearch = searchQuery.isBlank() || task.title.contains(searchQuery, ignoreCase = true)
             matchesTag && matchesSearch
         }

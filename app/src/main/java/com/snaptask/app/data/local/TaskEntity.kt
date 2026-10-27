@@ -22,6 +22,12 @@ data class TaskEntity(
     val dueDate: Long? = null,
     val completedAt: Long? = null
 ) {
+    // Backwards Compatibility Accessors
+    val thumbnailPath: String get() = beforeImageUri
+    val imagePath: String get() = beforeImageUri
+    val status: String get() = if (isCompleted) "DONE" else "TODO"
+    val priorityInt: Int get() = when (priority) { "HIGH" -> 2; "MEDIUM" -> 1; else -> 0 }
+
     fun toDomain(): Task {
         return Task(
             id = id,

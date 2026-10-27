@@ -53,6 +53,13 @@ interface TaskDao {
     @Query("UPDATE tasks SET isPinnedToWidget = :isPinned WHERE id = :id")
     suspend fun togglePinned(id: Long, isPinned: Boolean)
 
+    @Query("UPDATE tasks SET isCompleted = CASE WHEN :newStatus = 'DONE' THEN 1 ELSE 0 END, completedAt = CASE WHEN :newStatus = 'DONE' THEN :timestamp ELSE NULL END WHERE id = :id")
+    suspend fun updateTaskStatusWithTime(id: Long, newStatus: String, timestamp: Long)
+
+    suspend fun updateTaskStatus(id: Long, newStatus: String) {
+        updateTaskStatusWithTime(id, newStatus, System.currentTimeMillis())
+    }
+
     @Delete
     suspend fun deleteTask(task: TaskEntity)
 

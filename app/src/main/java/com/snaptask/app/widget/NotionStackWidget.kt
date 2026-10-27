@@ -70,10 +70,7 @@ class NotionStackWidget : GlanceAppWidget() {
         }
 
         val bitmap: Bitmap? = topTask?.let {
-            WidgetBitmapHelper.loadOptimizedBitmap(
-                if (it.thumbnailPath.isNotBlank()) it.thumbnailPath else it.beforeImageUri,
-                maxSize = 400
-            )
+            WidgetBitmapHelper.loadOptimizedBitmap(it.beforeImageUri, maxSize = 400)
         }
 
         provideContent {

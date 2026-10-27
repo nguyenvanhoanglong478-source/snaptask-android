@@ -65,7 +65,7 @@ class SnapTaskWidget : GlanceAppWidget() {
                         taskId = topTaskEntity.id,
                         title = topTaskEntity.title,
                         bitmap = bitmap,
-                        priority = topTaskEntity.priority
+                        priority = topTaskEntity.priorityInt
                     )
                 }
             }

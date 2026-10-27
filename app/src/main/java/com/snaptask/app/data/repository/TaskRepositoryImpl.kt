@@ -59,12 +59,23 @@ class TaskRepositoryImpl(
         taskDao.toggleCompleted(id, next, completedAt)
     }
 
+    override suspend fun toggleTaskStatus(id: Long, currentStatus: Any?) = withContext(Dispatchers.IO) {
+        val task = taskDao.getTaskById(id) ?: return@withContext
+        val next = !task.isCompleted
+        val completedAt = if (next) System.currentTimeMillis() else null
+        taskDao.toggleCompleted(id, next, completedAt)
+    }
+
     override suspend fun completeTaskWithAfterPhoto(id: Long, afterUri: String, caption: String) = withContext(Dispatchers.IO) {
         taskDao.completeTask(id, true, afterUri, caption, System.currentTimeMillis())
     }
 
     override suspend fun togglePinToWidget(id: Long, currentIsPinned: Boolean) = withContext(Dispatchers.IO) {
         taskDao.togglePinned(id, !currentIsPinned)
+    }
+
+    override suspend fun togglePinTask(id: Long, isPinned: Boolean) = withContext(Dispatchers.IO) {
+        taskDao.togglePinned(id, isPinned)
     }
 
     override suspend fun deleteTask(task: Task) = withContext(Dispatchers.IO) {

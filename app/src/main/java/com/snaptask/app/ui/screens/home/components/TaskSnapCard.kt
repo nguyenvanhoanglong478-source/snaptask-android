@@ -106,13 +106,13 @@ fun TaskSnapCard(
                         .padding(8.dp)
                         .align(Alignment.TopStart)
                         .background(
-                            Color(task.tag.hexColor).copy(alpha = 0.95f),
+                            Color(task.tagEnum.hexColor).copy(alpha = 0.95f),
                             shape = RoundedCornerShape(8.dp)
                         )
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = task.tag.displayName,
+                        text = task.tagEnum.displayName,
                         color = Color.White,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold
@@ -120,7 +120,7 @@ fun TaskSnapCard(
                 }
 
                 // Priority Badge
-                if (task.priority == TaskPriority.HIGH) {
+                if (task.priorityEnum == TaskPriority.HIGH) {
                     Box(
                         modifier = Modifier
                             .padding(8.dp)

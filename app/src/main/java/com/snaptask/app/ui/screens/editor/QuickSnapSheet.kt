@@ -234,10 +234,9 @@ fun QuickSnapSheet(
                 onClick = {
                     val task = Task(
                         title = title.ifBlank { "Nhiệm vụ không tên" },
-                        imagePath = imagePath,
-                        thumbnailPath = thumbnailPath,
-                        tag = selectedTag,
-                        priority = selectedPriority
+                        beforeImageUri = imagePath,
+                        tag = selectedTag.name,
+                        priority = selectedPriority.name
                     )
                     onSaveTask(task)
                 },

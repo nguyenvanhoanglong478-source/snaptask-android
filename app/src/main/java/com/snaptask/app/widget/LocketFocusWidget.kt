@@ -70,10 +70,7 @@ class LocketFocusWidget : GlanceAppWidget() {
         }
 
         val bitmap: Bitmap? = task?.let {
-            WidgetBitmapHelper.loadOptimizedBitmap(
-                if (it.thumbnailPath.isNotBlank()) it.thumbnailPath else it.beforeImageUri,
-                maxSize = 450
-            )
+            WidgetBitmapHelper.loadOptimizedBitmap(it.beforeImageUri, maxSize = 450)
         }
 
         provideContent {

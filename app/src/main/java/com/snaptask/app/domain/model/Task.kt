@@ -32,6 +32,9 @@ data class Task(
     val parsedSubtasks: List<SubTask>
         get() = Converters().toSubTaskList(subTasksJson)
 
+    val subtasks: List<SubTask>
+        get() = parsedSubtasks
+
     val completedSubtasksCount: Int
         get() = parsedSubtasks.count { it.isDone }
 
