@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SnapTask Preview (Locket × Notion)</title>
+  <style>
+    :root {
+      --bg: #FAFAF9;
+      --surface: #FFFFFF;
+      --text: #1C1917;
+      --text-muted: #78716C;
+      --border: #E7E5E4;
+      --accent: #1C1917;
+      --danger: #DC2626;
+      --amber: #D97706;
+      --green: #15803D;
+      --blue: #2563EB;
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: #121212; color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+
+    /* Phone Shell Simulator */
+    .phone-container {
+      width: 390px;
+      height: 800px;
+      background: var(--bg);
+      border-radius: 44px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.4), 0 0 0 12px #262626;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Status Bar */
+    .status-bar {
+      height: 44px;
+      padding: 0 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    /* Header */
+    .app-header {
+      padding: 10px 20px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      background: var(--bg);
+    }
+    .app-title h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
+    .app-title p { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .header-actions { display: flex; gap: 8px; }
+    .icon-btn {
+      width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border);
+      background: var(--surface); display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 14px; font-weight: 600;
+    }
+
+    /* Tags Scroll */
+    .tags-row {
+      display: flex; gap: 8px; padding: 0 20px 14px; overflow-x: auto; scrollbar-width: none;
+    }
+    .tags-row::-webkit-scrollbar { display: none; }
+    .tag-chip {
+      padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+      background: #F5F5F4; color: var(--text-muted); white-space: nowrap; cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .tag-chip.active { background: var(--accent); color: #FFF; }
+
+    /* Main Scroll Area */
+    .content-area {
+      flex: 1; overflow-y: auto; padding: 0 20px 90px;
+    }
+
+    /* Grid Layout */
+    .snap-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    }
+    .snap-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      overflow: hidden; display: flex; flex-direction: column; cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+    .snap-card:active { transform: scale(0.98); }
+    .snap-img-box {
+      width: 100%; aspect-ratio: 1.1; background: #E7E5E4; position: relative; overflow: hidden;
+    }
+    .snap-img-box img { width: 100%; height: 100%; object-fit: cover; }
+    .card-badge {
+      position: absolute; top: 8px; left: 8px; padding: 3px 8px; border-radius: 6px;
+      font-size: 10px; font-weight: 700; color: #FFF; text-transform: uppercase;
+    }
+    .priority-badge {
+      position: absolute; top: 8px; right: 8px; background: var(--danger); color: #FFF;
+      font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 12px;
+    }
+    .card-body {
+      padding: 10px; display: flex; flex-direction: column; gap: 4px;
+    }
+    .card-title-row { display: flex; align-items: flex-start; gap: 6px; }
+    .check-circle {
+      width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--text-muted);
+      cursor: pointer; flex-shrink: 0; margin-top: 1px; display: flex; align-items: center; justify-content: center;
+    }
+    .check-circle.done { background: var(--green); border-color: var(--green); color: #FFF; font-size: 10px; }
+    .card-title {
+      font-size: 13px; font-weight: 600; line-height: 1.3; color: var(--text);
+    }
+    .card-title.done { text-decoration: line-through; color: var(--text-muted); }
+
+    /* Locket Shutter Floating Action Bar */
+    .floating-bar {
+      position: absolute; bottom: 20px; left: 0; right: 0; display: flex;
+      justify-content: center; align-items: center; pointer-events: none;
+    }
+    .shutter-btn {
+      width: 68px; height: 68px; border-radius: 50%; background: var(--accent);
+      border: 4px solid #FFF; box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+      color: #FFF; font-size: 26px; pointer-events: auto; transition: transform 0.1s ease;
+    }
+    .shutter-btn:active { transform: scale(0.92); }
+
+    /* Modal Sheet */
+    .modal-overlay {
+      position: absolute; inset: 0; background: rgba(0,0,0,0.5); display: none;
+      align-items: flex-end; z-index: 100;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-sheet {
+      background: var(--surface); width: 100%; border-radius: 24px 24px 0 0;
+      padding: 24px; display: flex; flex-direction: column; gap: 16px;
+      animation: slideUp 0.25s ease-out;
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .sheet-title { font-size: 18px; font-weight: 700; }
+    .sheet-input {
+      width: 100%; padding: 12px 14px; border: 1px solid var(--border);
+      border-radius: 10px; font-size: 14px; outline: none; background: #F5F5F4;
+    }
+    .sheet-row { display: flex; gap: 10px; }
+    .sheet-btn {
+      flex: 1; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 700;
+      border: none; cursor: pointer; background: var(--accent); color: #FFF;
+    }
+
+    /* Widget Simulator Box */
+    .widget-sim-card {
+      background: #1C1917; color: #FFF; border-radius: 20px; padding: 16px;
+      margin-bottom: 16px; display: flex; flex-direction: column; gap: 10px;
+    }
+    .widget-sim-header {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 11px; font-weight: 800; color: #A8A29E; letter-spacing: 0.5px;
+    }
+    .widget-action-btn {
+      background: #FFF; color: #1C1917; border: none; padding: 8px 12px;
+      border-radius: 10px; font-weight: 700; font-size: 12px; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="phone-container">
+    <!-- Status Bar -->
+    <div class="status-bar">
+      <span>09:41</span>
+      <span>📶 5G  🔋 98%</span>
+    </div>
+
+    <!-- App Header -->
+    <div class="app-header">
+      <div class="app-title">
+        <h1>SnapTask</h1>
+        <p id="taskCountText">Đang tải công việc...</p>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn" onclick="toggleView()" id="viewToggleBtn" title="Chuyển chế độ xem">☷</button>
+      </div>
+    </div>
+
+    <!-- Tags Row (Notion style) -->
+    <div class="tags-row" id="tagsContainer">
+      <div class="tag-chip active" onclick="filterTag('ALL')">Tất cả</div>
+      <div class="tag-chip" onclick="filterTag('WORK')">Công việc</div>
+      <div class="tag-chip" onclick="filterTag('PERSONAL')">Cá nhân</div>
+      <div class="tag-chip" onclick="filterTag('SHOPPING')">Mua sắm</div>
+      <div class="tag-chip" onclick="filterTag('HOME')">Nhà cửa</div>
+    </div>
+
+    <!-- Content Area -->
+    <div class="content-area">
+      <!-- Widget Simulator Preview -->
+      <div class="widget-sim-card" id="widgetBox">
+        <div class="widget-sim-header">
+          <span>WIDGET MÀN HÌNH CHÍNH (LOCKET STYLE)</span>
+          <span style="color: #EF4444; font-weight: 800;" id="widgetPriority">GẤP</span>
+        </div>
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <img id="widgetImg" src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300" style="width: 54px; height: 54px; border-radius: 12px; object-fit: cover;">
+          <div style="flex: 1;">
+            <div id="widgetTitle" style="font-size: 14px; font-weight: 700;">Đọc hết chương 4 sách Clean Code</div>
+            <div style="font-size: 11px; color: #A8A29E; margin-top: 2px;">Chạm nút bên cạnh để xong ngay</div>
+          </div>
+          <button class="widget-action-btn" onclick="completeTopWidgetTask()">✓ Xong</button>
+        </div>
+      </div>
+
+      <!-- Snap Grid -->
+      <div class="snap-grid" id="snapGrid"></div>
+    </div>
+
+    <!-- Floating Action Shutter (Locket camera trigger) -->
+    <div class="floating-bar">
+      <button class="shutter-btn" onclick="openCaptureModal()" title="Chụp việc cần làm">📸</button>
+    </div>
+
+    <!-- Quick Snap Modal Sheet -->
+    <div class="modal-overlay" id="captureModal">
+      <div class="modal-sheet">
+        <div class="sheet-title">Chụp việc cần làm mới</div>
+        <input type="text" id="taskInput" class="sheet-input" placeholder="Bạn cần làm gì với ảnh này?" autofocus>
+        
+        <div style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Chọn danh mục:</div>
+        <div class="tags-row" style="padding: 0;">
+          <div class="tag-chip active" id="modalTagWork" onclick="selectModalTag('WORK')">Công việc</div>
+          <div class="tag-chip" id="modalTagPersonal" onclick="selectModalTag('PERSONAL')">Cá nhân</div>
+          <div class="tag-chip" id="modalTagShopping" onclick="selectModalTag('SHOPPING')">Mua sắm</div>
+        </div>
+
+        <div class="sheet-row">
+          <button class="sheet-btn" style="background: #E7E5E4; color: #1C1917;" onclick="closeCaptureModal()">Hủy</button>
+          <button class="sheet-btn" onclick="saveNewTask()">Lưu & Ghim Widget</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const sampleTasks = [
+      {
+        id: 1,
+        title: "Đọc 20 trang sách Thiết kế hệ thống",
+        img: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400",
+        tag: "WORK",
+        tagName: "Công việc",
+        tagColor: "#2563EB",
+        priority: "HIGH",
+        status: "TODO"
+      },
+      {
+        id: 2,
+        title: "Mua sữa hạt & trứng gà",
+        img: "https://images.unsplash.com/photo-1583258292688-d0213dc5a3a8?w=400",
+        tag: "SHOPPING",
+        tagName: "Mua sắm",
+        tagColor: "#D97706",
+        priority: "MEDIUM",
+        status: "TODO"
+      },
+      {
+        id: 3,
+        title: "Gọi thợ sửa vòi nước bồn rửa",
+        img: "https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=400",
+        tag: "HOME",
+        tagName: "Nhà cửa",
+        tagColor: "#7C3AED",
+        priority: "HIGH",
+        status: "TODO"
+      },
+      {
+        id: 4,
+        title: "Gửi báo cáo tối ưu hoá RAM",
+        img: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=400",
+        tag: "WORK",
+        tagName: "Công việc",
+        tagColor: "#2563EB",
+        priority: "MEDIUM",
+        status: "DONE"
+      }
+    ];
+
+    let currentTasks = [...sampleTasks];
+    let activeTag = 'ALL';
+    let currentModalTag = 'WORK';
+
+    function renderTasks() {
+      const grid = document.getElementById('snapGrid');
+      grid.innerHTML = '';
+
+      const filtered = activeTag === 'ALL' ? currentTasks : currentTasks.filter(t => t.tag === activeTag);
+      const pendingCount = currentTasks.filter(t => t.status !== 'DONE').length;
+      document.getElementById('taskCountText').innerText = `${pendingCount} việc cần làm`;
+
+      filtered.forEach(task => {
+        const isDone = task.status === 'DONE';
+        const card = document.createElement('div');
+        card.className = 'snap-card';
+        card.innerHTML = `
+          <div class="snap-img-box">
+            <img src="${task.img}" loading="lazy">
+            <div class="card-badge" style="background: ${task.tagColor};">${task.tagName}</div>
+            ${task.priority === 'HIGH' ? '<div class="priority-badge">GẤP</div>' : ''}
+          </div>
+          <div class="card-body">
+            <div class="card-title-row">
+              <div class="check-circle ${isDone ? 'done' : ''}" onclick="event.stopPropagation(); toggleTask(${task.id})">
+                ${isDone ? '✓' : ''}
+              </div>
+              <div class="card-title ${isDone ? 'done' : ''}">${task.title}</div>
+            </div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+
+      updateWidget();
+    }
+
+    function toggleTask(id) {
+      const task = currentTasks.find(t => t.id === id);
+      if (task) {
+        task.status = task.status === 'DONE' ? 'TODO' : 'DONE';
+        renderTasks();
+      }
+    }
+
+    function updateWidget() {
+      const topPending = currentTasks.find(t => t.status !== 'DONE');
+      const widgetBox = document.getElementById('widgetBox');
+      if (!topPending) {
+        document.getElementById('widgetTitle').innerText = 'Tất cả đã hoàn thành!';
+        document.getElementById('widgetPriority').style.display = 'none';
+        document.getElementById('widgetImg').style.display = 'none';
+      } else {
+        document.getElementById('widgetTitle').innerText = topPending.title;
+        document.getElementById('widgetPriority').style.display = topPending.priority === 'HIGH' ? 'inline' : 'none';
+        document.getElementById('widgetImg').style.display = 'block';
+        document.getElementById('widgetImg').src = topPending.img;
+      }
+    }
+
+    function completeTopWidgetTask() {
+      const topPending = currentTasks.find(t => t.status !== 'DONE');
+      if (topPending) {
+        topPending.status = 'DONE';
+        renderTasks();
+      }
+    }
+
+    function filterTag(tag) {
+      activeTag = tag;
+      document.querySelectorAll('#tagsContainer .tag-chip').forEach(c => c.classList.remove('active'));
+      event.target.classList.add('active');
+      renderTasks();
+    }
+
+    function openCaptureModal() {
+      document.getElementById('captureModal').classList.add('open');
+      document.getElementById('taskInput').value = '';
+    }
+
+    function closeCaptureModal() {
+      document.getElementById('captureModal').classList.remove('open');
+    }
+
+    function selectModalTag(tag) {
+      currentModalTag = tag;
+      document.querySelectorAll('#captureModal .tag-chip').forEach(c => c.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+
+    function saveNewTask() {
+      const input = document.getElementById('taskInput').value.trim();
+      if (!input) return;
+
+      const randomImages = [
+        "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=400",
+        "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400",
+        "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=400"
+      ];
+      const randomImg = randomImages[Math.floor(Math.random() * randomImages.length)];
+
+      const tagMap = {
+        WORK: { name: 'Công việc', color: '#2563EB' },
+        PERSONAL: { name: 'Cá nhân', color: '#059669' },
+        SHOPPING: { name: 'Mua sắm', color: '#D97706' }
+      };
+
+      currentTasks.unshift({
+        id: Date.now(),
+        title: input,
+        img: randomImg,
+        tag: currentModalTag,
+        tagName: tagMap[currentModalTag].name,
+        tagColor: tagMap[currentModalTag].color,
+        priority: "HIGH",
+        status: "TODO"
+      });
+
+      closeCaptureModal();
+      renderTasks();
+    }
+
+    function toggleView() {
+      alert("Chuyển đổi góc nhìn: Bạn đang ở chế độ Lưới ảnh (Locket Feed). Trên ứng dụng Android, bạn có thể vuốt sang Bảng Kanban Notion 3 cột.");
+    }
+
+    // Init
+    renderTasks();
+  </script>
+</body>
+</html>

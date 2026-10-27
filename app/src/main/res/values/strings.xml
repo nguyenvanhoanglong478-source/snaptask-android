@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">SnapTask</string>
+    <string name="widget_name">SnapTask - Focus Note</string>
+    <string name="widget_description">Xem và hoàn thành nhanh các việc cần làm có kèm ảnh chụp trực tiếp từ màn hình chính.</string>
+    <string name="camera_permission_required">SnapTask cần quyền truy cập máy ảnh để chụp nhanh việc cần làm.</string>
+</resources>
