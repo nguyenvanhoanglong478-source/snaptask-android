@@ -48,7 +48,7 @@ class SnapTaskWidget : GlanceAppWidget() {
     private val almondProvider    = ColorProvider(Color(0xFFEED3BA))
     private val whiteProvider     = ColorProvider(Color(0xFFFFFDF9))
     private val redProvider       = ColorProvider(Color(0xFFEF4444))
-    private val overlayProvider   = ColorProvider(Color(0xCC151311)) // Frosted dark glass overlay
+    private val overlayProvider   = ColorProvider(Color(0xE6151311)) // Frosted dark glass overlay
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val database = AppDatabase.getInstance(context)
@@ -142,7 +142,7 @@ class SnapTaskWidget : GlanceAppWidget() {
                 .background(obsidianProvider)
                 .cornerRadius(24.dp)
         ) {
-            // 1. The Captured Photo (Fills widget like Locket!)
+            // 1. The Captured Photo (Fills 100% of widget like Locket!)
             if (bitmap != null) {
                 Image(
                     provider = ImageProvider(bitmap),
@@ -159,77 +159,82 @@ class SnapTaskWidget : GlanceAppWidget() {
                 ) {}
             }
 
-            // 2. Top Bar Pill (Task indicator & Priority)
-            Row(
-                modifier = GlanceModifier
-                    .fillMaxWidth()
-                    .padding(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
+            // 2. Overlay Structure: Top Badge + Push to Bottom + Bottom Frosted Card
+            Column(modifier = GlanceModifier.fillMaxSize()) {
+                // Top Bar Pill
+                Row(
                     modifier = GlanceModifier
-                        .background(ColorProvider(Color(0xB3151311)))
-                        .cornerRadius(8.dp)
-                        .padding(horizontal = 7.dp, vertical = 3.dp)
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "VIỆC CẦN LÀM",
-                        style = TextStyle(
-                            color = almondProvider,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 10.sp
-                        )
-                    )
-                }
-
-                if (priority == TaskPriority.HIGH.level) {
-                    Spacer(modifier = GlanceModifier.defaultWeight())
                     Box(
                         modifier = GlanceModifier
-                            .background(redProvider)
+                            .background(ColorProvider(Color(0xB3151311)))
                             .cornerRadius(8.dp)
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .padding(horizontal = 7.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            text = "GẤP",
+                            text = "VIỆC CẦN LÀM",
                             style = TextStyle(
-                                color = whiteProvider,
+                                color = almondProvider,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 9.sp
+                                fontSize = 10.sp
                             )
                         )
                     }
+
+                    if (priority == TaskPriority.HIGH.level) {
+                        Spacer(modifier = GlanceModifier.defaultWeight())
+                        Box(
+                            modifier = GlanceModifier
+                                .background(redProvider)
+                                .cornerRadius(8.dp)
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "GẤP",
+                                style = TextStyle(
+                                    color = whiteProvider,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 9.sp
+                                )
+                            )
+                        }
+                    }
                 }
-            }
 
-            // 3. Bottom Frosted Glass Card with Task Title & 1-Tap Done Button
-            Column(
-                modifier = GlanceModifier
-                    .fillMaxWidth()
-                    .defaultWeight()
-                    .background(overlayProvider)
-                    .padding(horizontal = 10.dp, vertical = 8.dp)
-            ) {
-                Text(
-                    text = title.ifBlank { "Nhiệm vụ không tên" },
-                    style = TextStyle(
-                        color = whiteProvider,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp
-                    ),
-                    maxLines = 1
-                )
+                // Spacer pushing the bottom card down
+                Spacer(modifier = GlanceModifier.defaultWeight())
 
-                Spacer(modifier = GlanceModifier.height(5.dp))
+                // 3. Bottom Frosted Glass Card with Task Title & 1-Tap Done Button
+                Column(
+                    modifier = GlanceModifier
+                        .fillMaxWidth()
+                        .background(overlayProvider)
+                        .padding(horizontal = 10.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = title.ifBlank { "Nhiệm vụ không tên" },
+                        style = TextStyle(
+                            color = whiteProvider,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        ),
+                        maxLines = 1
+                    )
 
-                val taskIdParam = ActionParameters.Key<Long>("taskId")
-                Button(
-                    text = "✓ Xong ngay",
-                    onClick = actionRunCallback<ToggleTaskActionCallback>(
-                        actionParametersOf(taskIdParam to taskId)
-                    ),
-                    modifier = GlanceModifier.fillMaxWidth()
-                )
+                    Spacer(modifier = GlanceModifier.height(5.dp))
+
+                    val taskIdParam = ActionParameters.Key<Long>("taskId")
+                    Button(
+                        text = "✓ Xong ngay",
+                        onClick = actionRunCallback<ToggleTaskActionCallback>(
+                            actionParametersOf(taskIdParam to taskId)
+                        ),
+                        modifier = GlanceModifier.fillMaxWidth()
+                    )
+                }
             }
         }
     }
