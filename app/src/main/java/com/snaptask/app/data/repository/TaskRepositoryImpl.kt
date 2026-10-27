@@ -70,6 +70,10 @@ class TaskRepositoryImpl(
         taskDao.completeTask(id, true, afterUri, caption, System.currentTimeMillis())
     }
 
+    override suspend fun completeTaskWithProof(taskId: Long, afterImageUri: String?, completionCaption: String?, completedAt: Long) = withContext(Dispatchers.IO) {
+        taskDao.completeTask(taskId, true, afterImageUri, completionCaption, completedAt)
+    }
+
     override suspend fun togglePinToWidget(id: Long, currentIsPinned: Boolean) = withContext(Dispatchers.IO) {
         taskDao.togglePinned(id, !currentIsPinned)
     }

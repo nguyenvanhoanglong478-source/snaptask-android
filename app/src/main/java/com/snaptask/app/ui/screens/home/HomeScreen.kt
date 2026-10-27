@@ -63,6 +63,8 @@ import coil.request.ImageRequest
 import com.snaptask.app.domain.model.Task
 import com.snaptask.app.domain.model.TaskPriority
 import com.snaptask.app.domain.model.TaskTag
+import com.snaptask.app.ui.screens.home.components.CompletionProofBottomSheet
+import com.snaptask.app.ui.screens.home.components.FlipTaskCard3D
 import com.snaptask.app.ui.theme.ChipActiveBg
 import com.snaptask.app.ui.theme.ChipActiveText
 import com.snaptask.app.ui.theme.ChipInactiveBg
@@ -89,15 +91,28 @@ enum class ViewMode {
 fun HomeScreen(
     tasks: List<Task>,
     onOpenLiveCamera: () -> Unit,
+    onOpenProofCamera: (Task) -> Unit,
+    onQuickComplete: (Task) -> Unit,
     onToggleTaskStatus: (Task) -> Unit,
     onTogglePin: (Task) -> Unit,
     onTaskClick: (Task) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var viewMode by remember { mutableStateOf(ViewMode.BENTO_GRID) }
+    var viewMode by remember { mutableStateOf(ViewMode.FEED_FULL) }
     var selectedTag by remember { mutableStateOf<TaskTag?>(null) }
     var searchQuery by remember { mutableStateOf("") }
     var isSearchActive by remember { mutableStateOf(false) }
+
+    var pendingCompleteTask by remember { mutableStateOf<Task?>(null) }
+    var flippedMap by remember { mutableStateOf(mapOf<Long, Boolean>()) }
+
+    val handleCheckboxClick: (Task) -> Unit = { task ->
+        if (task.isCompleted) {
+            onToggleTaskStatus(task)
+        } else {
+            pendingCompleteTask = task
+        }
+    }
 
     val filteredTasks = remember(tasks, selectedTag, searchQuery) {
         val currentTag = selectedTag
@@ -301,7 +316,7 @@ fun HomeScreen(
                             items(filteredTasks, key = { it.id }) { task ->
                                 BentoTaskCard(
                                     task = task,
-                                    onToggleStatus = { onToggleTaskStatus(task) },
+                                    onToggleStatus = { handleCheckboxClick(task) },
                                     onTogglePin = { onTogglePin(task) },
                                     onClick = { onTaskClick(task) }
                                 )
@@ -315,9 +330,14 @@ fun HomeScreen(
                             modifier = Modifier.fillMaxSize()
                         ) {
                             items(filteredTasks, key = { it.id }) { task ->
-                                FullFeedTaskCard(
+                                val isFlipped = flippedMap[task.id] ?: false
+                                FlipTaskCard3D(
                                     task = task,
-                                    onToggleStatus = { onToggleTaskStatus(task) },
+                                    isFlipped = isFlipped,
+                                    onToggleFlip = {
+                                        flippedMap = flippedMap + (task.id to !isFlipped)
+                                    },
+                                    onToggleStatus = { handleCheckboxClick(task) },
                                     onTogglePin = { onTogglePin(task) },
                                     onClick = { onTaskClick(task) }
                                 )
@@ -326,6 +346,24 @@ fun HomeScreen(
                     }
                 }
             }
+        }
+
+        // Completion Proof Bottom Sheet (when uncompleted task checkbox is tapped)
+        pendingCompleteTask?.let { task ->
+            CompletionProofBottomSheet(
+                task = task,
+                onDismissRequest = { pendingCompleteTask = null },
+                onCaptureProof = {
+                    val target = task
+                    pendingCompleteTask = null
+                    onOpenProofCamera(target)
+                },
+                onQuickComplete = {
+                    val target = task
+                    pendingCompleteTask = null
+                    onQuickComplete(target)
+                }
+            )
         }
     }
 }
@@ -352,7 +390,13 @@ fun BentoTaskCard(
                 .aspectRatio(1f)
                 .background(Color(0xFF222222))
         ) {
-            val photoFile = File(task.beforeImageUri)
+            val photoFile = remember(task.beforeImageUri, task.afterImageUri, task.isCompleted) {
+                if (task.hasProof && !task.afterImageUri.isNullOrBlank() && File(task.afterImageUri).exists()) {
+                    File(task.afterImageUri)
+                } else {
+                    File(task.beforeImageUri)
+                }
+            }
             if (photoFile.exists()) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
@@ -373,12 +417,19 @@ fun BentoTaskCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .background(Color(0xCC000000), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 6.dp, vertical = 3.dp)
-                ) {
-                    Text(text = task.tagEnum.displayName, color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .background(if (task.hasProof) StatusSuccess else Color(0xCC000000), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 6.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = if (task.hasProof) "AFTER ✨" else task.tagEnum.displayName,
+                            color = if (task.hasProof) NotionDarkBg else Color.White,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
 
                 IconButton(

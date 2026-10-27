@@ -70,7 +70,14 @@ class NotionStackWidget : GlanceAppWidget() {
         }
 
         val bitmap: Bitmap? = topTask?.let {
-            WidgetBitmapHelper.loadOptimizedBitmap(it.beforeImageUri, maxSize = 400)
+            val mainUri = if (it.isCompleted && !it.afterImageUri.isNullOrBlank()) it.afterImageUri else it.beforeImageUri
+            val pipUri = if (it.isCompleted && !it.afterImageUri.isNullOrBlank()) it.beforeImageUri else null
+            WidgetBitmapHelper.createWidgetCompositeBitmap(
+                mainImageUri = mainUri,
+                miniPipImageUri = pipUri,
+                isCompleted = it.isCompleted,
+                outputSize = 380
+            )
         }
 
         provideContent {

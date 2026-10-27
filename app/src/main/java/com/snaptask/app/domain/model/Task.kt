@@ -1,6 +1,7 @@
 package com.snaptask.app.domain.model
 
 import com.snaptask.app.data.local.Converters
+import com.snaptask.app.util.DateTimeUtils
 
 data class Task(
     val id: Long = 0,
@@ -44,4 +45,13 @@ data class Task(
             if (list.isEmpty()) return if (isCompleted) 100 else 0
             return (list.count { it.isDone } * 100) / list.size
         }
+
+    val durationFormatted: String
+        get() = DateTimeUtils.formatTaskDuration(createdAt, completedAt)
+
+    val createdAtTimeFormatted: String
+        get() = DateTimeUtils.formatTime(createdAt)
+
+    val hasProof: Boolean
+        get() = isCompleted && !afterImageUri.isNullOrBlank()
 }

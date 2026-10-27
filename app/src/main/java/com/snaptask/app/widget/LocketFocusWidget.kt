@@ -70,7 +70,14 @@ class LocketFocusWidget : GlanceAppWidget() {
         }
 
         val bitmap: Bitmap? = task?.let {
-            WidgetBitmapHelper.loadOptimizedBitmap(it.beforeImageUri, maxSize = 450)
+            val mainUri = if (it.isCompleted && !it.afterImageUri.isNullOrBlank()) it.afterImageUri else it.beforeImageUri
+            val pipUri = if (it.isCompleted && !it.afterImageUri.isNullOrBlank()) it.beforeImageUri else null
+            WidgetBitmapHelper.createWidgetCompositeBitmap(
+                mainImageUri = mainUri,
+                miniPipImageUri = pipUri,
+                isCompleted = it.isCompleted,
+                outputSize = 420
+            )
         }
 
         provideContent {

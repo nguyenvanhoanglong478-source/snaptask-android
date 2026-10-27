@@ -23,7 +23,7 @@ import androidx.glance.appwidget.updateAll
 import com.snaptask.app.SnapTaskApplication
 import com.snaptask.app.domain.model.Task
 import com.snaptask.app.ui.screens.board.BoardScreen
-import com.snaptask.app.ui.screens.camera.CameraCaptureScreen
+import com.snaptask.app.ui.screens.camera.CameraAfterProofScreen
 import com.snaptask.app.ui.screens.camera.CameraCreatorScreen
 import com.snaptask.app.ui.screens.detail.TaskDetailScreen
 import com.snaptask.app.ui.screens.home.HomeScreen
@@ -36,7 +36,7 @@ import kotlinx.coroutines.launch
 enum class ScreenState {
     HOME,
     CAMERA_CREATOR,
-    CAMERA_AFTER,
+    CAMERA_AFTER_PROOF,
     DETAIL,
     BOARD
 }
@@ -105,6 +105,22 @@ class MainActivity : ComponentActivity() {
                             HomeScreen(
                                 tasks = tasks,
                                 onOpenLiveCamera = { openCameraWithCheck(ScreenState.CAMERA_CREATOR) },
+                                onOpenProofCamera = { task ->
+                                    selectedTask = task
+                                    openCameraWithCheck(ScreenState.CAMERA_AFTER_PROOF)
+                                },
+                                onQuickComplete = { task ->
+                                    scope.launch {
+                                        repository.completeTaskWithProof(
+                                            taskId = task.id,
+                                            afterImageUri = null,
+                                            completionCaption = null,
+                                            completedAt = System.currentTimeMillis()
+                                        )
+                                        updateWidgets()
+                                        Toast.makeText(this@MainActivity, "Đã hoàn thành! ⚡", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
                                 onToggleTaskStatus = { task ->
                                     scope.launch {
                                         repository.toggleTaskStatus(task.id, task.status)
@@ -140,28 +156,31 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        ScreenState.CAMERA_AFTER -> {
-                            CameraCaptureScreen(
-                                onPhotoCaptured = { fullPath, _ ->
-                                    scope.launch {
-                                        selectedTask?.let { t ->
-                                            val updated = t.copy(
-                                                afterImageUri = fullPath,
-                                                isCompleted = true,
+                        ScreenState.CAMERA_AFTER_PROOF -> {
+                            selectedTask?.let { taskToProve ->
+                                CameraAfterProofScreen(
+                                    task = taskToProve,
+                                    onProofCaptured = { afterUri, caption ->
+                                        scope.launch {
+                                            repository.completeTaskWithProof(
+                                                taskId = taskToProve.id,
+                                                afterImageUri = afterUri,
+                                                completionCaption = caption,
                                                 completedAt = System.currentTimeMillis()
                                             )
-                                            repository.updateTask(updated)
-                                            selectedTask = updated
                                             updateWidgets()
-                                            Toast.makeText(this@MainActivity, "Đã lưu ảnh hoàn thành! ✨", Toast.LENGTH_SHORT).show()
+                                            selectedTask = null
+                                            currentScreen = ScreenState.HOME
+                                            Toast.makeText(this@MainActivity, "Đã hoàn thành Before / After! ✨", Toast.LENGTH_SHORT).show()
                                         }
-                                        currentScreen = ScreenState.DETAIL
+                                    },
+                                    onClose = {
+                                        currentScreen = ScreenState.HOME
                                     }
-                                },
-                                onClose = {
-                                    currentScreen = ScreenState.DETAIL
-                                }
-                            )
+                                )
+                            } ?: run {
+                                currentScreen = ScreenState.HOME
+                            }
                         }
 
                         ScreenState.DETAIL -> {
@@ -190,7 +209,8 @@ class MainActivity : ComponentActivity() {
                                         }
                                     },
                                     onOpenAfterCamera = {
-                                        openCameraWithCheck(ScreenState.CAMERA_AFTER)
+                                        selectedTask = task
+                                        openCameraWithCheck(ScreenState.CAMERA_AFTER_PROOF)
                                     }
                                 )
                             } ?: run {

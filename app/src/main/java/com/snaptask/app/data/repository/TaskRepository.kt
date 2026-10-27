@@ -17,6 +17,7 @@ interface TaskRepository {
     suspend fun toggleTaskCompleted(id: Long, currentIsCompleted: Boolean)
     suspend fun toggleTaskStatus(id: Long, currentStatus: Any? = null)
     suspend fun completeTaskWithAfterPhoto(id: Long, afterUri: String, caption: String)
+    suspend fun completeTaskWithProof(taskId: Long, afterImageUri: String?, completionCaption: String?, completedAt: Long = System.currentTimeMillis())
     suspend fun togglePinToWidget(id: Long, currentIsPinned: Boolean)
     suspend fun togglePinTask(id: Long, isPinned: Boolean)
     suspend fun deleteTask(task: Task)
