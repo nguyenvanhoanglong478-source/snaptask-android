@@ -28,10 +28,10 @@ class TaskReminderReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        val action = intent.action
+        val incomingAction = intent.action
 
         // When device reboots, restore all pending reminders
-        if (action == Intent.ACTION_BOOT_COMPLETED) {
+        if (incomingAction == Intent.ACTION_BOOT_COMPLETED) {
             CoroutineScope(Dispatchers.IO).launch {
                 val db = AppDatabase.getInstance(context)
                 val pending = db.taskDao().getPendingTasksForWidget()
@@ -72,7 +72,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
 
         // 2. Action: Complete Task Directly
         val completeIntent = Intent(context, NotificationActionReceiver::class.java).apply {
-            action = NotificationActionReceiver.ACTION_COMPLETE_TASK
+            this.action = NotificationActionReceiver.ACTION_COMPLETE_TASK
             putExtra(TaskReminderScheduler.EXTRA_TASK_ID, taskId)
         }
         val completePendingIntent = PendingIntent.getBroadcast(
@@ -84,7 +84,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
 
         // 3. Action: Snooze 10 Minutes
         val snoozeIntent = Intent(context, NotificationActionReceiver::class.java).apply {
-            action = NotificationActionReceiver.ACTION_SNOOZE_TASK
+            this.action = NotificationActionReceiver.ACTION_SNOOZE_TASK
             putExtra(TaskReminderScheduler.EXTRA_TASK_ID, taskId)
             putExtra(TaskReminderScheduler.EXTRA_TASK_TITLE, taskTitle)
             putExtra(TaskReminderScheduler.EXTRA_TASK_IMAGE, taskImage)
