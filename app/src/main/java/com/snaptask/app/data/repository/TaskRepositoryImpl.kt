@@ -1,11 +1,8 @@
 package com.snaptask.app.data.repository
 
-import com.snaptask.app.data.local.Converters
 import com.snaptask.app.data.local.TaskDao
 import com.snaptask.app.data.local.TaskEntity
 import com.snaptask.app.domain.model.Task
-import com.snaptask.app.domain.model.TaskStatus
-import com.snaptask.app.domain.model.TaskTag
 import com.snaptask.app.util.FileUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -13,67 +10,66 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
 class TaskRepositoryImpl(
-    private val taskDao: TaskDao,
-    private val converters: Converters = Converters()
+    private val taskDao: TaskDao
 ) : TaskRepository {
 
     override fun getAllTasks(): Flow<List<Task>> {
-        return taskDao.getAllTasksFlow().map { entities ->
-            entities.map { it.toDomain(converters.toSubTaskList(it.subtasksJson)) }
-        }
+        return taskDao.getAllTasksFlow().map { list -> list.map { it.toDomain() } }
     }
 
-    override fun getTasksByStatus(status: TaskStatus): Flow<List<Task>> {
-        return taskDao.getTasksByStatusFlow(status.name).map { entities ->
-            entities.map { it.toDomain(converters.toSubTaskList(it.subtasksJson)) }
-        }
+    override fun getPendingTasks(): Flow<List<Task>> {
+        return taskDao.getPendingTasksFlow().map { list -> list.map { it.toDomain() } }
     }
 
-    override fun getTasksByTag(tag: TaskTag): Flow<List<Task>> {
-        return taskDao.getTasksByTagFlow(tag.name).map { entities ->
-            entities.map { it.toDomain(converters.toSubTaskList(it.subtasksJson)) }
-        }
+    override fun getCompletedTasks(): Flow<List<Task>> {
+        return taskDao.getCompletedTasksFlow().map { list -> list.map { it.toDomain() } }
+    }
+
+    override fun getPinnedTasks(): Flow<List<Task>> {
+        return taskDao.getPinnedTasksFlow().map { list -> list.map { it.toDomain() } }
     }
 
     override suspend fun getTaskById(id: Long): Task? = withContext(Dispatchers.IO) {
-        val entity = taskDao.getTaskById(id) ?: return@withContext null
-        entity.toDomain(converters.toSubTaskList(entity.subtasksJson))
+        taskDao.getTaskById(id)?.toDomain()
     }
 
     override suspend fun getTopPendingTask(): Task? = withContext(Dispatchers.IO) {
-        val entity = taskDao.getTopPendingTask() ?: return@withContext null
-        entity.toDomain(converters.toSubTaskList(entity.subtasksJson))
+        taskDao.getTopPendingTask()?.toDomain()
     }
 
     override suspend fun getPendingTasksForWidget(): List<Task> = withContext(Dispatchers.IO) {
-        taskDao.getPendingTasksForWidget().map {
-            it.toDomain(converters.toSubTaskList(it.subtasksJson))
-        }
+        taskDao.getPendingTasksForWidget().map { it.toDomain() }
+    }
+
+    override suspend fun getProgressStats(): Pair<Int, Int> = withContext(Dispatchers.IO) {
+        Pair(taskDao.getCompletedCount(), taskDao.getTotalCount())
     }
 
     override suspend fun createTask(task: Task): Long = withContext(Dispatchers.IO) {
-        val json = converters.fromSubTaskList(task.subtasks)
-        val entity = TaskEntity.fromDomain(task, json)
-        taskDao.insertTask(entity)
+        taskDao.insertTask(TaskEntity.fromDomain(task))
     }
 
     override suspend fun updateTask(task: Task) = withContext(Dispatchers.IO) {
-        val json = converters.fromSubTaskList(task.subtasks)
-        val entity = TaskEntity.fromDomain(task, json)
-        taskDao.updateTask(entity)
+        taskDao.updateTask(TaskEntity.fromDomain(task))
     }
 
-    override suspend fun toggleTaskStatus(id: Long, currentStatus: TaskStatus) = withContext(Dispatchers.IO) {
-        val next = currentStatus.next()
-        taskDao.updateTaskStatus(id, next.name)
+    override suspend fun toggleTaskCompleted(id: Long, currentIsCompleted: Boolean) = withContext(Dispatchers.IO) {
+        val next = !currentIsCompleted
+        val completedAt = if (next) System.currentTimeMillis() else null
+        taskDao.toggleCompleted(id, next, completedAt)
+    }
+
+    override suspend fun completeTaskWithAfterPhoto(id: Long, afterUri: String, caption: String) = withContext(Dispatchers.IO) {
+        taskDao.completeTask(id, true, afterUri, caption, System.currentTimeMillis())
+    }
+
+    override suspend fun togglePinToWidget(id: Long, currentIsPinned: Boolean) = withContext(Dispatchers.IO) {
+        taskDao.togglePinned(id, !currentIsPinned)
     }
 
     override suspend fun deleteTask(task: Task) = withContext(Dispatchers.IO) {
-        // Clean up image and thumbnail from disk
-        FileUtils.deleteFile(task.imagePath)
-        FileUtils.deleteFile(task.thumbnailPath)
-
-        val json = converters.fromSubTaskList(task.subtasks)
-        taskDao.deleteTask(TaskEntity.fromDomain(task, json))
+        FileUtils.deleteFile(task.beforeImageUri)
+        FileUtils.deleteFile(task.afterImageUri)
+        taskDao.deleteTask(TaskEntity.fromDomain(task))
     }
 }

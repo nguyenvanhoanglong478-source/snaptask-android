@@ -1,21 +1,44 @@
 package com.snaptask.app.domain.model
 
+import com.snaptask.app.data.local.Converters
+
 data class Task(
     val id: Long = 0,
     val title: String,
-    val imagePath: String,
-    val thumbnailPath: String,
-    val status: TaskStatus = TaskStatus.TODO,
-    val priority: TaskPriority = TaskPriority.MEDIUM,
-    val tag: TaskTag = TaskTag.PERSONAL,
-    val subtasks: List<SubTask> = emptyList(),
-    val dueDate: Long? = null,
+    val description: String = "",
+    val beforeImageUri: String,
+    val afterImageUri: String? = null,
+    val completionCaption: String? = null,
+    val isCompleted: Boolean = false,
+    val isPinnedToWidget: Boolean = false,
+    val priority: String = TaskPriority.MEDIUM.name,
+    val tag: String = TaskTag.PERSONAL.name,
+    val subTasksJson: String = "[]",
     val createdAt: Long = System.currentTimeMillis(),
-    val isSynced: Boolean = false
+    val dueDate: Long? = null,
+    val completedAt: Long? = null
 ) {
-    val isCompleted: Boolean
-        get() = status == TaskStatus.DONE
+    // Backwards Compatibility Accessors
+    val imagePath: String get() = beforeImageUri
+    val thumbnailPath: String get() = beforeImageUri
+    val status: TaskStatus get() = if (isCompleted) TaskStatus.DONE else TaskStatus.TODO
+
+    val priorityEnum: TaskPriority
+        get() = runCatching { TaskPriority.valueOf(priority) }.getOrDefault(TaskPriority.MEDIUM)
+
+    val tagEnum: TaskTag
+        get() = runCatching { TaskTag.valueOf(tag) }.getOrDefault(TaskTag.PERSONAL)
+
+    val parsedSubtasks: List<SubTask>
+        get() = Converters().toSubTaskList(subTasksJson)
 
     val completedSubtasksCount: Int
-        get() = subtasks.count { it.isDone }
+        get() = parsedSubtasks.count { it.isDone }
+
+    val progressPercent: Int
+        get() {
+            val list = parsedSubtasks
+            if (list.isEmpty()) return if (isCompleted) 100 else 0
+            return (list.count { it.isDone } * 100) / list.size
+        }
 }

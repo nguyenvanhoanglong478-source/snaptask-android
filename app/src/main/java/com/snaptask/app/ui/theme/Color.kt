@@ -3,56 +3,61 @@ package com.snaptask.app.ui.theme
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-// Velvet & Obsidian Theme (User's Exact Palette)
-val ObsidianInk  = Color(0xFF151311) // Rich deep obsidian
-val VelvetCurfew = Color(0xFF4B262F) // Deep wine / plum burgundy
-val AlmondHearth = Color(0xFFEED3BA) // Warm creamy almond
+// Notion Minimalist Dark + Locket Warm Accent
+val NotionDarkBg       = Color(0xFF121212) // Main Background
+val NotionCardSurface  = Color(0xFF1E1E1E) // Card Surface
+val NotionBorder       = Color(0xFF2E2E2E) // Subtle Border
+val LocketAccent       = Color(0xFFFF6B4A) // Locket Coral Orange Accent
+val LocketAccentMuted  = Color(0xFFD45538)
+val GlassmorphismDark  = Color(0xE6141414) // 90% opacity #141414 for robust contrast on photo overlays
 
-// Complementary & Accessible High-Contrast Colors
-val VelvetCurfewLight = Color(0xFF6B3843)
-val VelvetCurfewDark  = Color(0xFF2E171D)
-val AlmondHearthMuted = Color(0xFFD8BC9F)
-val ObsidianElevated  = Color(0xFF1F1A1C)
+// High-Contrast Typography (Verified with WCAG AA 4.5:1+)
+val TextPrimary        = Color(0xFFFFFFFF) // 18.2:1 on #121212
+val TextSecondary      = Color(0xFFA6A6A6) // 7.9:1 on #121212, 7.3:1 on #1E1E1E
+val TextMuted          = Color(0xFF8E8E93) // 5.6:1 on #121212, 5.1:1 on #1E1E1E
 
-// Ultra-High-Contrast Text Palette (WCAG AAA Compliant)
-val TextHighContrast = Color(0xFFFFFDF9) // Crisp bright white-cream (14:1 contrast ratio)
-val TextMediumContrast = Color(0xFFEBDBCF) // Almond cream for subtitles
-val TextMuted = Color(0xFFBFAAA0) // Soft readable muted text
+// Chips & Badges
+val ChipActiveBg       = Color(0xFFFF6B4A)
+val ChipActiveText     = Color(0xFF121212) // 6.65:1 on #FF6B4A (PASS AA & AAA)
+val ChipInactiveBg     = Color(0xFF242424)
+val ChipInactiveText   = Color(0xFFD6D6D6) // 10.68:1 on #242424 (PASS AA & AAA)
+val ChipInactiveBorder = Color(0xFF383838)
 
-// Chips & Containers
-val ChipActiveBackground = Color(0xFFEED3BA)
-val ChipActiveContent = Color(0xFF151311)
-val ChipInactiveBackground = Color(0xFF381F26)
-val ChipInactiveContent = Color(0xFFFAF0E6)
-val ChipInactiveBorder = Color(0xFF633A44)
+// Status Colors
+val StatusSuccess      = Color(0xFF22C55E)
+val StatusWarning      = Color(0xFFF59E0B)
+val StatusAmber        = StatusWarning
+val StatusDanger       = Color(0xFFEF4444)
 
 // Backwards Compatibility Aliases
-val Neutral900 = TextHighContrast
-val Neutral800 = ObsidianElevated
-val Neutral700 = TextMediumContrast
-val Neutral500 = TextMuted
-val Neutral300 = AlmondHearthMuted
-val Neutral200 = VelvetCurfewLight
-val Neutral100 = ChipInactiveBackground
-val Neutral50  = AlmondHearth
-
-// Status & Accents
-val BrandAmber = Color(0xFFF59E0B)
-val BrandGreen = Color(0xFF22C55E)
-val BrandRed   = Color(0xFFEF4444)
+val ObsidianInk            = NotionDarkBg
+val ObsidianElevated       = NotionCardSurface
+val VelvetCurfew           = NotionCardSurface
+val VelvetCurfewLight      = NotionCardSurface
+val AlmondHearth           = LocketAccent
+val TextHighContrast       = TextPrimary
+val TextMediumContrast     = TextSecondary
+val Neutral900             = TextPrimary
+val Neutral800             = NotionCardSurface
+val Neutral700             = TextSecondary
+val Neutral500             = TextMuted
+val Neutral100             = ChipInactiveBg
+val Neutral50              = LocketAccent
+val BrandAmber             = StatusWarning
+val BrandGreen             = StatusSuccess
+val BrandRed               = StatusDanger
+val ChipActiveBackground   = ChipActiveBg
+val ChipActiveContent      = ChipActiveText
+val ChipInactiveBackground = ChipInactiveBg
+val ChipInactiveContent    = ChipInactiveText
 
 // Gradients
-val SnapTaskVerticalGradient = Brush.verticalGradient(
+val NotionLocketGradient = Brush.verticalGradient(
     colors = listOf(
-        ObsidianInk,
-        VelvetCurfew,
-        Color(0xFF2C161D)
+        NotionDarkBg,
+        Color(0xFF1A1A1A),
+        NotionDarkBg
     )
 )
 
-val SnapTaskCardGradient = Brush.linearGradient(
-    colors = listOf(
-        VelvetCurfew,
-        ObsidianInk
-    )
-)
+val SnapTaskVerticalGradient = NotionLocketGradient

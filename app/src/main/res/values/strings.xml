@@ -2,5 +2,9 @@
     <string name="app_name">SnapTask</string>
     <string name="widget_name">SnapTask - Focus Note</string>
     <string name="widget_description">Xem và hoàn thành nhanh các việc cần làm có kèm ảnh chụp trực tiếp từ màn hình chính.</string>
+    <string name="widget_locket_focus_name">SnapTask - Locket Focus (2x2)</string>
+    <string name="widget_locket_focus_desc">Hiển thị ảnh Locket của task đang ghim, hoàn thành hoặc chuyển task ngay trên màn hình chính.</string>
+    <string name="widget_notion_stack_name">SnapTask - Notion Stack (4x2)</string>
+    <string name="widget_notion_stack_desc">Bảng tiến độ trực quan: ảnh task ưu tiên kèm danh sách checklist 3 việc tiếp theo.</string>
     <string name="camera_permission_required">SnapTask cần quyền truy cập máy ảnh để chụp nhanh việc cần làm.</string>
 </resources>

@@ -40,7 +40,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Home Screen Widget Receiver (Locket-style Glance Widget) -->
+        <!-- Home Screen Widget Receiver (Legacy Focus Glance Widget) -->
         <receiver
             android:name=".widget.SnapTaskWidgetReceiver"
             android:exported="true"
@@ -51,6 +51,32 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/snap_task_widget_info" />
+        </receiver>
+
+        <!-- Locket Focus Task Widget (2x2) -->
+        <receiver
+            android:name=".widget.LocketFocusWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_locket_focus_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/locket_focus_widget_info" />
+        </receiver>
+
+        <!-- Notion Visual Stack Widget (4x2) -->
+        <receiver
+            android:name=".widget.NotionStackWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_notion_stack_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/notion_stack_widget_info" />
         </receiver>
 
     </application>
