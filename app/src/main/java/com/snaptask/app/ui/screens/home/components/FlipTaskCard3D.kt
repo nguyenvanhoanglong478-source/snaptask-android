@@ -64,6 +64,7 @@ import com.snaptask.app.ui.theme.GlassmorphismDark
 import com.snaptask.app.ui.theme.LocketAccent
 import com.snaptask.app.ui.theme.NotionBorder
 import com.snaptask.app.ui.theme.NotionCardSurface
+import com.snaptask.app.ui.theme.NotionDarkBg
 import com.snaptask.app.ui.theme.StatusDanger
 import com.snaptask.app.ui.theme.StatusSuccess
 import com.snaptask.app.ui.theme.TextMuted

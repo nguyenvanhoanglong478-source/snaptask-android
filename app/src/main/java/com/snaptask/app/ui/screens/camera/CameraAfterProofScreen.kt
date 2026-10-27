@@ -62,6 +62,7 @@ import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.snaptask.app.domain.model.Task
+import com.snaptask.app.ui.theme.ChipInactiveBg
 import com.snaptask.app.ui.theme.LocketAccent
 import com.snaptask.app.ui.theme.NotionBorder
 import com.snaptask.app.ui.theme.NotionCardSurface
