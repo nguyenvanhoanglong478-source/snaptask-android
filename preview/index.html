@@ -3,29 +3,33 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>SnapTask Preview (Obsidian Ink & Velvet Curfew)</title>
+  <title>SnapTask Preview (V2 - Locket Photo Widget & High Contrast)</title>
   <style>
     :root {
       --obsidian: #151311;
       --velvet: #4B262F;
       --velvet-light: #6B3843;
       --almond: #EED3BA;
-      --almond-muted: #D8BC9F;
-      --surface-elevated: #221F1C;
-      --danger: #DC2626;
-      --radius: 16px;
+      --text-white: #FFFDF9;
+      --text-cream: #EBDBCF;
+      --text-muted: #BFAAA0;
+      --chip-bg: #381F26;
+      --chip-border: #633A44;
+      --surface-elevated: #241B1F;
+      --danger: #EF4444;
+      --radius: 18px;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-    body { background-color: #0B0A09; color: var(--almond); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+    body { background-color: #0A0808; color: var(--text-white); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
 
-    /* Phone Shell with User's Exact Gradient */
+    /* Phone Shell Simulator */
     .phone-container {
       width: 390px;
-      height: 800px;
-      background: linear-gradient(180deg, #151311 0%, #4B262F 55%, #EED3BA 100%);
+      height: 810px;
+      background: linear-gradient(180deg, #151311 0%, #4B262F 55%, #2C161D 100%);
       border-radius: 46px;
-      box-shadow: 0 25px 60px rgba(0,0,0,0.6), 0 0 0 12px #221F1C;
+      box-shadow: 0 25px 70px rgba(0,0,0,0.7), 0 0 0 12px #221F1C;
       position: relative;
       display: flex;
       flex-direction: column;
@@ -41,24 +45,23 @@
       align-items: center;
       font-size: 13px;
       font-weight: 600;
-      color: var(--almond);
+      color: var(--text-white);
     }
 
-    /* Header */
+    /* Smart Header */
     .app-header {
-      padding: 10px 20px 14px;
+      padding: 10px 20px 12px;
       display: flex;
       justify-content: space-between;
-      align-items: flex-end;
+      align-items: center;
     }
-    .app-title h1 { font-size: 25px; font-weight: 800; letter-spacing: -0.5px; color: var(--almond); }
-    .app-title p { font-size: 12px; color: var(--almond-muted); margin-top: 2px; }
-    .header-actions { display: flex; gap: 8px; }
-    .icon-btn {
-      width: 38px; height: 38px; border-radius: 12px; border: 1px solid var(--velvet-light);
-      background: rgba(21, 19, 17, 0.6); display: flex; align-items: center; justify-content: center;
-      cursor: pointer; font-size: 14px; font-weight: 600; color: var(--almond);
-      backdrop-filter: blur(8px);
+    .app-title h1 { font-size: 26px; font-weight: 900; letter-spacing: -0.5px; color: var(--text-white); }
+    .app-title p { font-size: 13px; color: var(--text-cream); margin-top: 2px; font-weight: 500; }
+    .smart-tools { display: flex; gap: 8px; align-items: center; }
+    .icon-pill-btn {
+      height: 38px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--chip-border);
+      background: var(--chip-bg); display: flex; align-items: center; gap: 6px;
+      cursor: pointer; font-size: 12px; font-weight: 700; color: var(--text-white);
     }
 
     /* Tags Scroll */
@@ -67,68 +70,85 @@
     }
     .tags-row::-webkit-scrollbar { display: none; }
     .tag-chip {
-      padding: 7px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
-      background: rgba(75, 38, 47, 0.7); color: var(--almond); white-space: nowrap; cursor: pointer;
-      border: 1px solid rgba(238, 211, 186, 0.2); transition: all 0.15s ease;
+      padding: 8px 16px; border-radius: 12px; font-size: 12px; font-weight: 700;
+      background: var(--chip-bg); color: var(--text-white); white-space: nowrap; cursor: pointer;
+      border: 1px solid var(--chip-border); transition: all 0.15s ease;
     }
     .tag-chip.active { background: var(--almond); color: var(--obsidian); border-color: var(--almond); }
 
     /* Main Scroll Area */
     .content-area {
-      flex: 1; overflow-y: auto; padding: 0 20px 96px;
+      flex: 1; overflow-y: auto; padding: 0 20px 100px;
     }
 
-    /* Widget Simulator Box */
-    .widget-sim-card {
-      background: rgba(21, 19, 17, 0.88); backdrop-filter: blur(10px);
-      border: 1px solid rgba(238, 211, 186, 0.3); border-radius: 22px; padding: 16px;
-      margin-bottom: 16px; display: flex; flex-direction: column; gap: 10px;
+    /* TRUE LOCKET WIDGET PREVIEW */
+    .locket-widget-box {
+      width: 100%; aspect-ratio: 1.15; border-radius: 24px; overflow: hidden;
+      position: relative; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      border: 2px solid rgba(238, 211, 186, 0.4);
     }
-    .widget-sim-header {
+    .locket-widget-bg-img {
+      width: 100%; height: 100%; object-fit: cover;
+    }
+    .locket-widget-top {
+      position: absolute; top: 10px; left: 10px; right: 10px;
       display: flex; justify-content: space-between; align-items: center;
-      font-size: 11px; font-weight: 800; color: var(--almond-muted); letter-spacing: 0.6px;
     }
-    .widget-action-btn {
-      background: var(--almond); color: var(--obsidian); border: none; padding: 8px 14px;
-      border-radius: 12px; font-weight: 700; font-size: 12px; cursor: pointer;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    .locket-top-pill {
+      background: rgba(21, 19, 17, 0.75); backdrop-filter: blur(8px);
+      padding: 4px 10px; border-radius: 8px; font-size: 10px; font-weight: 800;
+      color: var(--almond); letter-spacing: 0.5px;
+    }
+    .locket-priority-pill {
+      background: var(--danger); color: #FFF; font-size: 9px; font-weight: 800;
+      padding: 3px 8px; border-radius: 8px;
+    }
+    .locket-widget-bottom-scrim {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: rgba(21, 19, 17, 0.85); backdrop-filter: blur(10px);
+      padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    .locket-task-title {
+      font-size: 14px; font-weight: 800; color: #FFF; line-height: 1.2;
+    }
+    .locket-done-btn {
+      width: 100%; padding: 8px 12px; border-radius: 10px; border: none;
+      background: var(--almond); color: var(--obsidian); font-weight: 800; font-size: 13px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
     }
 
     /* Grid Layout */
     .snap-grid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
     }
     .snap-card {
-      background: rgba(34, 31, 28, 0.9); border: 1px solid rgba(107, 56, 67, 0.5);
+      background: var(--surface-elevated); border: 1px solid var(--chip-border);
       border-radius: var(--radius); overflow: hidden; display: flex; flex-direction: column;
-      cursor: pointer; transition: transform 0.15s ease; backdrop-filter: blur(6px);
+      cursor: pointer; transition: transform 0.15s ease;
     }
     .snap-card:active { transform: scale(0.97); }
     .snap-img-box {
-      width: 100%; aspect-ratio: 1.1; background: var(--velvet); position: relative; overflow: hidden;
+      width: 100%; aspect-ratio: 1.05; background: var(--velvet); position: relative; overflow: hidden;
     }
     .snap-img-box img { width: 100%; height: 100%; object-fit: cover; }
     .card-badge {
-      position: absolute; top: 8px; left: 8px; padding: 3px 8px; border-radius: 6px;
-      font-size: 10px; font-weight: 700; color: #FFF; text-transform: uppercase;
-    }
-    .priority-badge {
-      position: absolute; top: 8px; right: 8px; background: var(--danger); color: #FFF;
-      font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 12px;
+      position: absolute; top: 8px; left: 8px; padding: 4px 8px; border-radius: 8px;
+      font-size: 10px; font-weight: 800; color: #FFF;
     }
     .card-body {
-      padding: 10px; display: flex; flex-direction: column; gap: 4px;
+      padding: 12px; display: flex; flex-direction: column; gap: 6px;
     }
-    .card-title-row { display: flex; align-items: flex-start; gap: 6px; }
+    .card-title-row { display: flex; align-items: flex-start; gap: 8px; }
     .check-circle {
-      width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--almond-muted);
+      width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--almond);
       cursor: pointer; flex-shrink: 0; margin-top: 1px; display: flex; align-items: center; justify-content: center;
     }
-    .check-circle.done { background: #15803D; border-color: #15803D; color: #FFF; font-size: 10px; }
+    .check-circle.done { background: #22C55E; border-color: #22C55E; color: #FFF; font-size: 12px; }
     .card-title {
-      font-size: 13px; font-weight: 600; line-height: 1.3; color: var(--almond);
+      font-size: 14px; font-weight: 700; line-height: 1.3; color: var(--text-white);
     }
-    .card-title.done { text-decoration: line-through; color: var(--almond-muted); }
+    .card-title.done { text-decoration: line-through; color: var(--text-muted); }
 
     /* Locket Shutter Floating Action Bar */
     .floating-bar {
@@ -136,34 +156,34 @@
       justify-content: center; align-items: center; pointer-events: none;
     }
     .shutter-btn {
-      width: 68px; height: 68px; border-radius: 50%; background: var(--almond);
-      border: 4px solid var(--velvet); box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      width: 70px; height: 70px; border-radius: 50%; background: var(--almond);
+      border: 4px solid var(--velvet); box-shadow: 0 10px 25px rgba(0,0,0,0.5);
       display: flex; align-items: center; justify-content: center; cursor: pointer;
-      color: var(--obsidian); font-size: 26px; pointer-events: auto; transition: transform 0.1s ease;
+      color: var(--obsidian); font-size: 28px; pointer-events: auto; transition: transform 0.1s ease;
     }
     .shutter-btn:active { transform: scale(0.92); }
 
     /* Modal Sheet */
     .modal-overlay {
-      position: absolute; inset: 0; background: rgba(0,0,0,0.65); display: none;
-      align-items: flex-end; z-index: 100; backdrop-filter: blur(4px);
+      position: absolute; inset: 0; background: rgba(0,0,0,0.7); display: none;
+      align-items: flex-end; z-index: 100; backdrop-filter: blur(6px);
     }
     .modal-overlay.open { display: flex; }
     .modal-sheet {
-      background: var(--surface-elevated); width: 100%; border-radius: 26px 26px 0 0;
-      padding: 24px; display: flex; flex-direction: column; gap: 16px; border-top: 1px solid var(--velvet-light);
-      animation: slideUp 0.25s ease-out; color: var(--almond);
+      background: #1E1719; width: 100%; border-radius: 28px 28px 0 0;
+      padding: 24px; display: flex; flex-direction: column; gap: 16px;
+      border-top: 2px solid var(--chip-border); animation: slideUp 0.25s ease-out;
     }
     @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-    .sheet-title { font-size: 18px; font-weight: 700; color: var(--almond); }
+    .sheet-title { font-size: 20px; font-weight: 800; color: var(--text-white); }
     .sheet-input {
-      width: 100%; padding: 12px 14px; border: 1px solid var(--velvet-light);
-      border-radius: 12px; font-size: 14px; outline: none; background: rgba(75, 38, 47, 0.4);
-      color: var(--almond);
+      width: 100%; padding: 14px; border: 1.5.dp solid var(--chip-border);
+      border-radius: 14px; font-size: 14px; outline: none; background: #281C21;
+      color: var(--text-white);
     }
     .sheet-row { display: flex; gap: 10px; }
     .sheet-btn {
-      flex: 1; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 700;
+      flex: 1; padding: 14px; border-radius: 14px; font-size: 15px; font-weight: 800;
       border: none; cursor: pointer; background: var(--almond); color: var(--obsidian);
     }
   </style>
@@ -173,22 +193,25 @@
   <div class="phone-container">
     <!-- Status Bar -->
     <div class="status-bar">
-      <span>09:41</span>
-      <span>📶 5G  🔋 98%</span>
+      <span>01:26</span>
+      <span>📶 5G  🔋 95%</span>
     </div>
 
-    <!-- App Header -->
+    <!-- Smart Header -->
     <div class="app-header">
       <div class="app-title">
         <h1>SnapTask</h1>
-        <p id="taskCountText">Đang tải...</p>
+        <p id="taskCountText">1 việc cần giải quyết</p>
       </div>
-      <div class="header-actions">
-        <button class="icon-btn" onclick="toggleView()" id="viewToggleBtn" title="Chuyển chế độ xem">☷</button>
+      <div class="smart-tools">
+        <button class="icon-pill-btn" onclick="toggleView()" id="viewToggleBtn">
+          <span>☷</span>
+          <span>Bảng Cột</span>
+        </button>
       </div>
     </div>
 
-    <!-- Tags Row (Notion style) -->
+    <!-- Tags Row -->
     <div class="tags-row" id="tagsContainer">
       <div class="tag-chip active" onclick="filterTag('ALL')">Tất cả</div>
       <div class="tag-chip" onclick="filterTag('WORK')">Công việc</div>
@@ -199,19 +222,21 @@
 
     <!-- Content Area -->
     <div class="content-area">
-      <!-- Widget Simulator Preview -->
-      <div class="widget-sim-card" id="widgetBox">
-        <div class="widget-sim-header">
-          <span>WIDGET MÀN HÌNH CHÍNH (LOCKET STYLE)</span>
-          <span style="color: #EF4444; font-weight: 800;" id="widgetPriority">GẤP</span>
+      <!-- TRUE LOCKET PHOTO WIDGET PREVIEW -->
+      <div style="font-size: 11px; font-weight: 800; color: var(--text-cream); margin-bottom: 8px; letter-spacing: 0.5px;">
+        MÔ PHỎNG WIDGET MÀN HÌNH CHÍNH (CÓ ẢNH NHƯ LOCKET):
+      </div>
+      <div class="locket-widget-box" id="widgetBox">
+        <img id="widgetImg" class="locket-widget-bg-img" src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400">
+        
+        <div class="locket-widget-top">
+          <div class="locket-top-pill">VIỆC CẦN LÀM</div>
+          <div class="locket-priority-pill" id="widgetPriority">GẤP</div>
         </div>
-        <div style="display: flex; gap: 12px; align-items: center;">
-          <img id="widgetImg" src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300" style="width: 54px; height: 54px; border-radius: 12px; object-fit: cover;">
-          <div style="flex: 1;">
-            <div id="widgetTitle" style="font-size: 14px; font-weight: 700; color: var(--almond);">Đọc hết chương 4 sách Clean Code</div>
-            <div style="font-size: 11px; color: var(--almond-muted); margin-top: 2px;">Chạm nút bên cạnh để xong ngay</div>
-          </div>
-          <button class="widget-action-btn" onclick="completeTopWidgetTask()">✓ Xong</button>
+
+        <div class="locket-widget-bottom-scrim">
+          <div class="locket-task-title" id="widgetTitle">Đọc 20 trang sách Thiết kế hệ thống</div>
+          <button class="locket-done-btn" onclick="completeTopWidgetTask()">✓ Xong ngay</button>
         </div>
       </div>
 
@@ -227,10 +252,10 @@
     <!-- Quick Snap Modal Sheet -->
     <div class="modal-overlay" id="captureModal">
       <div class="modal-sheet">
-        <div class="sheet-title">Chụp việc cần làm mới</div>
+        <div class="sheet-title">Tạo việc cần làm mới</div>
         <input type="text" id="taskInput" class="sheet-input" placeholder="Bạn cần làm gì với ảnh này?" autofocus>
         
-        <div style="font-size: 12px; font-weight: 600; color: var(--almond-muted);">Chọn danh mục:</div>
+        <div style="font-size: 13px; font-weight: 700; color: var(--text-cream);">Danh mục:</div>
         <div class="tags-row" style="padding: 0;">
           <div class="tag-chip active" id="modalTagWork" onclick="selectModalTag('WORK')">Công việc</div>
           <div class="tag-chip" id="modalTagPersonal" onclick="selectModalTag('PERSONAL')">Cá nhân</div>
@@ -238,7 +263,7 @@
         </div>
 
         <div class="sheet-row">
-          <button class="sheet-btn" style="background: rgba(75, 38, 47, 0.7); color: var(--almond);" onclick="closeCaptureModal()">Hủy</button>
+          <button class="sheet-btn" style="background: var(--chip-bg); color: var(--text-white);" onclick="closeCaptureModal()">Hủy</button>
           <button class="sheet-btn" onclick="saveNewTask()">Lưu & Ghim Widget</button>
         </div>
       </div>
@@ -249,11 +274,11 @@
     const sampleTasks = [
       {
         id: 1,
-        title: "Đọc 20 trang sách Thiết kế hệ thống",
-        img: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400",
+        title: "First Build - Chụp thử ứng dụng",
+        img: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=400",
         tag: "WORK",
         tagName: "Công việc",
-        tagColor: "#4B262F",
+        tagColor: "#2563EB",
         priority: "HIGH",
         status: "TODO"
       },
@@ -266,26 +291,6 @@
         tagColor: "#D97706",
         priority: "MEDIUM",
         status: "TODO"
-      },
-      {
-        id: 3,
-        title: "Gọi thợ sửa vòi nước bồn rửa",
-        img: "https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=400",
-        tag: "HOME",
-        tagName: "Nhà cửa",
-        tagColor: "#6B3843",
-        priority: "HIGH",
-        status: "TODO"
-      },
-      {
-        id: 4,
-        title: "Gửi báo cáo tối ưu hoá RAM",
-        img: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=400",
-        tag: "WORK",
-        tagName: "Công việc",
-        tagColor: "#4B262F",
-        priority: "MEDIUM",
-        status: "DONE"
       }
     ];
 
@@ -299,7 +304,7 @@
 
       const filtered = activeTag === 'ALL' ? currentTasks : currentTasks.filter(t => t.tag === activeTag);
       const pendingCount = currentTasks.filter(t => t.status !== 'DONE').length;
-      document.getElementById('taskCountText').innerText = `${pendingCount} việc cần làm`;
+      document.getElementById('taskCountText').innerText = `${pendingCount} việc cần giải quyết`;
 
       filtered.forEach(task => {
         const isDone = task.status === 'DONE';
@@ -309,7 +314,7 @@
           <div class="snap-img-box">
             <img src="${task.img}" loading="lazy">
             <div class="card-badge" style="background: ${task.tagColor};">${task.tagName}</div>
-            ${task.priority === 'HIGH' ? '<div class="priority-badge">GẤP</div>' : ''}
+            ${task.priority === 'HIGH' ? '<div class="card-badge" style="right:8px; left:auto; background:#EF4444;">GẤP</div>' : ''}
           </div>
           <div class="card-body">
             <div class="card-title-row">
@@ -340,11 +345,10 @@
       if (!topPending) {
         document.getElementById('widgetTitle').innerText = 'Tất cả đã hoàn thành!';
         document.getElementById('widgetPriority').style.display = 'none';
-        document.getElementById('widgetImg').style.display = 'none';
+        document.getElementById('widgetImg').src = 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400';
       } else {
         document.getElementById('widgetTitle').innerText = topPending.title;
-        document.getElementById('widgetPriority').style.display = topPending.priority === 'HIGH' ? 'inline' : 'none';
-        document.getElementById('widgetImg').style.display = 'block';
+        document.getElementById('widgetPriority').style.display = topPending.priority === 'HIGH' ? 'block' : 'none';
         document.getElementById('widgetImg').src = topPending.img;
       }
     }
@@ -385,14 +389,13 @@
 
       const randomImages = [
         "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=400",
-        "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400",
-        "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=400"
+        "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400"
       ];
       const randomImg = randomImages[Math.floor(Math.random() * randomImages.length)];
 
       const tagMap = {
-        WORK: { name: 'Công việc', color: '#4B262F' },
-        PERSONAL: { name: 'Cá nhân', color: '#6B3843' },
+        WORK: { name: 'Công việc', color: '#2563EB' },
+        PERSONAL: { name: 'Cá nhân', color: '#059669' },
         SHOPPING: { name: 'Mua sắm', color: '#D97706' }
       };
 
@@ -412,7 +415,7 @@
     }
 
     function toggleView() {
-      alert("Chuyển đổi góc nhìn: Bạn đang ở chế độ Lưới ảnh (Locket Feed). Trên ứng dụng Android, bạn có thể vuốt sang Bảng Kanban Notion 3 cột.");
+      alert("Chuyển chế độ: Bạn có thể xem dạng Lưới ảnh hoặc Bảng Kanban 3 cột!");
     }
 
     // Init

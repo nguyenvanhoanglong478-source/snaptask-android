@@ -1,0 +1,6 @@
+# Build outputs and temporary files
+dist/
+build/
+.gradle/
+*.apk
+*.zip

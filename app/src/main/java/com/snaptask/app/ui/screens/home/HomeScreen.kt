@@ -7,12 +7,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -22,6 +24,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.ViewKanban
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -29,12 +32,10 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,8 +52,16 @@ import com.snaptask.app.domain.model.Task
 import com.snaptask.app.domain.model.TaskTag
 import com.snaptask.app.ui.screens.home.components.TaskSnapCard
 import com.snaptask.app.ui.theme.AlmondHearth
+import com.snaptask.app.ui.theme.ChipActiveBackground
+import com.snaptask.app.ui.theme.ChipActiveContent
+import com.snaptask.app.ui.theme.ChipInactiveBackground
+import com.snaptask.app.ui.theme.ChipInactiveBorder
+import com.snaptask.app.ui.theme.ChipInactiveContent
 import com.snaptask.app.ui.theme.ObsidianInk
 import com.snaptask.app.ui.theme.SnapTaskVerticalGradient
+import com.snaptask.app.ui.theme.TextHighContrast
+import com.snaptask.app.ui.theme.TextMediumContrast
+import com.snaptask.app.ui.theme.TextMuted
 import com.snaptask.app.ui.theme.VelvetCurfew
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -77,6 +86,8 @@ fun HomeScreen(
         }
     }
 
+    val pendingCount = tasks.count { !it.isCompleted }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -85,58 +96,100 @@ fun HomeScreen(
         Scaffold(
             containerColor = Color.Transparent,
             topBar = {
-                TopAppBar(
-                    title = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp, start = 18.dp, end = 18.dp, bottom = 8.dp)
+                ) {
+                    // Smart Top Row: Title + Quick View Switcher + Search
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Column {
                             Text(
                                 text = "SnapTask",
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = AlmondHearth
+                                style = MaterialTheme.typography.headlineLarge,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = TextHighContrast,
+                                fontSize = 26.sp
                             )
                             Text(
-                                text = "${tasks.count { !it.isCompleted }} việc cần giải quyết",
+                                text = if (pendingCount > 0) "$pendingCount việc cần giải quyết" else "Tất cả đã hoàn thành ✨",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = AlmondHearth.copy(alpha = 0.75f)
+                                color = TextMediumContrast,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 13.sp
                             )
                         }
-                    },
-                    actions = {
-                        IconButton(onClick = { isSearchActive = !isSearchActive }) {
-                            Icon(
-                                imageVector = Icons.Outlined.Search,
-                                contentDescription = "Tìm kiếm",
-                                tint = AlmondHearth
-                            )
+
+                        // Smart Tool Bar Pill (Search & Board Switcher)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            // Search Toggle Button
+                            IconButton(
+                                onClick = { isSearchActive = !isSearchActive },
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .background(ChipInactiveBackground, RoundedCornerShape(12.dp))
+                                    .border(1.dp, ChipInactiveBorder, RoundedCornerShape(12.dp))
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Search,
+                                    contentDescription = "Tìm kiếm",
+                                    tint = TextHighContrast,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            // View Mode Pill (Switch to Board View)
+                            Box(
+                                modifier = Modifier
+                                    .height(42.dp)
+                                    .background(ChipInactiveBackground, RoundedCornerShape(12.dp))
+                                    .border(1.dp, ChipInactiveBorder, RoundedCornerShape(12.dp))
+                                    .clickable(onClick = onOpenBoardView)
+                                    .padding(horizontal = 12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Filled.ViewKanban,
+                                        contentDescription = "Bảng Cột",
+                                        tint = AlmondHearth,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Bảng Cột",
+                                        color = TextHighContrast,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
                         }
-                        IconButton(onClick = onOpenBoardView) {
-                            Icon(
-                                imageVector = Icons.Filled.ViewKanban,
-                                contentDescription = "Bảng tiến độ",
-                                tint = AlmondHearth
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent
-                    )
-                )
+                    }
+                }
             },
             floatingActionButton = {
-                // Locket Shutter Button with Almond Hearth & Velvet Curfew accent
+                // Centered Smart Shutter Action Bar (Locket-style)
                 FloatingActionButton(
                     onClick = onOpenLiveCamera,
                     containerColor = AlmondHearth,
                     contentColor = ObsidianInk,
                     shape = CircleShape,
                     modifier = Modifier
-                        .size(66.dp)
-                        .border(3.dp, VelvetCurfew, CircleShape)
+                        .size(68.dp)
+                        .border(4.dp, VelvetCurfew, CircleShape)
                 ) {
                     Icon(
                         imageVector = Icons.Filled.CameraAlt,
                         contentDescription = "Chụp việc mới",
-                        modifier = Modifier.size(30.dp),
+                        modifier = Modifier.size(32.dp),
                         tint = ObsidianInk
                     )
                 }
@@ -147,47 +200,52 @@ fun HomeScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                // Search Input
+                // Expandable Search Input
                 if (isSearchActive) {
-                    TextField(
+                    OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
-                        placeholder = { Text("Tìm kiếm việc cần làm...", color = AlmondHearth.copy(alpha = 0.6f)) },
+                        placeholder = { Text("Tìm kiếm việc cần làm...", color = TextMuted) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 6.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = VelvetCurfew.copy(alpha = 0.8f),
-                            unfocusedContainerColor = VelvetCurfew.copy(alpha = 0.5f),
-                            focusedTextColor = AlmondHearth,
-                            unfocusedTextColor = AlmondHearth,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
+                            .padding(horizontal = 18.dp, vertical = 6.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = TextHighContrast,
+                            unfocusedTextColor = TextHighContrast,
+                            focusedContainerColor = Color(0xFF281C21),
+                            unfocusedContainerColor = Color(0xFF281C21),
+                            focusedBorderColor = AlmondHearth,
+                            unfocusedBorderColor = ChipInactiveBorder
                         ),
                         singleLine = true
                     )
                 }
 
-                // Tag Filter Chips (Notion style with Velvet & Almond tones)
+                // High-Contrast Tag Filter Chips (Notion style)
                 LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     item {
                         val isAllSelected = selectedTag == null
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (isAllSelected) AlmondHearth else VelvetCurfew.copy(alpha = 0.7f))
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (isAllSelected) ChipActiveBackground else ChipInactiveBackground)
+                                .border(
+                                    width = 1.dp,
+                                    color = if (isAllSelected) AlmondHearth else ChipInactiveBorder,
+                                    shape = RoundedCornerShape(10.dp)
+                                )
                                 .clickable { selectedTag = null }
-                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                                .padding(horizontal = 14.dp, vertical = 7.dp)
                         ) {
                             Text(
                                 text = "Tất cả",
-                                color = if (isAllSelected) ObsidianInk else AlmondHearth,
+                                color = if (isAllSelected) ChipActiveContent else ChipInactiveContent,
                                 fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
@@ -196,16 +254,21 @@ fun HomeScreen(
                         val isSelected = selectedTag == tag
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (isSelected) AlmondHearth else VelvetCurfew.copy(alpha = 0.7f))
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (isSelected) ChipActiveBackground else ChipInactiveBackground)
+                                .border(
+                                    width = 1.dp,
+                                    color = if (isSelected) AlmondHearth else ChipInactiveBorder,
+                                    shape = RoundedCornerShape(10.dp)
+                                )
                                 .clickable { selectedTag = tag }
-                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                                .padding(horizontal = 14.dp, vertical = 7.dp)
                         ) {
                             Text(
                                 text = tag.displayName,
-                                color = if (isSelected) ObsidianInk else AlmondHearth,
+                                color = if (isSelected) ChipActiveContent else ChipInactiveContent,
                                 fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
@@ -223,22 +286,23 @@ fun HomeScreen(
                             Text(
                                 text = "Chưa có việc nào ở đây",
                                 style = MaterialTheme.typography.titleMedium,
-                                color = AlmondHearth
+                                color = TextHighContrast,
+                                fontWeight = FontWeight.Bold
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
-                                text = "Chạm vào máy ảnh phía dưới để ghi lại việc cần làm",
+                                text = "Chạm vào máy ảnh phía dưới để chụp và ghim việc cần làm",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = AlmondHearth.copy(alpha = 0.7f)
+                                color = TextMediumContrast
                             )
                         }
                     }
                 } else {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(2),
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 8.dp, bottom = 96.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
                         modifier = Modifier.fillMaxSize()
                     ) {
                         items(filteredTasks, key = { it.id }) { task ->

@@ -2,6 +2,7 @@ package com.snaptask.app.ui.screens.home.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,9 +46,11 @@ import com.snaptask.app.ui.theme.AlmondHearth
 import com.snaptask.app.ui.theme.BrandAmber
 import com.snaptask.app.ui.theme.BrandGreen
 import com.snaptask.app.ui.theme.BrandRed
-import com.snaptask.app.ui.theme.ObsidianElevated
+import com.snaptask.app.ui.theme.ChipInactiveBorder
+import com.snaptask.app.ui.theme.TextHighContrast
+import com.snaptask.app.ui.theme.TextMediumContrast
+import com.snaptask.app.ui.theme.TextMuted
 import com.snaptask.app.ui.theme.VelvetCurfew
-import com.snaptask.app.ui.theme.VelvetCurfewLight
 import java.io.File
 
 @Composable
@@ -61,11 +64,11 @@ fun TaskSnapCard(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
-            containerColor = ObsidianElevated.copy(alpha = 0.92f)
+            containerColor = Color(0xFF241B1F) // Deep plum obsidian container
         ),
-        border = BorderStroke(1.dp, VelvetCurfewLight.copy(alpha = 0.6f)),
+        border = BorderStroke(1.dp, ChipInactiveBorder),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
@@ -73,34 +76,40 @@ fun TaskSnapCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1.1f)
+                    .aspectRatio(1.05f)
                     .background(VelvetCurfew)
             ) {
-                if (task.thumbnailPath.isNotBlank() && File(task.thumbnailPath).exists()) {
+                val imageFile = when {
+                    task.thumbnailPath.isNotBlank() && File(task.thumbnailPath).exists() -> File(task.thumbnailPath)
+                    task.imagePath.isNotBlank() && File(task.imagePath).exists() -> File(task.imagePath)
+                    else -> null
+                }
+
+                if (imageFile != null) {
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
-                            .data(File(task.thumbnailPath))
+                            .data(imageFile)
                             .crossfade(true)
                             .build(),
                         contentDescription = task.title,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .aspectRatio(1.1f)
-                            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
+                            .aspectRatio(1.05f)
+                            .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp)),
                         contentScale = ContentScale.Crop
                     )
                 }
 
-                // Tag Chip over image (Notion style)
+                // Tag Badge over image
                 Box(
                     modifier = Modifier
                         .padding(8.dp)
                         .align(Alignment.TopStart)
                         .background(
-                            Color(task.tag.hexColor).copy(alpha = 0.9f),
-                            shape = RoundedCornerShape(6.dp)
+                            Color(task.tag.hexColor).copy(alpha = 0.95f),
+                            shape = RoundedCornerShape(8.dp)
                         )
-                        .padding(horizontal = 7.dp, vertical = 3.dp)
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
                         text = task.tag.displayName,
@@ -110,14 +119,14 @@ fun TaskSnapCard(
                     )
                 }
 
-                // Priority Indicator
+                // Priority Badge
                 if (task.priority == TaskPriority.HIGH) {
                     Box(
                         modifier = Modifier
                             .padding(8.dp)
                             .align(Alignment.TopEnd)
-                            .background(BrandRed, shape = CircleShape)
-                            .padding(horizontal = 7.dp, vertical = 2.dp)
+                            .background(BrandRed, shape = RoundedCornerShape(8.dp))
+                            .padding(horizontal = 7.dp, vertical = 3.dp)
                     ) {
                         Text(
                             text = "GẤP",
@@ -129,7 +138,7 @@ fun TaskSnapCard(
                 }
             }
 
-            // 2. Task Details & Notion Checklist
+            // 2. Task Details & Notion Quick Check
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -139,10 +148,10 @@ fun TaskSnapCard(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Quick completion toggle button (48x48dp touch area)
+                    // Quick completion toggle button
                     Box(
                         modifier = Modifier
-                            .size(28.dp)
+                            .size(30.dp)
                             .clickable(onClick = onToggleStatus),
                         contentAlignment = Alignment.Center
                     ) {
@@ -152,7 +161,7 @@ fun TaskSnapCard(
                                     imageVector = Icons.Filled.CheckCircle,
                                     contentDescription = "Hoàn thành",
                                     tint = BrandGreen,
-                                    modifier = Modifier.size(22.dp)
+                                    modifier = Modifier.size(24.dp)
                                 )
                             }
                             TaskStatus.IN_PROGRESS -> {
@@ -160,15 +169,15 @@ fun TaskSnapCard(
                                     imageVector = Icons.Outlined.Schedule,
                                     contentDescription = "Đang thực hiện",
                                     tint = BrandAmber,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(22.dp)
                                 )
                             }
                             TaskStatus.TODO -> {
                                 Icon(
                                     imageVector = Icons.Outlined.Circle,
                                     contentDescription = "Cần làm",
-                                    tint = AlmondHearth.copy(alpha = 0.6f),
-                                    modifier = Modifier.size(20.dp)
+                                    tint = AlmondHearth,
+                                    modifier = Modifier.size(22.dp)
                                 )
                             }
                         }
@@ -182,18 +191,21 @@ fun TaskSnapCard(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None,
-                        color = if (task.isCompleted) AlmondHearth.copy(alpha = 0.45f) else AlmondHearth,
+                        color = if (task.isCompleted) TextMuted else TextHighContrast,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp,
                         modifier = Modifier.weight(1f)
                     )
                 }
 
-                // Subtasks counter if available
+                // Subtasks counter
                 if (task.subtasks.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = "Tiến độ: ${task.completedSubtasksCount}/${task.subtasks.size}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = AlmondHearth.copy(alpha = 0.6f)
+                        color = TextMediumContrast,
+                        fontSize = 11.sp
                     )
                 }
             }
