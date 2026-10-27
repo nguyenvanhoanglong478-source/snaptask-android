@@ -13,6 +13,16 @@ val VelvetCurfewLight = Color(0xFF6B3843)
 val AlmondHearthMuted = Color(0xFFD8BC9F)
 val ObsidianElevated  = Color(0xFF221F1C)
 
+// Theme Mappings
+val Neutral900 = ObsidianInk
+val Neutral800 = ObsidianElevated
+val Neutral700 = VelvetCurfew
+val Neutral500 = AlmondHearthMuted
+val Neutral300 = AlmondHearthMuted
+val Neutral200 = VelvetCurfewLight
+val Neutral100 = Color(0xFF2E171D)
+val Neutral50  = AlmondHearth
+
 // Gradients
 val SnapTaskVerticalGradient = Brush.verticalGradient(
     colors = listOf(

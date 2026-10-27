@@ -2,10 +2,10 @@ package com.snaptask.app.widget
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.Button
-import androidx.glance.ButtonDefaults
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
@@ -37,6 +37,10 @@ import java.io.File
 
 class SnapTaskWidget : GlanceAppWidget() {
 
+    private val obsidianProvider = ColorProvider(Color(0xFF151311))
+    private val almondProvider   = ColorProvider(Color(0xFFEED3BA))
+    private val redProvider      = ColorProvider(Color(0xFFEF4444))
+
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val database = AppDatabase.getInstance(context)
         val topTaskEntity = database.taskDao().getTopPendingTask()
@@ -60,11 +64,10 @@ class SnapTaskWidget : GlanceAppWidget() {
 
     @Composable
     private fun EmptyWidgetContent(context: Context) {
-        // Obsidian Ink background with Almond Hearth text
         Box(
             modifier = GlanceModifier
                 .fillMaxSize()
-                .background(ColorProvider(0xFF151311))
+                .background(obsidianProvider)
                 .cornerRadius(20.dp)
                 .padding(16.dp),
             contentAlignment = Alignment.Center
@@ -73,7 +76,7 @@ class SnapTaskWidget : GlanceAppWidget() {
                 Text(
                     text = "Không có việc tồn đọng",
                     style = TextStyle(
-                        color = ColorProvider(0xFFEED3BA),
+                        color = almondProvider,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp
                     )
@@ -95,11 +98,10 @@ class SnapTaskWidget : GlanceAppWidget() {
         thumbPath: String,
         priority: Int
     ) {
-        // Velvet Curfew & Obsidian Theme Widget
         Box(
             modifier = GlanceModifier
                 .fillMaxSize()
-                .background(ColorProvider(0xFF151311))
+                .background(obsidianProvider)
                 .cornerRadius(20.dp)
                 .padding(14.dp)
         ) {
@@ -112,7 +114,7 @@ class SnapTaskWidget : GlanceAppWidget() {
                     Text(
                         text = "VIỆC CẦN LÀM",
                         style = TextStyle(
-                            color = ColorProvider(0xFFEED3BA),
+                            color = almondProvider,
                             fontWeight = FontWeight.Bold,
                             fontSize = 11.sp
                         ),
@@ -123,7 +125,7 @@ class SnapTaskWidget : GlanceAppWidget() {
                         Text(
                             text = "GẤP",
                             style = TextStyle(
-                                color = ColorProvider(0xFFEF4444),
+                                color = redProvider,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 10.sp
                             )
@@ -137,7 +139,7 @@ class SnapTaskWidget : GlanceAppWidget() {
                 Text(
                     text = title.ifBlank { "Việc cần làm" },
                     style = TextStyle(
-                        color = ColorProvider(0xFFEED3BA),
+                        color = almondProvider,
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp
                     ),
