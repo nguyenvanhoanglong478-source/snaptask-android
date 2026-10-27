@@ -5,16 +5,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.Button
+import androidx.glance.ButtonDefaults
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
-import androidx.glance.Image
-import androidx.glance.ImageProvider
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.actionStartActivity
 import androidx.glance.appwidget.GlanceAppWidget
-import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
@@ -28,8 +26,6 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
-import androidx.glance.layout.size
-import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -64,11 +60,12 @@ class SnapTaskWidget : GlanceAppWidget() {
 
     @Composable
     private fun EmptyWidgetContent(context: Context) {
+        // Obsidian Ink background with Almond Hearth text
         Box(
             modifier = GlanceModifier
                 .fillMaxSize()
-                .background(ColorProvider(0xFF1C1917))
-                .cornerRadius(18.dp)
+                .background(ColorProvider(0xFF151311))
+                .cornerRadius(20.dp)
                 .padding(16.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -76,7 +73,7 @@ class SnapTaskWidget : GlanceAppWidget() {
                 Text(
                     text = "Không có việc tồn đọng",
                     style = TextStyle(
-                        color = ColorProvider(0xFFFAFAF9),
+                        color = ColorProvider(0xFFEED3BA),
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp
                     )
@@ -98,15 +95,13 @@ class SnapTaskWidget : GlanceAppWidget() {
         thumbPath: String,
         priority: Int
     ) {
-        val thumbFile = File(thumbPath)
-        val hasThumb = thumbPath.isNotBlank() && thumbFile.exists()
-
+        // Velvet Curfew & Obsidian Theme Widget
         Box(
             modifier = GlanceModifier
                 .fillMaxSize()
-                .background(ColorProvider(0xFF1C1917))
-                .cornerRadius(18.dp)
-                .padding(12.dp)
+                .background(ColorProvider(0xFF151311))
+                .cornerRadius(20.dp)
+                .padding(14.dp)
         ) {
             Column(modifier = GlanceModifier.fillMaxSize()) {
                 // Header Row
@@ -117,7 +112,7 @@ class SnapTaskWidget : GlanceAppWidget() {
                     Text(
                         text = "VIỆC CẦN LÀM",
                         style = TextStyle(
-                            color = ColorProvider(0xFFA8A29E),
+                            color = ColorProvider(0xFFEED3BA),
                             fontWeight = FontWeight.Bold,
                             fontSize = 11.sp
                         ),
@@ -138,11 +133,11 @@ class SnapTaskWidget : GlanceAppWidget() {
 
                 Spacer(modifier = GlanceModifier.height(8.dp))
 
-                // Task Title
+                // Task Title in Almond Hearth
                 Text(
                     text = title.ifBlank { "Việc cần làm" },
                     style = TextStyle(
-                        color = ColorProvider(0xFFFAFAF9),
+                        color = ColorProvider(0xFFEED3BA),
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp
                     ),
@@ -151,7 +146,7 @@ class SnapTaskWidget : GlanceAppWidget() {
 
                 Spacer(modifier = GlanceModifier.defaultWeight())
 
-                // 1-Tap Done Button directly on widget!
+                // 1-Tap Done Button in Almond Hearth
                 Row(
                     modifier = GlanceModifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
