@@ -22,7 +22,7 @@ class SnapTaskApplication : Application() {
         super.onCreate()
 
         database = AppDatabase.getInstance(this)
-        taskRepository = TaskRepositoryImpl(database.taskDao())
+        taskRepository = TaskRepositoryImpl(this, database.taskDao())
 
         // Low-End RAM Tuning for Coil Image Loader:
         // Set maximum memory cache to 15% of total available RAM

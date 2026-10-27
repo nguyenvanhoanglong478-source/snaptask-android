@@ -62,6 +62,7 @@ import com.snaptask.app.data.local.Converters
 import com.snaptask.app.domain.model.SubTask
 import com.snaptask.app.domain.model.Task
 import com.snaptask.app.domain.model.TaskPriority
+import com.snaptask.app.ui.screens.editor.ReminderPickerDialog
 import com.snaptask.app.ui.theme.ChipInactiveBg
 import com.snaptask.app.ui.theme.ChipInactiveBorder
 import com.snaptask.app.ui.theme.ChipInactiveText
@@ -75,6 +76,7 @@ import com.snaptask.app.ui.theme.StatusSuccess
 import com.snaptask.app.ui.theme.TextMuted
 import com.snaptask.app.ui.theme.TextPrimary
 import com.snaptask.app.ui.theme.TextSecondary
+import com.snaptask.app.util.DateTimeUtils
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -98,6 +100,9 @@ fun TaskDetailScreen(
     var currentCompletionCaption by remember { mutableStateOf(task.completionCaption ?: "") }
     var isCompleted by remember { mutableStateOf(task.isCompleted) }
     var isPinned by remember { mutableStateOf(task.isPinnedToWidget) }
+    var reminderTime by remember { mutableStateOf(task.reminderTime) }
+    var reminderType by remember { mutableStateOf(task.reminderType) }
+    var showReminderPicker by remember { mutableStateOf(false) }
     var subtasks by remember { mutableStateOf(task.parsedSubtasks) }
     var newSubtaskText by remember { mutableStateOf("") }
 
@@ -384,6 +389,39 @@ fun TaskDetailScreen(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
+                    // Reminder Row
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showReminderPicker = true },
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = "Nhắc nhở / Báo thức", color = TextSecondary, fontSize = 13.sp)
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    if (reminderTime != null) LocketAccent.copy(alpha = 0.2f) else ChipInactiveBg,
+                                    RoundedCornerShape(8.dp)
+                                )
+                                .border(
+                                    1.dp,
+                                    if (reminderTime != null) LocketAccent else ChipInactiveBorder,
+                                    RoundedCornerShape(8.dp)
+                                )
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = if (reminderTime != null) "⏰ ${if (reminderType == "ALARM") "Báo thức" else "Nhắc"}: ${DateTimeUtils.formatDateTime(reminderTime!!)}" else "Chưa đặt ⏰",
+                                color = if (reminderTime != null) LocketAccent else TextMuted,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
                     // Created At Row
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -586,6 +624,8 @@ fun TaskDetailScreen(
                         completionCaption = currentCompletionCaption,
                         isCompleted = isCompleted,
                         isPinnedToWidget = isPinned,
+                        reminderTime = reminderTime,
+                        reminderType = reminderType,
                         subTasksJson = converters.fromSubTaskList(subtasks),
                         completedAt = if (isCompleted && task.completedAt == null) System.currentTimeMillis() else task.completedAt
                     )
@@ -611,5 +651,18 @@ fun TaskDetailScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
         }
+    }
+
+    if (showReminderPicker) {
+        ReminderPickerDialog(
+            initialReminderTime = reminderTime,
+            initialReminderType = reminderType,
+            onConfirm = { time, type ->
+                reminderTime = time
+                reminderType = type
+                showReminderPicker = false
+            },
+            onDismiss = { showReminderPicker = false }
+        )
     }
 }

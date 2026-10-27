@@ -6,6 +6,10 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- Camera hardware declaration: Not strictly required so app can install on devices without back camera -->
     <uses-feature
@@ -77,6 +81,26 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/notion_stack_widget_info" />
+        </receiver>
+
+        <!-- Task Reminder Broadcast Receiver -->
+        <receiver
+            android:name=".reminder.TaskReminderReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="com.snaptask.app.ACTION_TASK_REMINDER" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Notification Action Receiver (Quick Complete & Snooze) -->
+        <receiver
+            android:name=".reminder.NotificationActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.snaptask.app.ACTION_COMPLETE_TASK" />
+                <action android:name="com.snaptask.app.ACTION_SNOOZE_TASK" />
+            </intent-filter>
         </receiver>
 
     </application>

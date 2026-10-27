@@ -502,6 +502,15 @@ private fun StandardBeforeFaceContent(
                         Text(text = "GẤP 🔥", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
                 }
+                if (task.hasReminder) {
+                    Box(
+                        modifier = Modifier
+                            .background(LocketAccent, RoundedCornerShape(10.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(text = "⏰ ${task.reminderFormatted}", color = NotionDarkBg, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
             }
 
             IconButton(

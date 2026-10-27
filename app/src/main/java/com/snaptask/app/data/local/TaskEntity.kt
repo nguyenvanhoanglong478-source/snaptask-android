@@ -20,7 +20,9 @@ data class TaskEntity(
     val subTasksJson: String = "[]",
     val createdAt: Long = System.currentTimeMillis(),
     val dueDate: Long? = null,
-    val completedAt: Long? = null
+    val completedAt: Long? = null,
+    val reminderTime: Long? = null,
+    val reminderType: String = "NONE"
 ) {
     // Backwards Compatibility Accessors
     val thumbnailPath: String get() = beforeImageUri
@@ -43,7 +45,9 @@ data class TaskEntity(
             subTasksJson = subTasksJson,
             createdAt = createdAt,
             dueDate = dueDate,
-            completedAt = completedAt
+            completedAt = completedAt,
+            reminderTime = reminderTime,
+            reminderType = reminderType
         )
     }
 
@@ -63,7 +67,9 @@ data class TaskEntity(
                 subTasksJson = task.subTasksJson,
                 createdAt = task.createdAt,
                 dueDate = task.dueDate,
-                completedAt = task.completedAt
+                completedAt = task.completedAt,
+                reminderTime = task.reminderTime,
+                reminderType = task.reminderType
             )
         }
     }

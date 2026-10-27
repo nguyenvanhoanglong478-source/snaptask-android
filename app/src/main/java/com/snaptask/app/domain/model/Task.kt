@@ -17,7 +17,9 @@ data class Task(
     val subTasksJson: String = "[]",
     val createdAt: Long = System.currentTimeMillis(),
     val dueDate: Long? = null,
-    val completedAt: Long? = null
+    val completedAt: Long? = null,
+    val reminderTime: Long? = null,
+    val reminderType: String = "NONE" // NONE, NOTIFICATION, ALARM
 ) {
     // Backwards Compatibility Accessors
     val imagePath: String get() = beforeImageUri
@@ -54,4 +56,10 @@ data class Task(
 
     val hasProof: Boolean
         get() = isCompleted && !afterImageUri.isNullOrBlank()
+
+    val hasReminder: Boolean
+        get() = reminderTime != null && reminderTime > System.currentTimeMillis() && !isCompleted
+
+    val reminderFormatted: String?
+        get() = reminderTime?.let { DateTimeUtils.formatDateTime(it) }
 }
