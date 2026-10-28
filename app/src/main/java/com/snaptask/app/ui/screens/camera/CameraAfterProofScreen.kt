@@ -60,6 +60,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -645,7 +646,7 @@ fun CameraAfterProofScreen(
                         .fillMaxWidth()
                         .height(52.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(if (capturedPhotoPath != null) AuroraGradient else BgElevated)
+                        .background(if (capturedPhotoPath != null) AuroraGradient else SolidColor(BgElevated))
                         .clickable(enabled = capturedPhotoPath != null) {
                             val finalPath = capturedPhotoPath ?: ""
                             onProofCaptured(finalPath, completionCaption)

@@ -302,7 +302,7 @@ fun QuickNoteBottomSheet(
                 IconButton(
                     onClick = {
                         if (newSubtaskText.isNotBlank()) {
-                            subtasks = subtasks + SubTask(title = newSubtaskText.trim(), isDone = false)
+                            subtasks = subtasks + SubTask(id = java.util.UUID.randomUUID().toString(), title = newSubtaskText.trim(), isDone = false)
                             newSubtaskText = ""
                         }
                     },
