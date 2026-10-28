@@ -200,7 +200,7 @@ fun QuickSnapSheet(
                     val (colorAccent, label) = when (priority) {
                         TaskPriority.LOW -> Pair(BrandGreen, "Thấp")
                         TaskPriority.MEDIUM -> Pair(BrandAmber, "Vừa")
-                        TaskPriority.HIGH -> Pair(BrandRed, "GẤP 🔥")
+                        TaskPriority.HIGH -> Pair(BrandRed, "GẤP")
                     }
 
                     Box(

@@ -112,7 +112,7 @@ class LocketFocusWidget : GlanceAppWidget() {
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = "Tất cả đã xong ✨",
+                    text = "Tất cả đã xong",
                     style = TextStyle(
                         color = whiteProvider,
                         fontWeight = FontWeight.Bold,
@@ -121,7 +121,7 @@ class LocketFocusWidget : GlanceAppWidget() {
                 )
                 Spacer(modifier = GlanceModifier.height(8.dp))
                 Button(
-                    text = "📸 Chụp việc mới",
+                    text = "Chụp việc mới",
                     onClick = actionStartActivity<MainActivity>()
                 )
             }
@@ -177,7 +177,7 @@ class LocketFocusWidget : GlanceAppWidget() {
                             .padding(horizontal = 7.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            text = if (isPinned) "📌 $tag" else tag,
+                            text = if (isPinned) "[Ghim] $tag" else tag,
                             style = TextStyle(
                                 color = whiteProvider,
                                 fontWeight = FontWeight.Bold,
@@ -196,7 +196,7 @@ class LocketFocusWidget : GlanceAppWidget() {
                                 .padding(horizontal = 6.dp, vertical = 3.dp)
                         ) {
                             Text(
-                                text = "GẤP 🔥",
+                                text = "GẤP",
                                 style = TextStyle(
                                     color = whiteProvider,
                                     fontWeight = FontWeight.Bold,
@@ -252,7 +252,7 @@ class LocketFocusWidget : GlanceAppWidget() {
                     ) {
                         val taskIdParam = ActionParameters.Key<Long>("taskId")
                         Button(
-                            text = "✓ Xong",
+                            text = "Xong",
                             onClick = actionRunCallback<CompleteTaskActionCallback>(
                                 actionParametersOf(taskIdParam to taskId)
                             ),
@@ -262,7 +262,7 @@ class LocketFocusWidget : GlanceAppWidget() {
                         Spacer(modifier = GlanceModifier.width(6.dp))
 
                         Button(
-                            text = "Tiếp ❯",
+                            text = "Tiếp",
                             onClick = actionRunCallback<NextTaskActionCallback>(),
                             modifier = GlanceModifier.defaultWeight()
                         )

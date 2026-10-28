@@ -85,6 +85,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.snaptask.app.domain.model.Task
 import com.snaptask.app.domain.model.TaskPriority
+import com.snaptask.app.ui.components.SnapTaskLogo
 import com.snaptask.app.ui.screens.home.components.CompletionProofBottomSheet
 import com.snaptask.app.ui.screens.home.components.FlipTaskCard3D
 import com.snaptask.app.ui.screens.home.components.QuickNoteBottomSheet
@@ -98,6 +99,7 @@ import com.snaptask.app.ui.theme.BgSurface
 import com.snaptask.app.ui.theme.BorderHighlight
 import com.snaptask.app.ui.theme.BorderSubtle
 import com.snaptask.app.ui.theme.CardBottomScrim
+import com.snaptask.app.ui.theme.SnapTaskIcons
 import com.snaptask.app.ui.theme.StatusAmber
 import com.snaptask.app.ui.theme.StatusSuccess
 import com.snaptask.app.ui.theme.StatusUrgent
@@ -230,71 +232,99 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "SnapTask",
-                                color = TextPrimary,
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 24.sp,
-                                letterSpacing = (-0.5).sp
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(AccentPrimary.copy(alpha = 0.2f))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        SnapTaskLogo(size = 28.dp)
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "3.0",
-                                    color = AccentPrimary,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold
+                                    text = "SnapTask",
+                                    color = TextPrimary,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 22.sp,
+                                    letterSpacing = (-0.5).sp
                                 )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(AccentPrimary.copy(alpha = 0.2f))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "3.0",
+                                        color = AccentPrimary,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
+                            Text(
+                                text = "${tasks.count { !it.isCompleted }} việc cần làm • ${tasks.size} tổng",
+                                color = TextSecondary,
+                                fontSize = 11.sp
+                            )
                         }
-                        Text(
-                            text = "${tasks.count { !it.isCompleted }} việc cần làm • ${tasks.size} tổng",
-                            color = TextSecondary,
-                            fontSize = 12.sp
-                        )
                     }
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        // Search Button
-                        IconButton(
-                            onClick = { isSearchActive = !isSearchActive },
+                        // 1. Search Button (42x42 square)
+                        Box(
                             modifier = Modifier
-                                .size(38.dp)
-                                .background(BgSurface, RoundedCornerShape(12.dp))
+                                .size(42.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFF15171E))
                                 .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
+                                .clickable { isSearchActive = !isSearchActive },
+                            contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                Icons.Outlined.Search,
+                                imageVector = SnapTaskIcons.Search,
                                 contentDescription = "Tìm kiếm",
                                 tint = if (isSearchActive) AccentPrimary else TextPrimary,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(19.dp)
                             )
                         }
 
-                        // Sort Menu Trigger
+                        // 2. View Mode Switcher Button (42x42 square, Icon-Only)
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFF15171E))
+                                .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
+                                .clickable {
+                                    viewMode = if (viewMode == ViewMode.BENTO_GRID) ViewMode.FEED_FULL else ViewMode.BENTO_GRID
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (viewMode == ViewMode.BENTO_GRID) SnapTaskIcons.ListFeed else SnapTaskIcons.GridBento,
+                                contentDescription = "Chuyển chế độ xem",
+                                tint = AccentPrimary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        // 3. Sort Button (42x42 square)
                         Box {
-                            IconButton(
-                                onClick = { showSortMenu = true },
+                            Box(
                                 modifier = Modifier
-                                    .size(38.dp)
-                                    .background(BgSurface, RoundedCornerShape(12.dp))
+                                    .size(42.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0xFF15171E))
                                     .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
+                                    .clickable { showSortMenu = true },
+                                contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    Icons.Filled.Sort,
+                                    imageVector = SnapTaskIcons.Sort,
                                     contentDescription = "Sắp xếp",
                                     tint = TextPrimary,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(19.dp)
                                 )
                             }
 
@@ -320,35 +350,6 @@ fun HomeScreen(
                                         }
                                     )
                                 }
-                            }
-                        }
-
-                        // View Mode Switcher Pill (Bento vs Full)
-                        Box(
-                            modifier = Modifier
-                                .height(38.dp)
-                                .background(BgSurface, RoundedCornerShape(12.dp))
-                                .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
-                                .clickable {
-                                    viewMode = if (viewMode == ViewMode.BENTO_GRID) ViewMode.FEED_FULL else ViewMode.BENTO_GRID
-                                }
-                                .padding(horizontal = 10.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = if (viewMode == ViewMode.BENTO_GRID) Icons.Filled.GridOn else Icons.Filled.ViewAgenda,
-                                    contentDescription = "Chuyển view",
-                                    tint = AccentPrimary,
-                                    modifier = Modifier.size(17.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = if (viewMode == ViewMode.BENTO_GRID) "Bento" else "Feed",
-                                    color = TextPrimary,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
                             }
                         }
                     }
@@ -502,7 +503,6 @@ fun HomeScreen(
             FloatingGlassDock(
                 onOpenLiveCamera = onOpenLiveCamera,
                 onOpenQuickNote = { showQuickNoteSheet = true },
-                onToggleSort = { showSortMenu = true },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 20.dp)
@@ -711,49 +711,39 @@ private fun CustomFoldersRow(
             val count = tasks.count { it.folderName.equals(folder, ignoreCase = true) }
             Box(
                 modifier = Modifier
+                    .height(36.dp)
                     .clip(RoundedCornerShape(10.dp))
                     .background(if (isSelected) AccentPrimary else BgElevated)
                     .border(1.dp, if (isSelected) AccentPrimary else BorderSubtle, RoundedCornerShape(10.dp))
                     .clickable { onSelectFolder(folder) }
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                    .padding(horizontal = 16.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Filled.Folder,
-                        contentDescription = null,
-                        tint = if (isSelected) Color.White else TextSecondary,
-                        modifier = Modifier.size(13.dp)
-                    )
-                    Spacer(modifier = Modifier.width(5.dp))
-                    Text(
-                        text = "$folder ($count)",
-                        color = if (isSelected) Color.White else TextSecondary,
-                        fontSize = 11.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                    )
-                }
+                Text(
+                    text = "$folder ($count)",
+                    color = if (isSelected) Color.White else TextSecondary,
+                    fontSize = 12.sp,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                )
             }
         }
 
         item {
             Box(
                 modifier = Modifier
+                    .size(36.dp)
                     .clip(RoundedCornerShape(10.dp))
                     .background(BgElevated)
                     .border(1.dp, BorderSubtle, RoundedCornerShape(10.dp))
-                    .clickable(onClick = onAddNewFolder)
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                    .clickable(onClick = onAddNewFolder),
+                contentAlignment = Alignment.Center
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Add, contentDescription = null, tint = AccentPrimary, modifier = Modifier.size(13.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "Thư mục",
-                        color = AccentPrimary,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                Icon(
+                    imageVector = SnapTaskIcons.Plus,
+                    contentDescription = "Thêm thư mục",
+                    tint = AccentPrimary,
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
     }
@@ -766,7 +756,6 @@ private fun CustomFoldersRow(
 private fun FloatingGlassDock(
     onOpenLiveCamera: () -> Unit,
     onOpenQuickNote: () -> Unit,
-    onToggleSort: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -775,36 +764,12 @@ private fun FloatingGlassDock(
             .clip(RoundedCornerShape(32.dp))
             .background(BgSurface.copy(alpha = 0.92f))
             .border(1.dp, BorderHighlight, RoundedCornerShape(32.dp))
-            .padding(horizontal = 14.dp, vertical = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Left: Quick Filter/Sort Button
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(BgElevated)
-                    .clickable(onClick = onToggleSort)
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Sort,
-                    contentDescription = "Bộ lọc",
-                    tint = TextPrimary,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "Lọc",
-                    color = TextPrimary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-
             // Center Hero: Shutter Camera Capture Button (56dp circle with Aurora Gradient)
             Box(
                 modifier = Modifier
@@ -823,13 +788,13 @@ private fun FloatingGlassDock(
                 )
             }
 
-            // Right: Quick Note Button
+            // Quick Note Button
             Row(
                 modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
                     .background(BgElevated)
                     .clickable(onClick = onOpenQuickNote)
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
@@ -842,7 +807,7 @@ private fun FloatingGlassDock(
                 Text(
                     text = "Ghi chú",
                     color = TextPrimary,
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold
                 )
             }
@@ -861,6 +826,12 @@ fun BentoTaskCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val priorityColor = when (task.priorityEnum) {
+        TaskPriority.HIGH -> StatusUrgent
+        TaskPriority.MEDIUM -> StatusAmber
+        TaskPriority.LOW -> Color.Transparent
+    }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -906,28 +877,50 @@ fun BentoTaskCard(
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .background(BgSurface, RoundedCornerShape(6.dp))
-                                .border(1.dp, BorderSubtle, RoundedCornerShape(6.dp))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Text(
-                                text = task.folderName,
-                                color = TextSecondary,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .background(BgSurface, RoundedCornerShape(6.dp))
+                                    .border(1.dp, BorderSubtle, RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = task.folderName,
+                                    color = TextSecondary,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                            if (task.priorityEnum == TaskPriority.HIGH || task.priorityEnum == TaskPriority.MEDIUM) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(priorityColor)
+                                )
+                            }
                         }
 
-                        if (task.isPinnedToWidget) {
+                        Box(
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF15171E))
+                                .border(1.dp, BorderSubtle, CircleShape)
+                                .clickable(onClick = onTogglePin),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Icon(
-                                Icons.Filled.PushPin,
-                                contentDescription = null,
-                                tint = AccentPrimary,
-                                modifier = Modifier.size(13.dp)
+                                imageVector = SnapTaskIcons.Pin,
+                                contentDescription = "Ghim",
+                                tint = if (task.isPinnedToWidget) AccentPrimary else TextSecondary,
+                                modifier = Modifier.size(14.dp)
                             )
                         }
                     }
@@ -947,9 +940,11 @@ fun BentoTaskCard(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(
-                            onClick = onToggleStatus,
-                            modifier = Modifier.size(24.dp)
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clickable(onClick = onToggleStatus),
+                            contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = if (task.isCompleted) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
@@ -971,7 +966,7 @@ fun BentoTaskCard(
             }
 
             if (photoFile != null && photoFile.exists()) {
-                // Top Row: Tag badge + Pin Icon
+                // Top Row: Tag badge + 6dp priority dot on Left, 30dp round Pin Button on Right
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -979,35 +974,51 @@ fun BentoTaskCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .background(if (task.hasProof) StatusSuccess else Color(0xCC000000), RoundedCornerShape(7.dp))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Text(
-                            text = if (task.hasProof) "AFTER ✨" else task.folderName,
-                            color = if (task.hasProof) BgPrimary else Color.White,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Box(
+                            modifier = Modifier
+                                .background(if (task.hasProof) StatusSuccess else Color(0xCC000000), RoundedCornerShape(7.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = if (task.hasProof) "AFTER" else task.folderName,
+                                color = if (task.hasProof) BgPrimary else Color.White,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        if (task.priorityEnum == TaskPriority.HIGH || task.priorityEnum == TaskPriority.MEDIUM) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(priorityColor)
+                            )
+                        }
                     }
 
-                    IconButton(
-                        onClick = onTogglePin,
+                    Box(
                         modifier = Modifier
-                            .size(26.dp)
-                            .background(Color(0xCC000000), CircleShape)
+                            .size(30.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF15171E).copy(alpha = 0.85f))
+                            .border(1.dp, BorderSubtle, CircleShape)
+                            .clickable(onClick = onTogglePin),
+                        contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = if (task.isPinnedToWidget) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+                            imageVector = SnapTaskIcons.Pin,
                             contentDescription = "Ghim",
                             tint = if (task.isPinnedToWidget) AccentPrimary else Color.White,
-                            modifier = Modifier.size(13.dp)
+                            modifier = Modifier.size(14.dp)
                         )
                     }
                 }
 
-                // Bottom Scrim Bar
+                // Bottom Scrim Bar: 24dp Checkmark spaced 12dp from title
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1016,9 +1027,11 @@ fun BentoTaskCard(
                         .padding(horizontal = 8.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(
-                        onClick = onToggleStatus,
-                        modifier = Modifier.size(22.dp)
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clickable(onClick = onToggleStatus),
+                        contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = if (task.isCompleted) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
@@ -1027,7 +1040,7 @@ fun BentoTaskCard(
                             modifier = Modifier.size(18.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = task.title,
                         color = if (task.isCompleted) TextMuted else TextPrimary,

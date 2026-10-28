@@ -1,0 +1,110 @@
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt">
+
+    <aapt:attr name="android:drawable">
+        <vector
+            android:width="108dp"
+            android:height="108dp"
+            android:viewportWidth="108"
+            android:viewportHeight="108">
+
+            <!-- 1. Viewfinder Brackets Group -->
+            <group
+                android:name="viewfinder_group"
+                android:pivotX="54"
+                android:pivotY="54">
+                <path
+                    android:name="brackets_path"
+                    android:strokeColor="#F8FAFC"
+                    android:strokeWidth="3.5"
+                    android:strokeLineCap="round"
+                    android:strokeLineJoin="round"
+                    android:pathData="M33,45 L33,37 A4,4 0 0 1 37,33 L45,33 M63,33 L71,33 A4,4 0 0 1 75,37 L75,45 M75,63 L75,71 A4,4 0 0 1 71,75 L63,75 M45,75 L37,75 A4,4 0 0 1 33,71 L33,63" />
+            </group>
+
+            <!-- 2. Center Lens & Checkmark Group -->
+            <group
+                android:name="center_group"
+                android:pivotX="54"
+                android:pivotY="54">
+                <!-- Lens Ring -->
+                <path
+                    android:name="lens_ring"
+                    android:strokeColor="#6366F1"
+                    android:strokeWidth="3.2"
+                    android:strokeLineCap="round"
+                    android:fillColor="#00000000"
+                    android:pathData="M54,40 A14,14 0 1 1 53.99,40"
+                    android:trimPathEnd="0" />
+
+                <!-- Center Task Checkmark -->
+                <path
+                    android:name="check_mark"
+                    android:strokeColor="#10B981"
+                    android:strokeWidth="3.8"
+                    android:strokeLineCap="round"
+                    android:strokeLineJoin="round"
+                    android:pathData="M46,54.5 L51.5,60 L63,47.5"
+                    android:trimPathEnd="0" />
+            </group>
+        </vector>
+    </aapt:attr>
+
+    <!-- Animation Target: Viewfinder Brackets (Scale + Rotation) -->
+    <target android:name="viewfinder_group">
+        <aapt:attr name="android:animation">
+            <set android:ordering="together">
+                <objectAnimator
+                    android:duration="450"
+                    android:interpolator="@android:interpolator/overshoot"
+                    android:propertyName="scaleX"
+                    android:valueFrom="0.65"
+                    android:valueTo="1.0"
+                    android:valueType="floatType" />
+                <objectAnimator
+                    android:duration="450"
+                    android:interpolator="@android:interpolator/overshoot"
+                    android:propertyName="scaleY"
+                    android:valueFrom="0.65"
+                    android:valueTo="1.0"
+                    android:valueType="floatType" />
+                <objectAnimator
+                    android:duration="450"
+                    android:interpolator="@android:interpolator/fast_out_slow_in"
+                    android:propertyName="rotation"
+                    android:valueFrom="-12"
+                    android:valueTo="0"
+                    android:valueType="floatType" />
+            </set>
+        </aapt:attr>
+    </target>
+
+    <!-- Animation Target: Center Lens Ring (trimPathEnd 0 -> 1) -->
+    <target android:name="lens_ring">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:startOffset="50"
+                android:duration="450"
+                android:interpolator="@android:interpolator/fast_out_slow_in"
+                android:propertyName="trimPathEnd"
+                android:valueFrom="0.0"
+                android:valueTo="1.0"
+                android:valueType="floatType" />
+        </aapt:attr>
+    </target>
+
+    <!-- Animation Target: Checkmark (trimPathEnd 0 -> 1) -->
+    <target android:name="check_mark">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:startOffset="240"
+                android:duration="380"
+                android:interpolator="@android:interpolator/fast_out_slow_in"
+                android:propertyName="trimPathEnd"
+                android:valueFrom="0.0"
+                android:valueTo="1.0"
+                android:valueType="floatType" />
+        </aapt:attr>
+    </target>
+
+</animated-vector>

@@ -37,7 +37,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
         when (intent.action) {
             ACTION_STOP_ALARM -> {
                 notificationManager.cancel(taskId.toInt())
-                Toast.makeText(context, "Đã tắt chuông báo thức! 🔕", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Đã tắt chuông báo thức!", Toast.LENGTH_SHORT).show()
             }
 
             ACTION_COMPLETE_TASK -> {
@@ -58,7 +58,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
                         } catch (_: Exception) {}
 
                         Handler(Looper.getMainLooper()).post {
-                            Toast.makeText(context, "Đã hoàn thành công việc! ✅", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Đã hoàn thành công việc!", Toast.LENGTH_SHORT).show()
                         }
                     } finally {
                         pendingResult.finish()
@@ -86,7 +86,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
                 )
 
                 TaskReminderScheduler.scheduleReminder(context, snoozedTask)
-                Toast.makeText(context, "Sẽ nhắc lại sau 10 phút! 💤", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Sẽ nhắc lại sau 10 phút!", Toast.LENGTH_SHORT).show()
             }
         }
     }

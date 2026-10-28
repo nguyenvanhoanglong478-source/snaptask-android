@@ -86,6 +86,7 @@ import com.snaptask.app.ui.theme.BgPrimary
 import com.snaptask.app.ui.theme.BgSurface
 import com.snaptask.app.ui.theme.BorderHighlight
 import com.snaptask.app.ui.theme.BorderSubtle
+import com.snaptask.app.ui.theme.SnapTaskIcons
 import com.snaptask.app.ui.theme.StatusUrgent
 import com.snaptask.app.ui.theme.ChipActiveBg
 import com.snaptask.app.ui.theme.ChipActiveText
@@ -437,58 +438,6 @@ fun CameraCreatorScreen(
                         },
                         modifier = Modifier.fillMaxSize()
                     )
-
-                    // HUD Top-Left: Flash Mode Toggle Button
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(14.dp)
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(Color(0x80000000))
-                            .border(1.dp, if (flashMode != CameraFlashMode.OFF) AccentPrimary else Color(0x33FFFFFF), CircleShape)
-                            .clickable { applyFlashMode(flashMode.next()) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = when (flashMode) {
-                                CameraFlashMode.OFF -> Icons.Filled.FlashOff
-                                CameraFlashMode.ON -> Icons.Filled.FlashOn
-                                CameraFlashMode.AUTO -> Icons.Filled.FlashAuto
-                                CameraFlashMode.TORCH -> Icons.Filled.Bolt
-                            },
-                            contentDescription = "Flash: ${flashMode.name}",
-                            tint = if (flashMode != CameraFlashMode.OFF) AccentPrimary else Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    // HUD Top-Right: Flip Camera Button
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(14.dp)
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(Color(0x80000000))
-                            .border(1.dp, Color(0x33FFFFFF), CircleShape)
-                            .clickable(enabled = !isCapturing) {
-                                camera?.cameraControl?.enableTorch(false)
-                                cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
-                                    CameraSelector.DEFAULT_FRONT_CAMERA
-                                } else {
-                                    CameraSelector.DEFAULT_BACK_CAMERA
-                                }
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Cameraswitch,
-                            contentDescription = "Đổi camera",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
                 } else {
                     // Instantly display captured image in 1:1 squircle
                     AsyncImage(
@@ -501,7 +450,7 @@ fun CameraCreatorScreen(
                         contentScale = ContentScale.Crop
                     )
 
-                    // Top Badge: "✅ ĐÃ CHỤP"
+                    // Top Badge: "ĐÃ CHỤP"
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopStart)
@@ -511,7 +460,7 @@ fun CameraCreatorScreen(
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
                         Text(
-                            text = "✅ ĐÃ CHỤP",
+                            text = "ĐÃ CHỤP",
                             color = AccentPrimary,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
@@ -531,65 +480,109 @@ fun CameraCreatorScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // 2. Camera Controls: Single Centered Shutter or Retake Button
-            if (cameraState == CameraState.PREVIEWING) {
+            // 2. Camera Controls: 3 Circular Buttons (Flash - Shutter/Retake - Flip) spaced by 32dp
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(32.dp, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Left: Flash Button (46x46 circular)
                 Box(
                     modifier = Modifier
-                        .size(74.dp)
+                        .size(46.dp)
                         .clip(CircleShape)
-                        .background(Color.Transparent)
-                        .border(3.dp, Color.White.copy(alpha = 0.9f), CircleShape)
-                        .padding(5.dp)
-                        .clip(CircleShape)
-                        .background(AuroraGradient)
-                        .clickable(enabled = !isCapturing) {
-                            takePhoto()
-                        },
+                        .background(Color(0xFF15171E))
+                        .border(1.dp, if (flashMode != CameraFlashMode.OFF) AccentPrimary else BorderSubtle, CircleShape)
+                        .clickable { applyFlashMode(flashMode.next()) },
                     contentAlignment = Alignment.Center
                 ) {
-                    if (isCapturing) {
-                        CircularProgressIndicator(
-                            color = Color.White,
-                            modifier = Modifier.size(26.dp),
-                            strokeWidth = 3.dp
-                        )
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .size(22.dp)
-                                .background(Color.White, CircleShape)
+                    Icon(
+                        imageVector = when (flashMode) {
+                            CameraFlashMode.OFF -> SnapTaskIcons.FlashOff
+                            CameraFlashMode.ON, CameraFlashMode.TORCH -> SnapTaskIcons.FlashOn
+                            CameraFlashMode.AUTO -> SnapTaskIcons.FlashAuto
+                        },
+                        contentDescription = "Flash: ${flashMode.name}",
+                        tint = if (flashMode != CameraFlashMode.OFF) AccentPrimary else Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                // Center: Shutter (72x72) or Retake (56x56)
+                if (cameraState == CameraState.PREVIEWING) {
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(CircleShape)
+                            .background(Color.Transparent)
+                            .border(2.5.dp, Color.White.copy(alpha = 0.9f), CircleShape)
+                            .padding(5.dp)
+                            .clip(CircleShape)
+                            .background(AuroraGradient)
+                            .clickable(enabled = !isCapturing) {
+                                takePhoto()
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isCapturing) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(26.dp),
+                                strokeWidth = 3.dp
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .background(Color.White, CircleShape)
+                            )
+                        }
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF15171E))
+                            .border(1.5.dp, StatusUrgent, CircleShape)
+                            .clickable {
+                                capturedPhotoPath?.let { File(it).delete() }
+                                capturedPhotoPath = null
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = SnapTaskIcons.Retake,
+                            contentDescription = "Chụp lại",
+                            tint = StatusUrgent,
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 }
-            } else {
-                // When CAPTURED: Retake Button ("🔄 Chụp lại")
+
+                // Right: Flip Camera Button (46x46 circular)
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(BgSurface)
-                        .border(1.dp, BorderSubtle, RoundedCornerShape(16.dp))
-                        .clickable {
-                            capturedPhotoPath?.let { File(it).delete() }
-                            capturedPhotoPath = null
-                        }
-                        .padding(horizontal = 20.dp, vertical = 10.dp),
+                        .size(46.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF15171E))
+                        .border(1.dp, BorderSubtle, CircleShape)
+                        .clickable(enabled = !isCapturing && cameraState == CameraState.PREVIEWING) {
+                            camera?.cameraControl?.enableTorch(false)
+                            cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
+                                CameraSelector.DEFAULT_FRONT_CAMERA
+                            } else {
+                                CameraSelector.DEFAULT_BACK_CAMERA
+                            }
+                        },
                     contentAlignment = Alignment.Center
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Filled.Refresh,
-                            contentDescription = "Chụp lại",
-                            tint = AccentPrimary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Chụp lại (Retake)",
-                            color = TextPrimary,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    Icon(
+                        imageVector = SnapTaskIcons.CameraFlip,
+                        contentDescription = "Đổi camera",
+                        tint = if (cameraState == CameraState.PREVIEWING) Color.White else TextMuted,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
 
@@ -623,180 +616,114 @@ fun CameraCreatorScreen(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Quick Property Chips
-                Text(
-                    text = "THUỘC TÍNH (PROPERTIES)",
-                    color = TextSecondary,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                // Quick Property Chips (1 single horizontal row of height 44.dp, fillMaxWidth, spacedBy 10.dp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // 1. Folder Chip
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .height(38.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(BgElevated)
-                                .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
-                                .clickable {
-                                    val nextIdx = (folderOptions.indexOf(selectedFolder) + 1) % folderOptions.size
-                                    selectedFolder = folderOptions[nextIdx]
-                                }
-                                .padding(horizontal = 12.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    Icons.Filled.Folder,
-                                    contentDescription = null,
-                                    tint = AccentPrimary,
-                                    modifier = Modifier.size(15.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = selectedFolder,
-                                    color = TextPrimary,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
+                    // 1. Folder selector chip (weight 1f, height 44dp, rounded 12dp)
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(BgElevated)
+                            .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
+                            .clickable {
+                                val nextIdx = (folderOptions.indexOf(selectedFolder) + 1) % folderOptions.size
+                                selectedFolder = folderOptions[nextIdx]
                             }
-                        }
-                    }
-
-                    // 2. Tag Property Chip
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .height(38.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(AccentPrimary.copy(alpha = 0.2f))
-                                .border(1.dp, AccentPrimary, RoundedCornerShape(12.dp))
-                                .clickable {
-                                    val nextIndex = (selectedTag.ordinal + 1) % TaskTag.entries.size
-                                    selectedTag = TaskTag.entries[nextIndex]
-                                }
-                                .padding(horizontal = 12.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
+                            .padding(horizontal = 12.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = SnapTaskIcons.Folder,
+                                contentDescription = "Thư mục",
+                                tint = AccentPrimary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "🏷️ ${selectedTag.displayName}",
-                                color = AccentPrimary,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
+                                text = selectedFolder,
+                                color = TextPrimary,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1
                             )
                         }
                     }
 
-                    // 3. Priority Property Chip
-                    item {
-                        val priorityColor = when (selectedPriority) {
-                            TaskPriority.LOW -> StatusSuccess
-                            TaskPriority.MEDIUM -> StatusAmber
-                            TaskPriority.HIGH -> StatusUrgent
-                        }
-                        Box(
-                            modifier = Modifier
-                                .height(38.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(priorityColor.copy(alpha = 0.2f))
-                                .border(1.dp, priorityColor, RoundedCornerShape(12.dp))
-                                .clickable {
-                                    val nextIndex = (selectedPriority.ordinal + 1) % TaskPriority.entries.size
-                                    selectedPriority = TaskPriority.entries[nextIndex]
-                                }
-                                .padding(horizontal = 12.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(7.dp)
-                                        .clip(CircleShape)
-                                        .background(priorityColor)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = selectedPriority.label,
-                                    color = priorityColor,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
+                    // 2. Priority button (Icon-only 44.dp x 44.dp)
+                    val priorityColor = when (selectedPriority) {
+                        TaskPriority.LOW -> TextMuted
+                        TaskPriority.MEDIUM -> Color(0xFFF59E0B)
+                        TaskPriority.HIGH -> Color(0xFFF43F5E)
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFF15171E))
+                            .border(1.dp, if (selectedPriority != TaskPriority.LOW) priorityColor else BorderSubtle, RoundedCornerShape(12.dp))
+                            .clickable {
+                                val nextIndex = (selectedPriority.ordinal + 1) % TaskPriority.entries.size
+                                selectedPriority = TaskPriority.entries[nextIndex]
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = SnapTaskIcons.FlagPriority,
+                            contentDescription = "Mức độ ưu tiên",
+                            tint = priorityColor,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
 
-                    // 4. Reminder Property Chip
-                    item {
-                        val hasReminder = reminderTime != null
-                        Box(
-                            modifier = Modifier
-                                .height(38.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (hasReminder) AccentPrimary.copy(alpha = 0.2f) else BgElevated)
-                                .border(1.dp, if (hasReminder) AccentPrimary else BorderSubtle, RoundedCornerShape(12.dp))
-                                .clickable { showReminderPicker = true }
-                                .padding(horizontal = 12.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    Icons.Filled.Alarm,
-                                    contentDescription = "Nhắc nhở",
-                                    tint = if (hasReminder) AccentPrimary else TextSecondary,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = if (hasReminder) "⏰ ${DateTimeUtils.formatTime(reminderTime!!)}" else "⏰ Nhắc nhở",
-                                    color = if (hasReminder) AccentPrimary else TextPrimary,
-                                    fontSize = 12.sp,
-                                    fontWeight = if (hasReminder) FontWeight.Bold else FontWeight.Medium
-                                )
-                            }
-                        }
+                    // 3. Reminder button (Icon-only 44.dp x 44.dp)
+                    val hasReminder = reminderTime != null
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (hasReminder) AccentPrimary.copy(alpha = 0.2f) else Color(0xFF15171E))
+                            .border(1.dp, if (hasReminder) AccentPrimary else BorderSubtle, RoundedCornerShape(12.dp))
+                            .clickable { showReminderPicker = true },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = SnapTaskIcons.AlarmClock,
+                            contentDescription = "Nhắc nhở",
+                            tint = if (hasReminder) AccentPrimary else TextSecondary,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
 
-                    // 5. Pin to Widget Property Chip
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .height(38.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (isPinned) AccentPrimary.copy(alpha = 0.2f) else BgElevated)
-                                .border(1.dp, if (isPinned) AccentPrimary else BorderSubtle, RoundedCornerShape(12.dp))
-                                .clickable { isPinned = !isPinned }
-                                .padding(horizontal = 12.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    Icons.Filled.PushPin,
-                                    contentDescription = "Ghim",
-                                    tint = if (isPinned) AccentPrimary else TextSecondary,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = if (isPinned) "📌 Đã ghim Widget" else "📌 Ghim Widget",
-                                    color = if (isPinned) AccentPrimary else TextPrimary,
-                                    fontSize = 12.sp,
-                                    fontWeight = if (isPinned) FontWeight.Bold else FontWeight.Medium
-                                )
-                            }
-                        }
+                    // 4. Pin button (Icon-only 44.dp x 44.dp)
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isPinned) AccentPrimary.copy(alpha = 0.2f) else Color(0xFF15171E))
+                            .border(1.dp, if (isPinned) AccentPrimary else BorderSubtle, RoundedCornerShape(12.dp))
+                            .clickable { isPinned = !isPinned },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = SnapTaskIcons.Pin,
+                            contentDescription = "Ghim widget",
+                            tint = if (isPinned) AccentPrimary else TextSecondary,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
-                // Primary Button: "Lưu & Ghim Widget 🚀" with Aurora Gradient
+                // Primary Action Button: "Lưu Task" (52dp, rounded 16dp, Aurora gradient)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -819,12 +746,21 @@ fun CameraCreatorScreen(
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "Lưu & Ghim Widget 🚀",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = SnapTaskIcons.Check,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Lưu Task",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp
+                        )
+                    }
                 }
             }
         }

@@ -1,18 +1,54 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Velvet Background -->
+
+    <!-- Background Gradient -->
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="0"
+                android:startY="0"
+                android:endX="108"
+                android:endY="108"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#0B0C10" />
+                <item android:offset="1.0" android:color="#1A1C2E" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Subtle Grid Lines -->
     <path
-        android:fillColor="#4B262F"
-        android:pathData="M0,0h108v108h-108z" />
-    <!-- Camera Body -->
+        android:strokeColor="#282C3A"
+        android:strokeWidth="0.8"
+        android:strokeAlpha="0.45"
+        android:pathData="M27,0v108 M54,0v108 M81,0v108 M0,27h108 M0,54h108 M0,81h108" />
+
+    <!-- 4 Viewfinder Brackets in Safe Zone (33..75) -->
     <path
-        android:fillColor="#EED3BA"
-        android:pathData="M38,32 L44,26 L64,26 L70,32 L82,32 C85.3,32 88,34.7 88,38 L88,74 C88,77.3 85.3,80 82,80 L26,80 C22.7,80 20,77.3 20,74 L20,38 C20,34.7 22.7,32 26,32 L38,32 Z M54,70 C62.8,70 70,62.8 70,54 C70,45.2 62.8,38 54,38 C45.2,38 38,45.2 38,54 C38,62.8 45.2,70 54,70 Z" />
-    <!-- Lens inner circle -->
+        android:strokeColor="#F8FAFC"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M33,45 L33,37 A4,4 0 0 1 37,33 L45,33 M63,33 L71,33 A4,4 0 0 1 75,37 L75,45 M75,63 L75,71 A4,4 0 0 1 71,75 L63,75 M45,75 L37,75 A4,4 0 0 1 33,71 L33,63" />
+
+    <!-- Center Camera Lens Ring (Electric Indigo) -->
     <path
-        android:fillColor="#151311"
-        android:pathData="M54,64 C59.5,64 64,59.5 64,54 C64,48.5 59.5,44 54,44 C48.5,44 44,48.5 44,54 C44,59.5 48.5,64 54,64 Z" />
+        android:strokeColor="#6366F1"
+        android:strokeWidth="3.2"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M54,40 A14,14 0 1 1 53.99,40" />
+
+    <!-- Center Task Checkmark (Emerald Mint) -->
+    <path
+        android:strokeColor="#10B981"
+        android:strokeWidth="3.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M46,54.5 L51.5,60 L63,47.5" />
+
 </vector>

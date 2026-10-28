@@ -1,9 +1,13 @@
 package com.snaptask.app.ui
 
 import android.Manifest
+import android.animation.AnimatorSet
+import android.animation.ObjectAnimator
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.view.View
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -20,8 +24,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.core.animation.doOnEnd
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.glance.appwidget.updateAll
+import androidx.lifecycle.lifecycleScope
 import com.snaptask.app.SnapTaskApplication
 import com.snaptask.app.domain.model.Task
 import com.snaptask.app.reminder.AlarmSoundPlayer
@@ -35,6 +42,7 @@ import com.snaptask.app.util.NotificationPermissionHelper
 import com.snaptask.app.widget.LocketFocusWidget
 import com.snaptask.app.widget.NotionStackWidget
 import com.snaptask.app.widget.SnapTaskWidget
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 enum class ScreenState {
@@ -59,7 +67,29 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+
+        var keepSplashScreen = true
+        splashScreen.setKeepOnScreenCondition { keepSplashScreen }
+        lifecycleScope.launch {
+            delay(550)
+            keepSplashScreen = false
+        }
+
+        splashScreen.setOnExitAnimationListener { splashScreenView ->
+            val iconView = splashScreenView.iconView
+            val scaleX = ObjectAnimator.ofFloat(iconView, View.SCALE_X, 1f, 1.3f)
+            val scaleY = ObjectAnimator.ofFloat(iconView, View.SCALE_Y, 1f, 1.3f)
+            val alpha = ObjectAnimator.ofFloat(splashScreenView.view, View.ALPHA, 1f, 0f)
+            AnimatorSet().apply {
+                playTogether(scaleX, scaleY, alpha)
+                duration = 250
+                interpolator = AccelerateDecelerateInterpolator()
+                doOnEnd { splashScreenView.remove() }
+                start()
+            }
+        }
 
         val app = application as SnapTaskApplication
         val repository = app.taskRepository
@@ -114,13 +144,13 @@ class MainActivity : ComponentActivity() {
                         val diffSec = diffMs / 1000
                         val diffMin = diffSec / 60
                         return when {
-                            diffSec in 0..10 -> "\n⏰ Đã đặt nhắc nhở sau ${diffSec.coerceAtLeast(1)} giây!"
-                            diffMin < 60 -> "\n⏰ Đã đặt nhắc nhở sau ${diffMin} phút nữa"
+                            diffSec in 0..10 -> "\nĐã đặt nhắc nhở sau ${diffSec.coerceAtLeast(1)} giây"
+                            diffMin < 60 -> "\nĐã đặt nhắc nhở sau ${diffMin} phút nữa"
                             else -> {
                                 val hours = diffMin / 60
                                 val remMin = diffMin % 60
-                                if (remMin > 0) "\n⏰ Đã đặt nhắc nhở sau ${hours}h ${remMin}m nữa"
-                                else "\n⏰ Đã đặt nhắc nhở sau ${hours} giờ nữa"
+                                if (remMin > 0) "\nĐã đặt nhắc nhở sau ${hours}h ${remMin}m nữa"
+                                else "\nĐã đặt nhắc nhở sau ${hours} giờ nữa"
                             }
                         }
                     }
@@ -169,7 +199,7 @@ class MainActivity : ComponentActivity() {
                                             completedAt = System.currentTimeMillis()
                                         )
                                         updateWidgets()
-                                        Toast.makeText(this@MainActivity, "Đã hoàn thành! ⚡", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(this@MainActivity, "Đã hoàn thành!", Toast.LENGTH_SHORT).show()
                                     }
                                 },
                                 onToggleTaskStatus = { task ->
@@ -193,7 +223,7 @@ class MainActivity : ComponentActivity() {
                                         repository.createTask(newTask)
                                         updateWidgets()
                                         val reminderNotice = formatReminderConfirmation(newTask)
-                                        Toast.makeText(this@MainActivity, "Đã lưu ghi chú! ✍️$reminderNotice", Toast.LENGTH_LONG).show()
+                                        Toast.makeText(this@MainActivity, "Đã lưu ghi chú!$reminderNotice", Toast.LENGTH_LONG).show()
                                     }
                                 }
                             )
@@ -207,7 +237,7 @@ class MainActivity : ComponentActivity() {
                                         updateWidgets()
                                         currentScreen = ScreenState.HOME
                                         val reminderNotice = formatReminderConfirmation(newTask)
-                                        Toast.makeText(this@MainActivity, "Đã lưu việc cần làm! 🚀$reminderNotice", Toast.LENGTH_LONG).show()
+                                        Toast.makeText(this@MainActivity, "Đã lưu việc cần làm!$reminderNotice", Toast.LENGTH_LONG).show()
                                     }
                                 },
                                 onClose = {
@@ -231,7 +261,7 @@ class MainActivity : ComponentActivity() {
                                             updateWidgets()
                                             selectedTask = null
                                             currentScreen = ScreenState.HOME
-                                            Toast.makeText(this@MainActivity, "Đã hoàn thành Before / After! ✨", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(this@MainActivity, "Đã hoàn thành Before / After!", Toast.LENGTH_SHORT).show()
                                         }
                                     },
                                     onClose = {

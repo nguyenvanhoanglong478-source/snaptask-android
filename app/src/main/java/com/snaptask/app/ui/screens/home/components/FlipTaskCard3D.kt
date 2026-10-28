@@ -71,6 +71,7 @@ import com.snaptask.app.ui.theme.BgPrimary
 import com.snaptask.app.ui.theme.BgSurface
 import com.snaptask.app.ui.theme.BorderSubtle
 import com.snaptask.app.ui.theme.CardBottomScrim
+import com.snaptask.app.ui.theme.SnapTaskIcons
 import com.snaptask.app.ui.theme.StatusAmber
 import com.snaptask.app.ui.theme.StatusSuccess
 import com.snaptask.app.ui.theme.StatusUrgent
@@ -238,21 +239,12 @@ fun QuickNoteFeedCard(
                             .border(1.dp, BorderSubtle, RoundedCornerShape(8.dp))
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Filled.Folder,
-                                contentDescription = null,
-                                tint = AccentPrimary,
-                                modifier = Modifier.size(12.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = task.folderName,
-                                color = TextSecondary,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
+                        Text(
+                            text = task.folderName,
+                            color = TextSecondary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
 
                     // Priority badge
@@ -264,7 +256,7 @@ fun QuickNoteFeedCard(
                                 .padding(horizontal = 7.dp, vertical = 4.dp)
                         ) {
                             Text(
-                                text = "Gấp 🔥",
+                                text = "Gấp",
                                 color = StatusUrgent,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold
@@ -281,7 +273,7 @@ fun QuickNoteFeedCard(
                                 .padding(horizontal = 7.dp, vertical = 4.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Filled.Alarm, contentDescription = null, tint = AccentPrimary, modifier = Modifier.size(11.dp))
+                                Icon(SnapTaskIcons.AlarmClock, contentDescription = null, tint = AccentPrimary, modifier = Modifier.size(11.dp))
                                 Spacer(modifier = Modifier.width(3.dp))
                                 Text(
                                     text = task.reminderFormatted ?: "",
@@ -294,26 +286,28 @@ fun QuickNoteFeedCard(
                     }
                 }
 
-                // Pin Button
-                IconButton(
-                    onClick = onTogglePin,
+                // Pin Button (36dp round button)
+                Box(
                     modifier = Modifier
-                        .size(32.dp)
-                        .background(BgElevated, CircleShape)
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF15171E))
                         .border(1.dp, BorderSubtle, CircleShape)
+                        .clickable(onClick = onTogglePin),
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = if (task.isPinnedToWidget) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+                        imageVector = SnapTaskIcons.Pin,
                         contentDescription = "Ghim",
                         tint = if (task.isPinnedToWidget) AccentPrimary else TextSecondary,
-                        modifier = Modifier.size(15.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Title and Interactive Checkbox
+            // Title and Interactive Checkbox (24dp spaced 12dp from title)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Top
@@ -321,22 +315,24 @@ fun QuickNoteFeedCard(
                 Box(
                     modifier = Modifier
                         .padding(top = 2.dp)
+                        .size(24.dp)
                         .scale(checkScale)
                         .clickable {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             isCheckedInternal = !isCheckedInternal
                             onToggleStatus()
-                        }
+                        },
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = if (task.isCompleted) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
                         contentDescription = "Trạng thái",
                         tint = if (task.isCompleted) StatusSuccess else TextSecondary,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.width(10.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -445,7 +441,7 @@ private fun AfterFaceContent(
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = "✨ AFTER • HOÀN THÀNH",
+                        text = "AFTER • HOÀN THÀNH",
                         color = BgPrimary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.ExtraBold
@@ -486,22 +482,24 @@ private fun AfterFaceContent(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onToggleStatus()
-                    },
-                    modifier = Modifier.size(28.dp)
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onToggleStatus()
+                        },
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Filled.CheckCircle,
                         contentDescription = "Hoàn thành",
                         tint = StatusSuccess,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -525,14 +523,17 @@ private fun AfterFaceContent(
                     }
                 }
 
-                IconButton(
-                    onClick = onTogglePin,
+                Box(
                     modifier = Modifier
-                        .size(32.dp)
-                        .background(Color(0xCC000000), CircleShape)
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF15171E).copy(alpha = 0.85f))
+                        .border(1.dp, BorderSubtle, CircleShape)
+                        .clickable(onClick = onTogglePin),
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = if (task.isPinnedToWidget) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+                        imageVector = SnapTaskIcons.Pin,
                         contentDescription = "Ghim",
                         tint = if (task.isPinnedToWidget) AccentPrimary else Color.White,
                         modifier = Modifier.size(16.dp)
@@ -586,7 +587,7 @@ private fun BeforeFlippedFaceContent(
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = "📌 BEFORE • BẮT ĐẦU",
+                        text = "BEFORE • BẮT ĐẦU",
                         color = Color.White,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.ExtraBold
@@ -629,22 +630,24 @@ private fun BeforeFlippedFaceContent(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onToggleStatus()
-                    },
-                    modifier = Modifier.size(28.dp)
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onToggleStatus()
+                        },
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = if (task.isCompleted) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
                         contentDescription = "Status",
                         tint = if (task.isCompleted) StatusSuccess else TextPrimary,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -733,7 +736,7 @@ private fun StandardBeforeFaceContent(
                             .background(StatusUrgent, RoundedCornerShape(10.dp))
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
-                        Text(text = "Gấp 🔥", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Text(text = "Gấp", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
                 }
                 if (task.hasReminder) {
@@ -742,27 +745,34 @@ private fun StandardBeforeFaceContent(
                             .background(AccentPrimary, RoundedCornerShape(10.dp))
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
-                        Text(text = "⏰ ${task.reminderFormatted}", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(SnapTaskIcons.AlarmClock, contentDescription = null, tint = Color.White, modifier = Modifier.size(11.dp))
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(text = task.reminderFormatted ?: "", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
 
-            IconButton(
-                onClick = onTogglePin,
+            Box(
                 modifier = Modifier
-                    .size(34.dp)
-                    .background(Color(0xCC000000), CircleShape)
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF15171E).copy(alpha = 0.85f))
+                    .border(1.dp, BorderSubtle, CircleShape)
+                    .clickable(onClick = onTogglePin),
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = if (task.isPinnedToWidget) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+                    imageVector = SnapTaskIcons.Pin,
                     contentDescription = "Ghim",
                     tint = if (task.isPinnedToWidget) AccentPrimary else Color.White,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(16.dp)
                 )
             }
         }
 
-        // Bottom Scrim Bar
+        // Bottom Scrim Bar: 24dp Checkmark spaced 12dp from title
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -771,21 +781,23 @@ private fun StandardBeforeFaceContent(
                 .padding(horizontal = 14.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onToggleStatus()
-                },
-                modifier = Modifier.size(28.dp)
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .clickable {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onToggleStatus()
+                    },
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = if (task.isCompleted) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
                     contentDescription = "Hoàn thành",
                     tint = if (task.isCompleted) StatusSuccess else TextPrimary,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(22.dp)
                 )
             }
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = task.title,
@@ -842,7 +854,7 @@ private fun MiniPipThumbnail(
             )
         }
 
-        // Overlay Icon 🔄
+        // Overlay Icon
         Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)

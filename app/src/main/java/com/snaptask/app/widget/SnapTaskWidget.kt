@@ -111,7 +111,7 @@ class SnapTaskWidget : GlanceAppWidget() {
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = "Không có việc tồn đọng ✨",
+                    text = "Không có việc tồn đọng",
                     style = TextStyle(
                         color = whiteProvider,
                         fontWeight = FontWeight.Bold,
@@ -120,7 +120,7 @@ class SnapTaskWidget : GlanceAppWidget() {
                 )
                 Spacer(modifier = GlanceModifier.height(8.dp))
                 Button(
-                    text = "📸 Chụp việc mới",
+                    text = "Chụp việc mới",
                     onClick = actionStartActivity<MainActivity>()
                 )
             }
@@ -228,7 +228,7 @@ class SnapTaskWidget : GlanceAppWidget() {
 
                     val taskIdParam = ActionParameters.Key<Long>("taskId")
                     Button(
-                        text = "✓ Xong ngay",
+                        text = "Xong ngay",
                         onClick = actionRunCallback<ToggleTaskActionCallback>(
                             actionParametersOf(taskIdParam to taskId)
                         ),

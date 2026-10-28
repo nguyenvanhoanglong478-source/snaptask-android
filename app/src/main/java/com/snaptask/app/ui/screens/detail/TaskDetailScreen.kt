@@ -245,7 +245,7 @@ fun TaskDetailScreen(
                                 .background(Color(0xD9000000), RoundedCornerShape(8.dp))
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
-                            Text(text = "BEFORE 📸", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text(text = "BEFORE", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -282,7 +282,7 @@ fun TaskDetailScreen(
                                     .background(StatusSuccess, RoundedCornerShape(8.dp))
                                     .padding(horizontal = 8.dp, vertical = 4.dp)
                             ) {
-                                Text(text = "AFTER ✨", color = NotionDarkBg, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                Text(text = "AFTER", color = NotionDarkBg, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                             }
                         } else {
                             Column(
@@ -364,7 +364,7 @@ fun TaskDetailScreen(
                                 .padding(horizontal = 10.dp, vertical = 4.dp)
                         ) {
                             Text(
-                                text = if (isCompleted) "Đã hoàn thành ✓" else "Đang thực hiện ⏳",
+                                text = if (isCompleted) "Đã hoàn thành" else "Đang thực hiện",
                                 color = if (isCompleted) StatusSuccess else StatusAmber,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
@@ -418,7 +418,7 @@ fun TaskDetailScreen(
                                 .padding(horizontal = 10.dp, vertical = 4.dp)
                         ) {
                             Text(
-                                text = if (reminderTime != null) "⏰ ${if (reminderType == "ALARM") "Báo thức" else "Nhắc"}: ${DateTimeUtils.formatDateTime(reminderTime!!)}" else "Chưa đặt ⏰",
+                                text = if (reminderTime != null) "${if (reminderType == "ALARM") "Báo thức" else "Nhắc"}: ${DateTimeUtils.formatDateTime(reminderTime!!)}" else "Chưa đặt",
                                 color = if (reminderTime != null) LocketAccent else TextMuted,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold

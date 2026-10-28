@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -78,7 +79,7 @@ fun CompletionProofBottomSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Hoàn thành công việc ✨",
+                    text = "Hoàn thành công việc",
                     color = TextPrimary,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
@@ -122,7 +123,12 @@ fun CompletionProofBottomSheet(
                             .background(Color(0xFF2B2B2B), RoundedCornerShape(12.dp)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("📷", fontSize = 20.sp)
+                        Icon(
+                            imageVector = Icons.Filled.CameraAlt,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.7f),
+                            modifier = Modifier.size(22.dp)
+                        )
                     }
                 }
 
@@ -162,7 +168,7 @@ fun CompletionProofBottomSheet(
                 )
             ) {
                 Text(
-                    text = "📸 Chụp ảnh kết quả (After Proof)",
+                    text = "Chụp ảnh kết quả (After Proof)",
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp
                 )
@@ -183,7 +189,7 @@ fun CompletionProofBottomSheet(
                 )
             ) {
                 Text(
-                    text = "⚡ Hoàn thành nhanh (Không chụp ảnh)",
+                    text = "Hoàn thành nhanh (Không chụp ảnh)",
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 13.sp,
                     color = TextSecondary

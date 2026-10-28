@@ -147,7 +147,7 @@ fun ReminderPickerDialog(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Hẹn giờ nhắc nhở ⏰",
+                    text = "Hẹn giờ nhắc nhở",
                     color = TextPrimary,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
@@ -170,7 +170,7 @@ fun ReminderPickerDialog(
                         .padding(10.dp)
                 ) {
                     Text(
-                        text = "⚠️ Quyền thông báo đang TẮT. Chạm vào đây để bật trong Cài đặt!",
+                        text = "Quyền thông báo đang TẮT. Chạm vào đây để bật trong Cài đặt!",
                         color = StatusDanger,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold
@@ -244,7 +244,7 @@ fun ReminderPickerDialog(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Báo thức lớn 🔔",
+                            text = "Báo thức lớn",
                             color = if (isAlarm) NotionDarkBg else TextPrimary,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
@@ -280,14 +280,14 @@ fun ReminderPickerDialog(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "⚡ TEST THỬ (SAU 5 GIÂY)",
+                            text = "TEST THỬ (SAU 5 GIÂY)",
                             color = if (is5sSelected) NotionDarkBg else LocketAccent,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.ExtraBold
                         )
                         if (is5sSelected) {
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = "✓ Đã chọn", color = NotionDarkBg, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(text = "Đã chọn", color = NotionDarkBg, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -392,7 +392,7 @@ fun ReminderPickerDialog(
             Button(
                 onClick = {
                     if (!NotificationPermissionHelper.areNotificationsEnabled(context)) {
-                        Toast.makeText(context, "⚠️ Cần bật quyền thông báo để chuông hoạt động!", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, "Cần bật quyền thông báo để chuông hoạt động!", Toast.LENGTH_LONG).show()
                         NotificationPermissionHelper.openNotificationSettings(context)
                     }
                     onConfirm(selectedTime, selectedType)

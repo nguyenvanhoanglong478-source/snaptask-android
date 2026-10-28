@@ -124,7 +124,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
 
         val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_launcher)
-            .setContentTitle(if (isAlarmMode) "⏰ BÁO THỨC: $taskTitle" else "🔔 Đến giờ làm: $taskTitle")
+            .setContentTitle(if (isAlarmMode) "Báo thức: $taskTitle" else "Đến giờ làm: $taskTitle")
             .setContentText(if (taskDesc.isNotBlank()) taskDesc else "Chạm để chụp ảnh hoàn thành (After Proof)")
             .setContentIntent(contentPendingIntent)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -134,7 +134,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
             builder.setStyle(
                 NotificationCompat.BigPictureStyle()
                     .bigPicture(photoBitmap)
-                    .setSummaryText(if (isAlarmMode) "⏰ Báo thức công việc" else "📸 Nhiệm vụ SnapTask")
+                    .setSummaryText(if (isAlarmMode) "Báo thức công việc" else "Nhiệm vụ SnapTask")
             )
         }
 
@@ -149,16 +149,16 @@ class TaskReminderReceiver : BroadcastReceiver() {
             // Real physical sound & vibration
             AlarmSoundPlayer.playAlarm(context)
 
-            builder.addAction(0, "🔕 Tắt chuông", stopAlarmPendingIntent)
-            builder.addAction(0, "✅ Hoàn thành", completePendingIntent)
-            builder.addAction(0, "💤 Báo lại 10p", snoozePendingIntent)
+            builder.addAction(0, "Tắt chuông", stopAlarmPendingIntent)
+            builder.addAction(0, "Hoàn thành", completePendingIntent)
+            builder.addAction(0, "Báo lại 10p", snoozePendingIntent)
         } else {
             builder.priority = NotificationCompat.PRIORITY_HIGH
             builder.setCategory(NotificationCompat.CATEGORY_REMINDER)
             builder.setAutoCancel(true)
 
-            builder.addAction(0, "✅ Hoàn thành nhanh", completePendingIntent)
-            builder.addAction(0, "💤 Báo lại sau 10p", snoozePendingIntent)
+            builder.addAction(0, "Hoàn thành nhanh", completePendingIntent)
+            builder.addAction(0, "Báo lại sau 10p", snoozePendingIntent)
         }
 
         notificationManager.notify(taskId.toInt(), builder.build())

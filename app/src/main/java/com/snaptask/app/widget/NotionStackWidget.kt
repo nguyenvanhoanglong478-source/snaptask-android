@@ -141,7 +141,7 @@ class NotionStackWidget : GlanceAppWidget() {
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = "🎯 $completedCount/$totalCount xong",
+                                text = "$completedCount/$totalCount xong",
                                 style = TextStyle(
                                     color = accentProvider,
                                     fontWeight = FontWeight.Bold,
@@ -174,7 +174,7 @@ class NotionStackWidget : GlanceAppWidget() {
                     // 1-Tap Done Button for Priority Task
                     val taskIdParam = ActionParameters.Key<Long>("taskId")
                     Button(
-                        text = "✓ Hoàn thành",
+                        text = "Hoàn thành",
                         onClick = actionRunCallback<CompleteTaskActionCallback>(
                             actionParametersOf(taskIdParam to topTask.id)
                         ),
@@ -190,7 +190,7 @@ class NotionStackWidget : GlanceAppWidget() {
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Hết việc! ✨",
+                            text = "Hết việc!",
                             style = TextStyle(
                                 color = whiteProvider,
                                 fontWeight = FontWeight.Bold,
@@ -256,7 +256,7 @@ class NotionStackWidget : GlanceAppWidget() {
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "▫ ",
+                                    text = "- ",
                                     style = TextStyle(
                                         color = accentProvider,
                                         fontWeight = FontWeight.Bold,
@@ -281,7 +281,7 @@ class NotionStackWidget : GlanceAppWidget() {
 
                 // Quick Add Photo Button
                 Button(
-                    text = "📸 Chụp việc mới",
+                    text = "Chụp việc mới",
                     onClick = actionStartActivity<MainActivity>(),
                     modifier = GlanceModifier.fillMaxWidth()
                 )

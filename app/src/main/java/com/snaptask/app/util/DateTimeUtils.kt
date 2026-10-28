@@ -16,14 +16,14 @@ object DateTimeUtils {
         return when {
             days > 0 -> {
                 val remHours = hours % 24
-                if (remHours > 0) "⏱ ${days}d ${remHours}h" else "⏱ ${days}d"
+                if (remHours > 0) "${days}d ${remHours}h" else "${days}d"
             }
             hours > 0 -> {
                 val remMinutes = minutes % 60
-                if (remMinutes > 0) "⏱ ${hours}h ${remMinutes}m" else "⏱ ${hours}h"
+                if (remMinutes > 0) "${hours}h ${remMinutes}m" else "${hours}h"
             }
-            minutes > 0 -> "⏱ ${minutes}m"
-            else -> "⏱ <1m"
+            minutes > 0 -> "${minutes}m"
+            else -> "<1m"
         }
     }
 
