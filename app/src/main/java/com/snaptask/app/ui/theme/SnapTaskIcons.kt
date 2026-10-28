@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathBuilder
+import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
 object SnapTaskIcons {
@@ -17,13 +18,14 @@ object SnapTaskIcons {
             defaultHeight = 24.dp,
             viewportWidth = 24f,
             viewportHeight = 24f
-        ).addPath(
+        ).path(
             stroke = SolidColor(Color.White),
             strokeLineWidth = 1.8f,
             strokeLineCap = StrokeCap.Round,
-            strokeLineJoin = StrokeJoin.Round,
-            pathBuilder = builder
-        ).build()
+            strokeLineJoin = StrokeJoin.Round
+        ) {
+            builder()
+        }.build()
     }
 
     // 1. Search (Magnifying Glass)
