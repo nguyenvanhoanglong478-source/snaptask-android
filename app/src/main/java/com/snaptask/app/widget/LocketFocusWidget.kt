@@ -48,12 +48,12 @@ class LocketFocusWidgetReceiver : GlanceAppWidgetReceiver() {
 
 class LocketFocusWidget : GlanceAppWidget() {
 
-    private val bgDarkProvider       = ColorProvider(Color(0xFF121212))
-    private val overlayGlassProvider = ColorProvider(Color(0xE6141414))
-    private val whiteProvider        = ColorProvider(Color(0xFFFFFFFF))
-    private val accentProvider       = ColorProvider(Color(0xFFFF6B4A))
-    private val redProvider          = ColorProvider(Color(0xFFEF4444))
-    private val pillDarkProvider     = ColorProvider(Color(0xCC000000))
+    private val bgDarkProvider       = ColorProvider(Color(0xFF14161F))
+    private val overlayGlassProvider = ColorProvider(Color(0xE614161F))
+    private val whiteProvider        = ColorProvider(Color(0xFFF8FAFC))
+    private val accentProvider       = ColorProvider(Color(0xFF6366F1))
+    private val redProvider          = ColorProvider(Color(0xFFF43F5E))
+    private val pillDarkProvider     = ColorProvider(Color(0xCC0B0C10))
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val database = AppDatabase.getInstance(context)

@@ -63,6 +63,12 @@ import com.snaptask.app.domain.model.SubTask
 import com.snaptask.app.domain.model.Task
 import com.snaptask.app.domain.model.TaskPriority
 import com.snaptask.app.ui.screens.editor.ReminderPickerDialog
+import com.snaptask.app.ui.theme.AccentPrimary
+import com.snaptask.app.ui.theme.AuroraGradient
+import com.snaptask.app.ui.theme.BgElevated
+import com.snaptask.app.ui.theme.BgPrimary
+import com.snaptask.app.ui.theme.BgSurface
+import com.snaptask.app.ui.theme.BorderSubtle
 import com.snaptask.app.ui.theme.ChipInactiveBg
 import com.snaptask.app.ui.theme.ChipInactiveBorder
 import com.snaptask.app.ui.theme.ChipInactiveText
@@ -117,7 +123,7 @@ fun TaskDetailScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = NotionDarkBg,
+        containerColor = BgPrimary,
         topBar = {
             Row(
                 modifier = Modifier
@@ -616,37 +622,38 @@ fun TaskDetailScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // 6. Save & Update Button
-            Button(
-                onClick = {
-                    val updatedTask = task.copy(
-                        title = currentTitle.ifBlank { "Việc cần làm" },
-                        description = currentDescription,
-                        completionCaption = currentCompletionCaption,
-                        isCompleted = isCompleted,
-                        isPinnedToWidget = isPinned,
-                        reminderTime = reminderTime,
-                        reminderType = reminderType,
-                        subTasksJson = converters.fromSubTaskList(subtasks),
-                        completedAt = if (isCompleted && task.completedAt == null) System.currentTimeMillis() else task.completedAt
-                    )
-                    onSaveTask(updatedTask)
-                },
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = LocketAccent,
-                    contentColor = NotionDarkBg
-                )
+                    .height(52.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(AuroraGradient)
+                    .clickable {
+                        val updatedTask = task.copy(
+                            title = currentTitle.ifBlank { "Việc cần làm" },
+                            description = currentDescription,
+                            completionCaption = currentCompletionCaption,
+                            isCompleted = isCompleted,
+                            isPinnedToWidget = isPinned,
+                            reminderTime = reminderTime,
+                            reminderType = reminderType,
+                            subTasksJson = converters.fromSubTaskList(subtasks),
+                            completedAt = if (isCompleted && task.completedAt == null) System.currentTimeMillis() else task.completedAt
+                        )
+                        onSaveTask(updatedTask)
+                    },
+                contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Filled.Check, contentDescription = "Save", modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Lưu & Cập nhật Task",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.Check, contentDescription = "Save", tint = Color.White, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Lưu & Cập nhật Task",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(32.dp))

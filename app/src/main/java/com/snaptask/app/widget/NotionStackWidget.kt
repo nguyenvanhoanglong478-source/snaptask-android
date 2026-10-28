@@ -48,13 +48,13 @@ class NotionStackWidgetReceiver : GlanceAppWidgetReceiver() {
 
 class NotionStackWidget : GlanceAppWidget() {
 
-    private val bgDarkProvider       = ColorProvider(Color(0xFF121212))
-    private val surfaceDarkProvider  = ColorProvider(Color(0xFF1E1E1E))
-    private val overlayGlassProvider = ColorProvider(Color(0xE6141414))
-    private val whiteProvider        = ColorProvider(Color(0xFFFFFFFF))
-    private val secondaryProvider    = ColorProvider(Color(0xFFA6A6A6))
-    private val accentProvider       = ColorProvider(Color(0xFFFF6B4A))
-    private val pillDarkProvider     = ColorProvider(Color(0xCC000000))
+    private val bgDarkProvider       = ColorProvider(Color(0xFF14161F))
+    private val surfaceDarkProvider  = ColorProvider(Color(0xFF1E212D))
+    private val overlayGlassProvider = ColorProvider(Color(0xE614161F))
+    private val whiteProvider        = ColorProvider(Color(0xFFF8FAFC))
+    private val secondaryProvider    = ColorProvider(Color(0xFF94A3B8))
+    private val accentProvider       = ColorProvider(Color(0xFF6366F1))
+    private val pillDarkProvider     = ColorProvider(Color(0xCC0B0C10))
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val database = AppDatabase.getInstance(context)

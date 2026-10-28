@@ -7,11 +7,13 @@ data class Task(
     val id: Long = 0,
     val title: String,
     val description: String = "",
-    val beforeImageUri: String,
+    val beforeImageUri: String = "",
     val afterImageUri: String? = null,
     val completionCaption: String? = null,
     val isCompleted: Boolean = false,
     val isPinnedToWidget: Boolean = false,
+    val isFavorite: Boolean = false,
+    val folderName: String = "Cá nhân",
     val priority: String = TaskPriority.MEDIUM.name,
     val tag: String = TaskTag.PERSONAL.name,
     val subTasksJson: String = "[]",
@@ -25,6 +27,9 @@ data class Task(
     val imagePath: String get() = beforeImageUri
     val thumbnailPath: String get() = beforeImageUri
     val status: TaskStatus get() = if (isCompleted) TaskStatus.DONE else TaskStatus.TODO
+
+    val hasImage: Boolean get() = beforeImageUri.isNotBlank()
+    val isQuickNote: Boolean get() = beforeImageUri.isBlank()
 
     val priorityEnum: TaskPriority
         get() = runCatching { TaskPriority.valueOf(priority) }.getOrDefault(TaskPriority.MEDIUM)

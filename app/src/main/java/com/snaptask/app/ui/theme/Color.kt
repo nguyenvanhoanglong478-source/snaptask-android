@@ -3,61 +3,89 @@ package com.snaptask.app.ui.theme
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-// Notion Minimalist Dark + Locket Warm Accent
-val NotionDarkBg       = Color(0xFF121212) // Main Background
-val NotionCardSurface  = Color(0xFF1E1E1E) // Card Surface
-val NotionBorder       = Color(0xFF2E2E2E) // Subtle Border
-val LocketAccent       = Color(0xFFFF6B4A) // Locket Coral Orange Accent
-val LocketAccentMuted  = Color(0xFFD45538)
-val GlassmorphismDark  = Color(0xE6141414) // 90% opacity #141414 for robust contrast on photo overlays
+// ==========================================
+// MIDNIGHT GLASS & AURORA DESIGN SYSTEM
+// Inspired by Linear, Craft & MyMind
+// ==========================================
 
-// High-Contrast Typography (Verified with WCAG AA 4.5:1+)
-val TextPrimary        = Color(0xFFFFFFFF) // 18.2:1 on #121212
-val TextSecondary      = Color(0xFFA6A6A6) // 7.9:1 on #121212, 7.3:1 on #1E1E1E
-val TextMuted          = Color(0xFF8E8E93) // 5.6:1 on #121212, 5.1:1 on #1E1E1E
+// 1. Core Background & Surface Hierarchy (Deep Obsidian)
+val BgPrimary       = Color(0xFF0B0C10) // Main Screen Background
+val BgSurface       = Color(0xFF14161F) // Cards, Sheets & Modal Containers
+val BgElevated      = Color(0xFF1E212D) // Chips, Input fields, Secondary elements
+val BorderSubtle    = Color(0xFF282C3A) // Crisp 1dp Architectural Borders
+val BorderHighlight = Color(0xFF3B4154) // Focus & Active Borders
 
-// Chips & Badges
-val ChipActiveBg       = Color(0xFFFF6B4A)
-val ChipActiveText     = Color(0xFF121212) // 6.65:1 on #FF6B4A (PASS AA & AAA)
-val ChipInactiveBg     = Color(0xFF242424)
-val ChipInactiveText   = Color(0xFFD6D6D6) // 10.68:1 on #242424 (PASS AA & AAA)
-val ChipInactiveBorder = Color(0xFF383838)
+// 2. Aurora & Electric Indigo Accents
+val AccentPrimary   = Color(0xFF6366F1) // Electric Indigo (Primary Brand Color)
+val AccentSecondary = Color(0xFF8B5CF6) // Violet (Gradient Partner)
+val AccentSubtle    = Color(0x336366F1) // 20% Indigo Tint for Active Chips
 
-// Status Colors
-val StatusSuccess      = Color(0xFF22C55E)
-val StatusWarning      = Color(0xFFF59E0B)
-val StatusAmber        = StatusWarning
-val StatusDanger       = Color(0xFFEF4444)
+// Gradients
+val AuroraGradient = Brush.linearGradient(
+    colors = listOf(AccentPrimary, AccentSecondary)
+)
 
-// Backwards Compatibility Aliases
-val ObsidianInk            = NotionDarkBg
-val ObsidianElevated       = NotionCardSurface
-val VelvetCurfew           = NotionCardSurface
-val VelvetCurfewLight      = NotionCardSurface
-val AlmondHearth           = LocketAccent
+val AuroraDockGradient = Brush.linearGradient(
+    colors = listOf(Color(0xFF6366F1), Color(0xFF9333EA))
+)
+
+val CardBottomScrim = Brush.verticalGradient(
+    colors = listOf(
+        Color.Transparent,
+        Color(0x660B0C10),
+        Color(0xF20B0C10)
+    )
+)
+
+val GlassmorphismDark = Color(0xE614161F) // 90% Opacity #14161F
+
+// 3. High-Contrast Typography
+val TextPrimary   = Color(0xFFF8FAFC) // 18.5:1 Contrast on #0B0C10
+val TextSecondary = Color(0xFF94A3B8) // 7.8:1 Contrast on #0B0C10
+val TextMuted     = Color(0xFF64748B) // 4.8:1 Contrast on #0B0C10
+
+// 4. Semantic Status Accents
+val StatusSuccess = Color(0xFF10B981) // Emerald Mint (Completed & After proof)
+val StatusWarning = Color(0xFFF59E0B) // Amber Gold (Medium Priority & Reminders)
+val StatusAmber   = StatusWarning
+val StatusUrgent  = Color(0xFFF43F5E) // Rose Crimson (High Priority & Alarms)
+val StatusDanger  = StatusUrgent
+
+// 5. Chips & Interactive States
+val ChipActiveBg       = AccentPrimary
+val ChipActiveText     = Color(0xFFFFFFFF)
+val ChipInactiveBg     = BgElevated
+val ChipInactiveBorder = BorderSubtle
+val ChipInactiveText   = TextSecondary
+
+// ==========================================
+// BACKWARD COMPATIBILITY ALIASES
+// (Ensures legacy screens compile smoothly)
+// ==========================================
+val NotionDarkBg           = BgPrimary
+val NotionCardSurface      = BgSurface
+val NotionBorder           = BorderSubtle
+val LocketAccent           = AccentPrimary
+val LocketAccentMuted      = AccentSecondary
+val ObsidianInk            = BgPrimary
+val ObsidianElevated       = BgSurface
+val VelvetCurfew           = BgSurface
+val VelvetCurfewLight      = BgElevated
+val AlmondHearth           = AccentPrimary
 val TextHighContrast       = TextPrimary
 val TextMediumContrast     = TextSecondary
 val Neutral900             = TextPrimary
-val Neutral800             = NotionCardSurface
+val Neutral800             = BgSurface
 val Neutral700             = TextSecondary
 val Neutral500             = TextMuted
-val Neutral100             = ChipInactiveBg
-val Neutral50              = LocketAccent
+val Neutral100             = BgElevated
+val Neutral50              = AccentPrimary
 val BrandAmber             = StatusWarning
 val BrandGreen             = StatusSuccess
-val BrandRed               = StatusDanger
+val BrandRed               = StatusUrgent
 val ChipActiveBackground   = ChipActiveBg
 val ChipActiveContent      = ChipActiveText
 val ChipInactiveBackground = ChipInactiveBg
 val ChipInactiveContent    = ChipInactiveText
-
-// Gradients
-val NotionLocketGradient = Brush.verticalGradient(
-    colors = listOf(
-        NotionDarkBg,
-        Color(0xFF1A1A1A),
-        NotionDarkBg
-    )
-)
-
-val SnapTaskVerticalGradient = NotionLocketGradient
+val NotionLocketGradient   = AuroraGradient
+val SnapTaskVerticalGradient = AuroraGradient

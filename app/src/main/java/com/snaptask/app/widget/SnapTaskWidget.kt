@@ -44,11 +44,11 @@ import java.io.File
 
 class SnapTaskWidget : GlanceAppWidget() {
 
-    private val obsidianProvider  = ColorProvider(Color(0xFF151311))
-    private val almondProvider    = ColorProvider(Color(0xFFEED3BA))
-    private val whiteProvider     = ColorProvider(Color(0xFFFFFDF9))
-    private val redProvider       = ColorProvider(Color(0xFFEF4444))
-    private val overlayProvider   = ColorProvider(Color(0xE6151311)) // Frosted dark glass overlay
+    private val obsidianProvider  = ColorProvider(Color(0xFF14161F))
+    private val almondProvider    = ColorProvider(Color(0xFF6366F1))
+    private val whiteProvider     = ColorProvider(Color(0xFFF8FAFC))
+    private val redProvider       = ColorProvider(Color(0xFFF43F5E))
+    private val overlayProvider   = ColorProvider(Color(0xE614161F)) // Frosted dark glass overlay
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val database = AppDatabase.getInstance(context)
@@ -155,7 +155,7 @@ class SnapTaskWidget : GlanceAppWidget() {
                 Box(
                     modifier = GlanceModifier
                         .fillMaxSize()
-                        .background(ColorProvider(Color(0xFF4B262F)))
+                        .background(ColorProvider(Color(0xFF1E212D)))
                 ) {}
             }
 

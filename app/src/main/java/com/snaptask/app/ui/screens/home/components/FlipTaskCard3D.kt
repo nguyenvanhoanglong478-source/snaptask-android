@@ -1,7 +1,9 @@
 package com.snaptask.app.ui.screens.home.components
 
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -23,7 +25,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Alarm
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.outlined.Circle
@@ -42,8 +47,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -60,13 +65,15 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.snaptask.app.domain.model.Task
 import com.snaptask.app.domain.model.TaskPriority
-import com.snaptask.app.ui.theme.GlassmorphismDark
-import com.snaptask.app.ui.theme.LocketAccent
-import com.snaptask.app.ui.theme.NotionBorder
-import com.snaptask.app.ui.theme.NotionCardSurface
-import com.snaptask.app.ui.theme.NotionDarkBg
-import com.snaptask.app.ui.theme.StatusDanger
+import com.snaptask.app.ui.theme.AccentPrimary
+import com.snaptask.app.ui.theme.BgElevated
+import com.snaptask.app.ui.theme.BgPrimary
+import com.snaptask.app.ui.theme.BgSurface
+import com.snaptask.app.ui.theme.BorderSubtle
+import com.snaptask.app.ui.theme.CardBottomScrim
+import com.snaptask.app.ui.theme.StatusAmber
 import com.snaptask.app.ui.theme.StatusSuccess
+import com.snaptask.app.ui.theme.StatusUrgent
 import com.snaptask.app.ui.theme.TextMuted
 import com.snaptask.app.ui.theme.TextPrimary
 import com.snaptask.app.ui.theme.TextSecondary
@@ -82,6 +89,18 @@ fun FlipTaskCard3D(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // If it's a Quick Note without an image, display the dedicated Quick Note card
+    if (task.isQuickNote || task.beforeImageUri.isBlank()) {
+        QuickNoteFeedCard(
+            task = task,
+            onToggleStatus = onToggleStatus,
+            onTogglePin = onTogglePin,
+            onClick = onClick,
+            modifier = modifier
+        )
+        return
+    }
+
     val haptic = LocalHapticFeedback.current
     val density = LocalDensity.current.density
 
@@ -116,15 +135,15 @@ fun FlipTaskCard3D(
                 rotationY = rotation
                 cameraDistance = 16f * density
             },
-        shape = RoundedCornerShape(32.dp),
-        colors = CardDefaults.cardColors(containerColor = NotionCardSurface),
-        border = BorderStroke(1.dp, if (task.isCompleted) StatusSuccess.copy(alpha = 0.5f) else NotionBorder)
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = BgSurface),
+        border = BorderStroke(1.dp, if (task.isCompleted) StatusSuccess.copy(alpha = 0.4f) else BorderSubtle)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
-                .background(Color(0xFF1E1E1E))
+                .background(BgPrimary)
         ) {
             if (rotation <= 90f) {
                 // FRONT FACE:
@@ -171,6 +190,220 @@ fun FlipTaskCard3D(
 }
 
 /**
+ * Dedicated Quick Note Card for text-only tasks
+ */
+@Composable
+fun QuickNoteFeedCard(
+    task: Task,
+    onToggleStatus: () -> Unit,
+    onTogglePin: () -> Unit,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val haptic = LocalHapticFeedback.current
+    var isCheckedInternal by remember(task.isCompleted) { mutableStateOf(task.isCompleted) }
+    val checkScale by animateFloatAsState(
+        targetValue = if (isCheckedInternal) 1.15f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "CheckScale"
+    )
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = BgSurface),
+        border = BorderStroke(1.dp, if (task.isCompleted) StatusSuccess.copy(alpha = 0.35f) else BorderSubtle)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            // Header Row: Folder + Priority + Reminder + Pin
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Folder badge
+                    Box(
+                        modifier = Modifier
+                            .background(BgElevated, RoundedCornerShape(8.dp))
+                            .border(1.dp, BorderSubtle, RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Filled.Folder,
+                                contentDescription = null,
+                                tint = AccentPrimary,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = task.folderName,
+                                color = TextSecondary,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+
+                    // Priority badge
+                    if (task.priorityEnum == TaskPriority.HIGH) {
+                        Box(
+                            modifier = Modifier
+                                .background(StatusUrgent.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+                                .border(1.dp, StatusUrgent.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 7.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "Gấp 🔥",
+                                color = StatusUrgent,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    // Reminder badge
+                    if (task.hasReminder) {
+                        Box(
+                            modifier = Modifier
+                                .background(AccentPrimary.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+                                .border(1.dp, AccentPrimary.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 7.dp, vertical = 4.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Filled.Alarm, contentDescription = null, tint = AccentPrimary, modifier = Modifier.size(11.dp))
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = task.reminderFormatted ?: "",
+                                    color = AccentPrimary,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Pin Button
+                IconButton(
+                    onClick = onTogglePin,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .background(BgElevated, CircleShape)
+                        .border(1.dp, BorderSubtle, CircleShape)
+                ) {
+                    Icon(
+                        imageVector = if (task.isPinnedToWidget) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+                        contentDescription = "Ghim",
+                        tint = if (task.isPinnedToWidget) AccentPrimary else TextSecondary,
+                        modifier = Modifier.size(15.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Title and Interactive Checkbox
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top
+            ) {
+                Box(
+                    modifier = Modifier
+                        .padding(top = 2.dp)
+                        .scale(checkScale)
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            isCheckedInternal = !isCheckedInternal
+                            onToggleStatus()
+                        }
+                ) {
+                    Icon(
+                        imageVector = if (task.isCompleted) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
+                        contentDescription = "Trạng thái",
+                        tint = if (task.isCompleted) StatusSuccess else TextSecondary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(10.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = task.title,
+                        color = if (task.isCompleted) TextMuted else TextPrimary,
+                        textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+
+                    if (task.description.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = task.description,
+                            color = TextSecondary,
+                            fontSize = 13.sp,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+
+            // Subtasks checklist preview (up to 3 items)
+            if (task.parsedSubtasks.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(BgElevated, RoundedCornerShape(12.dp))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    task.parsedSubtasks.take(3).forEach { sub ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = if (sub.isDone) Icons.Filled.Check else Icons.Outlined.Circle,
+                                contentDescription = null,
+                                tint = if (sub.isDone) AccentPrimary else TextMuted,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = sub.title,
+                                color = if (sub.isDone) TextMuted else TextSecondary,
+                                fontSize = 12.sp,
+                                textDecoration = if (sub.isDone) TextDecoration.LineThrough else TextDecoration.None,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                    if (task.parsedSubtasks.size > 3) {
+                        Text(
+                            text = "+${task.parsedSubtasks.size - 3} việc nhỏ khác",
+                            color = TextMuted,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
  * Mặt AFTER: Hiển thị khi Task đã hoàn thành và có ảnh kết quả.
  */
 @Composable
@@ -182,6 +415,8 @@ private fun AfterFaceContent(
     onToggleStatus: () -> Unit,
     onTogglePin: () -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
+
     Box(modifier = Modifier.fillMaxSize()) {
         // Main After Photo
         AsyncImage(
@@ -210,8 +445,8 @@ private fun AfterFaceContent(
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = "✨ AFTER • DONE",
-                        color = NotionDarkBg,
+                        text = "✨ AFTER • HOÀN THÀNH",
+                        color = BgPrimary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.ExtraBold
                     )
@@ -239,28 +474,23 @@ private fun AfterFaceContent(
             )
         }
 
-        // Bottom Glassmorphism Scrim with Title & Caption
+        // Bottom Scrim with Title & Caption
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            Color.Transparent,
-                            Color(0x80101010),
-                            GlassmorphismDark
-                        )
-                    )
-                )
-                .padding(horizontal = 14.dp, vertical = 12.dp)
+                .background(CardBottomScrim)
+                .padding(horizontal = 14.dp, vertical = 14.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
-                    onClick = onToggleStatus,
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onToggleStatus()
+                    },
                     modifier = Modifier.size(28.dp)
                 ) {
                     Icon(
@@ -286,7 +516,7 @@ private fun AfterFaceContent(
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = "\"${task.completionCaption}\"",
-                            color = LocketAccent,
+                            color = StatusSuccess,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
                             maxLines = 1,
@@ -304,7 +534,7 @@ private fun AfterFaceContent(
                     Icon(
                         imageVector = if (task.isPinnedToWidget) Icons.Filled.PushPin else Icons.Outlined.PushPin,
                         contentDescription = "Ghim",
-                        tint = if (task.isPinnedToWidget) LocketAccent else Color.White,
+                        tint = if (task.isPinnedToWidget) AccentPrimary else Color.White,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -325,6 +555,8 @@ private fun BeforeFlippedFaceContent(
     onToggleStatus: () -> Unit,
     onTogglePin: () -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
+
     Box(modifier = Modifier.fillMaxSize()) {
         // Main Before Photo
         if (beforeFile.exists()) {
@@ -350,12 +582,12 @@ private fun BeforeFlippedFaceContent(
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Box(
                     modifier = Modifier
-                        .background(LocketAccent, RoundedCornerShape(10.dp))
+                        .background(AccentPrimary, RoundedCornerShape(10.dp))
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = "📌 BEFORE • START",
-                        color = NotionDarkBg,
+                        text = "📌 BEFORE • BẮT ĐẦU",
+                        color = Color.White,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.ExtraBold
                     )
@@ -385,28 +617,23 @@ private fun BeforeFlippedFaceContent(
             }
         }
 
-        // Bottom Glassmorphism Scrim with Title & Original Description
+        // Bottom Scrim with Title & Original Description
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            Color.Transparent,
-                            Color(0x80101010),
-                            GlassmorphismDark
-                        )
-                    )
-                )
-                .padding(horizontal = 14.dp, vertical = 12.dp)
+                .background(CardBottomScrim)
+                .padding(horizontal = 14.dp, vertical = 14.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
-                    onClick = onToggleStatus,
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onToggleStatus()
+                    },
                     modifier = Modifier.size(28.dp)
                 ) {
                     Icon(
@@ -444,7 +671,7 @@ private fun BeforeFlippedFaceContent(
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Sync, contentDescription = "Lật lại", tint = LocketAccent, modifier = Modifier.size(14.dp))
+                        Icon(Icons.Filled.Sync, contentDescription = "Lật lại", tint = AccentPrimary, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(3.dp))
                         Text("After", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
@@ -464,6 +691,8 @@ private fun StandardBeforeFaceContent(
     onToggleStatus: () -> Unit,
     onTogglePin: () -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
+
     Box(modifier = Modifier.fillMaxSize()) {
         if (beforeFile.exists()) {
             AsyncImage(
@@ -491,24 +720,29 @@ private fun StandardBeforeFaceContent(
                         .background(Color(0xCC000000), RoundedCornerShape(10.dp))
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
-                    Text(text = task.tagEnum.displayName, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = task.folderName.ifBlank { task.tagEnum.displayName },
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
                 if (task.priorityEnum == TaskPriority.HIGH) {
                     Box(
                         modifier = Modifier
-                            .background(StatusDanger, RoundedCornerShape(10.dp))
+                            .background(StatusUrgent, RoundedCornerShape(10.dp))
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
-                        Text(text = "GẤP 🔥", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Text(text = "Gấp 🔥", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
                 }
                 if (task.hasReminder) {
                     Box(
                         modifier = Modifier
-                            .background(LocketAccent, RoundedCornerShape(10.dp))
+                            .background(AccentPrimary, RoundedCornerShape(10.dp))
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
-                        Text(text = "⏰ ${task.reminderFormatted}", color = NotionDarkBg, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Text(text = "⏰ ${task.reminderFormatted}", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -522,23 +756,26 @@ private fun StandardBeforeFaceContent(
                 Icon(
                     imageVector = if (task.isPinnedToWidget) Icons.Filled.PushPin else Icons.Outlined.PushPin,
                     contentDescription = "Ghim",
-                    tint = if (task.isPinnedToWidget) LocketAccent else Color.White,
+                    tint = if (task.isPinnedToWidget) AccentPrimary else Color.White,
                     modifier = Modifier.size(18.dp)
                 )
             }
         }
 
-        // Bottom Glassmorphism Bar
+        // Bottom Scrim Bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
-                .background(GlassmorphismDark)
-                .padding(horizontal = 14.dp, vertical = 12.dp),
+                .background(CardBottomScrim)
+                .padding(horizontal = 14.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
-                onClick = onToggleStatus,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onToggleStatus()
+                },
                 modifier = Modifier.size(28.dp)
             ) {
                 Icon(

@@ -12,8 +12,8 @@ android {
         applicationId = "com.snaptask.app"
         minSdk = 24
         targetSdk = 34
-        versionCode = 6
-        versionName = "2.4.0"
+        versionCode = 7
+        versionName = "3.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

@@ -187,6 +187,14 @@ class MainActivity : ComponentActivity() {
                                 onTaskClick = { task ->
                                     selectedTask = task
                                     currentScreen = ScreenState.DETAIL
+                                },
+                                onSaveQuickNote = { newTask ->
+                                    scope.launch {
+                                        repository.createTask(newTask)
+                                        updateWidgets()
+                                        val reminderNotice = formatReminderConfirmation(newTask)
+                                        Toast.makeText(this@MainActivity, "Đã lưu ghi chú! ✍️$reminderNotice", Toast.LENGTH_LONG).show()
+                                    }
                                 }
                             )
                         }

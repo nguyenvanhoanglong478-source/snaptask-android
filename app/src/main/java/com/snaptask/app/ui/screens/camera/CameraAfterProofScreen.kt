@@ -73,6 +73,14 @@ import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.snaptask.app.domain.model.Task
+import com.snaptask.app.ui.theme.AccentPrimary
+import com.snaptask.app.ui.theme.AccentSecondary
+import com.snaptask.app.ui.theme.AuroraGradient
+import com.snaptask.app.ui.theme.BgElevated
+import com.snaptask.app.ui.theme.BgPrimary
+import com.snaptask.app.ui.theme.BgSurface
+import com.snaptask.app.ui.theme.BorderHighlight
+import com.snaptask.app.ui.theme.BorderSubtle
 import com.snaptask.app.ui.theme.ChipInactiveBg
 import com.snaptask.app.ui.theme.LocketAccent
 import com.snaptask.app.ui.theme.NotionBorder
@@ -327,7 +335,7 @@ fun CameraAfterProofScreen(
         }
     }
 
-    Box(modifier = modifier.fillMaxSize().background(NotionDarkBg)) {
+    Box(modifier = modifier.fillMaxSize().background(BgPrimary)) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -347,8 +355,8 @@ fun CameraAfterProofScreen(
                     onClick = onClose,
                     modifier = Modifier
                         .size(40.dp)
-                        .background(NotionCardSurface, CircleShape)
-                        .border(1.dp, NotionBorder, CircleShape)
+                        .background(BgSurface, CircleShape)
+                        .border(1.dp, BorderSubtle, CircleShape)
                 ) {
                     Icon(Icons.Filled.Close, contentDescription = "Đóng", tint = TextPrimary)
                 }
@@ -362,7 +370,7 @@ fun CameraAfterProofScreen(
                     )
                     Text(
                         text = task.title,
-                        color = LocketAccent,
+                        color = AccentPrimary,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1
@@ -375,13 +383,13 @@ fun CameraAfterProofScreen(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // 1:1 Camera Viewfinder with Squircle 32dp
+            // 1:1 Camera Viewfinder with Squircle 32dp and HUD controls
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
                     .clip(RoundedCornerShape(32.dp))
-                    .border(2.dp, if (cameraState == CameraState.CAPTURED) StatusSuccess else NotionBorder, RoundedCornerShape(32.dp))
+                    .border(2.dp, if (cameraState == CameraState.CAPTURED) StatusSuccess else BorderSubtle, RoundedCornerShape(32.dp))
                     .background(Color.Black),
                 contentAlignment = Alignment.Center
             ) {
@@ -420,22 +428,74 @@ fun CameraAfterProofScreen(
                         )
                     }
 
-                    // Ghost Overlay Toggle Pill (Top-Right over Viewfinder)
+                    // HUD Top-Left: Flash Button
                     Box(
                         modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(12.dp)
+                            .align(Alignment.TopStart)
+                            .padding(14.dp)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color(0x80000000))
+                            .border(1.dp, if (flashMode != CameraFlashMode.OFF) AccentPrimary else Color(0x33FFFFFF), CircleShape)
+                            .clickable { applyFlashMode(flashMode.next()) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = when (flashMode) {
+                                CameraFlashMode.OFF -> Icons.Filled.FlashOff
+                                CameraFlashMode.ON -> Icons.Filled.FlashOn
+                                CameraFlashMode.AUTO -> Icons.Filled.FlashAuto
+                                CameraFlashMode.TORCH -> Icons.Filled.Bolt
+                            },
+                            contentDescription = "Flash: ${flashMode.name}",
+                            tint = if (flashMode != CameraFlashMode.OFF) AccentPrimary else Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    // HUD Top-Center: Ghost Overlay Toggle Pill
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 14.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(if (isGhostOverlayEnabled) LocketAccent else Color(0xCC141414))
-                            .border(1.dp, if (isGhostOverlayEnabled) LocketAccent else NotionBorder, RoundedCornerShape(12.dp))
+                            .background(if (isGhostOverlayEnabled) AccentPrimary else Color(0x80000000))
+                            .border(1.dp, if (isGhostOverlayEnabled) AccentPrimary else Color(0x33FFFFFF), RoundedCornerShape(12.dp))
                             .clickable { isGhostOverlayEnabled = !isGhostOverlayEnabled }
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
                         Text(
                             text = if (isGhostOverlayEnabled) "👻 Ghost: BẬT" else "👻 Ghost: TẮT",
-                            color = if (isGhostOverlayEnabled) NotionDarkBg else TextPrimary,
+                            color = Color.White,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    // HUD Top-Right: Flip Camera Button
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(14.dp)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color(0x80000000))
+                            .border(1.dp, Color(0x33FFFFFF), CircleShape)
+                            .clickable(enabled = !isCapturing) {
+                                camera?.cameraControl?.enableTorch(false)
+                                cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
+                                    CameraSelector.DEFAULT_FRONT_CAMERA
+                                } else {
+                                    CameraSelector.DEFAULT_BACK_CAMERA
+                                }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Cameraswitch,
+                            contentDescription = "Đổi camera",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 } else {
@@ -478,139 +538,78 @@ fun CameraAfterProofScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // 2. Camera Symmetrical Control Bar
+            // 2. Camera Controls: Single Centered Shutter or Retake Button
             if (cameraState == CameraState.PREVIEWING) {
-                Row(
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
+                        .size(74.dp)
+                        .clip(CircleShape)
+                        .background(Color.Transparent)
+                        .border(3.dp, Color.White.copy(alpha = 0.9f), CircleShape)
+                        .padding(5.dp)
+                        .clip(CircleShape)
+                        .background(AuroraGradient)
+                        .clickable(enabled = !isCapturing) {
+                            takeProofPhoto()
+                        },
+                    contentAlignment = Alignment.Center
                 ) {
-                    // Left: Flash Mode Toggle Button (fixed 48dp circle)
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(NotionCardSurface)
-                            .border(1.dp, if (flashMode != CameraFlashMode.OFF) LocketAccent else NotionBorder, CircleShape)
-                            .clickable {
-                                applyFlashMode(flashMode.next())
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = when (flashMode) {
-                                CameraFlashMode.OFF -> Icons.Filled.FlashOff
-                                CameraFlashMode.ON -> Icons.Filled.FlashOn
-                                CameraFlashMode.AUTO -> Icons.Filled.FlashAuto
-                                CameraFlashMode.TORCH -> Icons.Filled.Bolt
-                            },
-                            contentDescription = "Flash: ${flashMode.name}",
-                            tint = if (flashMode != CameraFlashMode.OFF) LocketAccent else TextSecondary,
-                            modifier = Modifier.size(22.dp)
+                    if (isCapturing) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(26.dp),
+                            strokeWidth = 3.dp
                         )
-                    }
-
-                    // Center: Shutter Button (fixed 76dp outer / 62dp inner circle in LocketAccent)
-                    Box(
-                        modifier = Modifier
-                            .size(76.dp)
-                            .clip(CircleShape)
-                            .background(Color.Transparent)
-                            .border(3.5.dp, Color.White, CircleShape)
-                            .padding(6.dp)
-                            .clip(CircleShape)
-                            .background(LocketAccent)
-                            .clickable(enabled = !isCapturing) {
-                                takeProofPhoto()
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (isCapturing) {
-                            CircularProgressIndicator(
-                                color = Color.White,
-                                modifier = Modifier.size(28.dp),
-                                strokeWidth = 3.dp
-                            )
-                        }
-                    }
-
-                    // Right: Flip Camera Button (fixed 48dp circle)
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(NotionCardSurface)
-                            .border(1.dp, NotionBorder, CircleShape)
-                            .clickable(enabled = !isCapturing) {
-                                camera?.cameraControl?.enableTorch(false)
-                                cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
-                                    CameraSelector.DEFAULT_FRONT_CAMERA
-                                } else {
-                                    CameraSelector.DEFAULT_BACK_CAMERA
-                                }
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Cameraswitch,
-                            contentDescription = "Đổi camera trước/sau",
-                            tint = TextPrimary,
-                            modifier = Modifier.size(22.dp)
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(22.dp)
+                                .background(Color.White, CircleShape)
                         )
                     }
                 }
             } else {
                 // When CAPTURED: Retake Button ("🔄 Chụp lại")
-                Row(
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(NotionCardSurface)
-                            .border(1.dp, NotionBorder, RoundedCornerShape(16.dp))
-                            .clickable {
-                                capturedPhotoPath?.let { File(it).delete() }
-                                capturedPhotoPath = null
-                            }
-                            .padding(horizontal = 20.dp, vertical = 12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Filled.Refresh,
-                                contentDescription = "Chụp lại",
-                                tint = LocketAccent,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "🔄 Chụp lại (Retake)",
-                                color = TextPrimary,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(BgSurface)
+                        .border(1.dp, BorderSubtle, RoundedCornerShape(16.dp))
+                        .clickable {
+                            capturedPhotoPath?.let { File(it).delete() }
+                            capturedPhotoPath = null
                         }
+                        .padding(horizontal = 20.dp, vertical = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Filled.Refresh,
+                            contentDescription = "Chụp lại",
+                            tint = AccentPrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Chụp lại (Retake)",
+                            color = TextPrimary,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             // 3. Completion Caption Block
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(NotionCardSurface, RoundedCornerShape(20.dp))
-                    .border(1.dp, NotionBorder, RoundedCornerShape(20.dp))
+                    .background(BgSurface, RoundedCornerShape(20.dp))
+                    .border(1.dp, BorderSubtle, RoundedCornerShape(20.dp))
                     .padding(16.dp)
             ) {
                 Text(
@@ -631,40 +630,43 @@ fun CameraAfterProofScreen(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary,
-                        focusedContainerColor = NotionDarkBg,
-                        unfocusedContainerColor = NotionDarkBg,
-                        focusedBorderColor = LocketAccent,
-                        unfocusedBorderColor = NotionBorder
+                        focusedContainerColor = BgElevated,
+                        unfocusedContainerColor = BgElevated,
+                        focusedBorderColor = AccentPrimary,
+                        unfocusedBorderColor = BorderSubtle
                     )
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Save & Complete Button
-                Button(
-                    onClick = {
-                        val finalPath = capturedPhotoPath ?: ""
-                        onProofCaptured(finalPath, completionCaption)
-                    },
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp),
-                    enabled = capturedPhotoPath != null,
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = LocketAccent,
-                        contentColor = NotionDarkBg,
-                        disabledContainerColor = ChipInactiveBg,
-                        disabledContentColor = TextMuted
-                    )
+                        .height(52.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(if (capturedPhotoPath != null) AuroraGradient else BgElevated)
+                        .clickable(enabled = capturedPhotoPath != null) {
+                            val finalPath = capturedPhotoPath ?: ""
+                            onProofCaptured(finalPath, completionCaption)
+                        },
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Filled.Check, contentDescription = "Hoàn thành", modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Lưu & Hoàn Thành (After Proof) 🚀",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Filled.Check,
+                            contentDescription = "Hoàn thành",
+                            tint = if (capturedPhotoPath != null) Color.White else TextMuted,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Lưu & Hoàn Thành (After Proof) 🚀",
+                            color = if (capturedPhotoPath != null) Color.White else TextMuted,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp
+                        )
+                    }
                 }
             }
         }

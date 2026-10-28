@@ -77,6 +77,16 @@ import com.snaptask.app.domain.model.Task
 import com.snaptask.app.domain.model.TaskPriority
 import com.snaptask.app.domain.model.TaskTag
 import com.snaptask.app.ui.screens.editor.ReminderPickerDialog
+import androidx.compose.material.icons.filled.Folder
+import com.snaptask.app.ui.theme.AccentPrimary
+import com.snaptask.app.ui.theme.AccentSecondary
+import com.snaptask.app.ui.theme.AuroraGradient
+import com.snaptask.app.ui.theme.BgElevated
+import com.snaptask.app.ui.theme.BgPrimary
+import com.snaptask.app.ui.theme.BgSurface
+import com.snaptask.app.ui.theme.BorderHighlight
+import com.snaptask.app.ui.theme.BorderSubtle
+import com.snaptask.app.ui.theme.StatusUrgent
 import com.snaptask.app.ui.theme.ChipActiveBg
 import com.snaptask.app.ui.theme.ChipActiveText
 import com.snaptask.app.ui.theme.ChipInactiveBg
@@ -150,6 +160,7 @@ fun CameraCreatorScreen(
     // Task & Form States
     var capturedPhotoPath by remember { mutableStateOf<String?>(null) }
     var title by remember { mutableStateOf("") }
+    var selectedFolder by remember { mutableStateOf("Cá nhân") }
     var selectedTag by remember { mutableStateOf(TaskTag.PERSONAL) }
     var selectedPriority by remember { mutableStateOf(TaskPriority.MEDIUM) }
     var isPinned by remember { mutableStateOf(true) }
@@ -357,7 +368,9 @@ fun CameraCreatorScreen(
         }
     }
 
-    Box(modifier = modifier.fillMaxSize().background(NotionDarkBg)) {
+    val folderOptions = remember { listOf("Cá nhân", "Công việc", "Học tập", "Mua sắm") }
+
+    Box(modifier = modifier.fillMaxSize().background(BgPrimary)) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -377,8 +390,8 @@ fun CameraCreatorScreen(
                     onClick = onClose,
                     modifier = Modifier
                         .size(40.dp)
-                        .background(NotionCardSurface, CircleShape)
-                        .border(1.dp, NotionBorder, CircleShape)
+                        .background(BgSurface, CircleShape)
+                        .border(1.dp, BorderSubtle, CircleShape)
                 ) {
                     Icon(Icons.Filled.Close, contentDescription = "Đóng", tint = TextPrimary)
                 }
@@ -396,13 +409,13 @@ fun CameraCreatorScreen(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // 1. Camera Viewfinder 1:1 Aspect Ratio with 32dp Squircle Corners
+            // 1. Camera Viewfinder 1:1 Aspect Ratio with HUD Controls
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
                     .clip(RoundedCornerShape(32.dp))
-                    .border(2.dp, if (cameraState == CameraState.CAPTURED) LocketAccent else NotionBorder, RoundedCornerShape(32.dp))
+                    .border(2.dp, if (cameraState == CameraState.CAPTURED) AccentPrimary else BorderSubtle, RoundedCornerShape(32.dp))
                     .background(Color.Black),
                 contentAlignment = Alignment.Center
             ) {
@@ -424,6 +437,58 @@ fun CameraCreatorScreen(
                         },
                         modifier = Modifier.fillMaxSize()
                     )
+
+                    // HUD Top-Left: Flash Mode Toggle Button
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(14.dp)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color(0x80000000))
+                            .border(1.dp, if (flashMode != CameraFlashMode.OFF) AccentPrimary else Color(0x33FFFFFF), CircleShape)
+                            .clickable { applyFlashMode(flashMode.next()) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = when (flashMode) {
+                                CameraFlashMode.OFF -> Icons.Filled.FlashOff
+                                CameraFlashMode.ON -> Icons.Filled.FlashOn
+                                CameraFlashMode.AUTO -> Icons.Filled.FlashAuto
+                                CameraFlashMode.TORCH -> Icons.Filled.Bolt
+                            },
+                            contentDescription = "Flash: ${flashMode.name}",
+                            tint = if (flashMode != CameraFlashMode.OFF) AccentPrimary else Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    // HUD Top-Right: Flip Camera Button
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(14.dp)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color(0x80000000))
+                            .border(1.dp, Color(0x33FFFFFF), CircleShape)
+                            .clickable(enabled = !isCapturing) {
+                                camera?.cameraControl?.enableTorch(false)
+                                cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
+                                    CameraSelector.DEFAULT_FRONT_CAMERA
+                                } else {
+                                    CameraSelector.DEFAULT_BACK_CAMERA
+                                }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Cameraswitch,
+                            contentDescription = "Đổi camera",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 } else {
                     // Instantly display captured image in 1:1 squircle
                     AsyncImage(
@@ -447,7 +512,7 @@ fun CameraCreatorScreen(
                     ) {
                         Text(
                             text = "✅ ĐÃ CHỤP",
-                            color = LocketAccent,
+                            color = AccentPrimary,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -464,139 +529,78 @@ fun CameraCreatorScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // 2. Camera Symmetrical Control Bar
+            // 2. Camera Controls: Single Centered Shutter or Retake Button
             if (cameraState == CameraState.PREVIEWING) {
-                Row(
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
+                        .size(74.dp)
+                        .clip(CircleShape)
+                        .background(Color.Transparent)
+                        .border(3.dp, Color.White.copy(alpha = 0.9f), CircleShape)
+                        .padding(5.dp)
+                        .clip(CircleShape)
+                        .background(AuroraGradient)
+                        .clickable(enabled = !isCapturing) {
+                            takePhoto()
+                        },
+                    contentAlignment = Alignment.Center
                 ) {
-                    // Left: Flash Mode Toggle Button (fixed 48dp circle)
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(NotionCardSurface)
-                            .border(1.dp, if (flashMode != CameraFlashMode.OFF) LocketAccent else NotionBorder, CircleShape)
-                            .clickable {
-                                applyFlashMode(flashMode.next())
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = when (flashMode) {
-                                CameraFlashMode.OFF -> Icons.Filled.FlashOff
-                                CameraFlashMode.ON -> Icons.Filled.FlashOn
-                                CameraFlashMode.AUTO -> Icons.Filled.FlashAuto
-                                CameraFlashMode.TORCH -> Icons.Filled.Bolt
-                            },
-                            contentDescription = "Flash: ${flashMode.name}",
-                            tint = if (flashMode != CameraFlashMode.OFF) LocketAccent else TextSecondary,
-                            modifier = Modifier.size(22.dp)
+                    if (isCapturing) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(26.dp),
+                            strokeWidth = 3.dp
                         )
-                    }
-
-                    // Center: Shutter Button (fixed 76dp outer / 62dp inner circle in LocketAccent)
-                    Box(
-                        modifier = Modifier
-                            .size(76.dp)
-                            .clip(CircleShape)
-                            .background(Color.Transparent)
-                            .border(3.5.dp, Color.White, CircleShape)
-                            .padding(6.dp)
-                            .clip(CircleShape)
-                            .background(LocketAccent)
-                            .clickable(enabled = !isCapturing) {
-                                takePhoto()
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (isCapturing) {
-                            CircularProgressIndicator(
-                                color = Color.White,
-                                modifier = Modifier.size(28.dp),
-                                strokeWidth = 3.dp
-                            )
-                        }
-                    }
-
-                    // Right: Flip Camera Button (fixed 48dp circle)
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(NotionCardSurface)
-                            .border(1.dp, NotionBorder, CircleShape)
-                            .clickable(enabled = !isCapturing) {
-                                camera?.cameraControl?.enableTorch(false)
-                                cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
-                                    CameraSelector.DEFAULT_FRONT_CAMERA
-                                } else {
-                                    CameraSelector.DEFAULT_BACK_CAMERA
-                                }
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Cameraswitch,
-                            contentDescription = "Đổi camera trước/sau",
-                            tint = TextPrimary,
-                            modifier = Modifier.size(22.dp)
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(22.dp)
+                                .background(Color.White, CircleShape)
                         )
                     }
                 }
             } else {
                 // When CAPTURED: Retake Button ("🔄 Chụp lại")
-                Row(
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(NotionCardSurface)
-                            .border(1.dp, NotionBorder, RoundedCornerShape(16.dp))
-                            .clickable {
-                                capturedPhotoPath?.let { File(it).delete() }
-                                capturedPhotoPath = null
-                            }
-                            .padding(horizontal = 20.dp, vertical = 12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Filled.Refresh,
-                                contentDescription = "Chụp lại",
-                                tint = LocketAccent,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "🔄 Chụp lại (Retake)",
-                                color = TextPrimary,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(BgSurface)
+                        .border(1.dp, BorderSubtle, RoundedCornerShape(16.dp))
+                        .clickable {
+                            capturedPhotoPath?.let { File(it).delete() }
+                            capturedPhotoPath = null
                         }
+                        .padding(horizontal = 20.dp, vertical = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Filled.Refresh,
+                            contentDescription = "Chụp lại",
+                            tint = AccentPrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Chụp lại (Retake)",
+                            color = TextPrimary,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // 3. Notion Quick Input & Metadata Card
+            // 3. Properties & Details Card
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(NotionCardSurface, RoundedCornerShape(24.dp))
-                    .border(1.dp, NotionBorder, RoundedCornerShape(24.dp))
+                    .background(BgSurface, RoundedCornerShape(24.dp))
+                    .border(1.dp, BorderSubtle, RoundedCornerShape(24.dp))
                     .padding(16.dp)
             ) {
                 // Task Title Input
@@ -610,18 +614,18 @@ fun CameraCreatorScreen(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary,
-                        focusedContainerColor = NotionDarkBg,
-                        unfocusedContainerColor = NotionDarkBg,
-                        focusedBorderColor = LocketAccent,
-                        unfocusedBorderColor = NotionBorder
+                        focusedContainerColor = BgElevated,
+                        unfocusedContainerColor = BgElevated,
+                        focusedBorderColor = AccentPrimary,
+                        unfocusedBorderColor = BorderSubtle
                     )
                 )
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Notion Quick Property Chips
+                // Quick Property Chips
                 Text(
-                    text = "THUỘC TÍNH NHANH (PROPERTIES)",
+                    text = "THUỘC TÍNH (PROPERTIES)",
                     color = TextSecondary,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
@@ -633,14 +637,47 @@ fun CameraCreatorScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // 1. Tag Property Chip
+                    // 1. Folder Chip
                     item {
                         Box(
                             modifier = Modifier
                                 .height(38.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(ChipActiveBg)
-                                .border(1.dp, LocketAccent, RoundedCornerShape(12.dp))
+                                .background(BgElevated)
+                                .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
+                                .clickable {
+                                    val nextIdx = (folderOptions.indexOf(selectedFolder) + 1) % folderOptions.size
+                                    selectedFolder = folderOptions[nextIdx]
+                                }
+                                .padding(horizontal = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Filled.Folder,
+                                    contentDescription = null,
+                                    tint = AccentPrimary,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = selectedFolder,
+                                    color = TextPrimary,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+
+                    // 2. Tag Property Chip
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .height(38.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(AccentPrimary.copy(alpha = 0.2f))
+                                .border(1.dp, AccentPrimary, RoundedCornerShape(12.dp))
                                 .clickable {
                                     val nextIndex = (selectedTag.ordinal + 1) % TaskTag.entries.size
                                     selectedTag = TaskTag.entries[nextIndex]
@@ -650,19 +687,19 @@ fun CameraCreatorScreen(
                         ) {
                             Text(
                                 text = "🏷️ ${selectedTag.displayName}",
-                                color = ChipActiveText,
+                                color = AccentPrimary,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
                     }
 
-                    // 2. Priority Property Chip
+                    // 3. Priority Property Chip
                     item {
                         val priorityColor = when (selectedPriority) {
                             TaskPriority.LOW -> StatusSuccess
                             TaskPriority.MEDIUM -> StatusAmber
-                            TaskPriority.HIGH -> StatusDanger
+                            TaskPriority.HIGH -> StatusUrgent
                         }
                         Box(
                             modifier = Modifier
@@ -695,15 +732,15 @@ fun CameraCreatorScreen(
                         }
                     }
 
-                    // 3. Reminder Property Chip
+                    // 4. Reminder Property Chip
                     item {
                         val hasReminder = reminderTime != null
                         Box(
                             modifier = Modifier
                                 .height(38.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(if (hasReminder) LocketAccent.copy(alpha = 0.2f) else ChipInactiveBg)
-                                .border(1.dp, if (hasReminder) LocketAccent else ChipInactiveBorder, RoundedCornerShape(12.dp))
+                                .background(if (hasReminder) AccentPrimary.copy(alpha = 0.2f) else BgElevated)
+                                .border(1.dp, if (hasReminder) AccentPrimary else BorderSubtle, RoundedCornerShape(12.dp))
                                 .clickable { showReminderPicker = true }
                                 .padding(horizontal = 12.dp),
                             contentAlignment = Alignment.Center
@@ -712,13 +749,13 @@ fun CameraCreatorScreen(
                                 Icon(
                                     Icons.Filled.Alarm,
                                     contentDescription = "Nhắc nhở",
-                                    tint = if (hasReminder) LocketAccent else TextSecondary,
+                                    tint = if (hasReminder) AccentPrimary else TextSecondary,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = if (hasReminder) "⏰ ${DateTimeUtils.formatTime(reminderTime!!)}" else "⏰ Nhắc nhở",
-                                    color = if (hasReminder) LocketAccent else TextPrimary,
+                                    color = if (hasReminder) AccentPrimary else TextPrimary,
                                     fontSize = 12.sp,
                                     fontWeight = if (hasReminder) FontWeight.Bold else FontWeight.Medium
                                 )
@@ -726,14 +763,14 @@ fun CameraCreatorScreen(
                         }
                     }
 
-                    // 4. Pin to Widget Property Chip
+                    // 5. Pin to Widget Property Chip
                     item {
                         Box(
                             modifier = Modifier
                                 .height(38.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(if (isPinned) LocketAccent.copy(alpha = 0.2f) else ChipInactiveBg)
-                                .border(1.dp, if (isPinned) LocketAccent else ChipInactiveBorder, RoundedCornerShape(12.dp))
+                                .background(if (isPinned) AccentPrimary.copy(alpha = 0.2f) else BgElevated)
+                                .border(1.dp, if (isPinned) AccentPrimary else BorderSubtle, RoundedCornerShape(12.dp))
                                 .clickable { isPinned = !isPinned }
                                 .padding(horizontal = 12.dp),
                             contentAlignment = Alignment.Center
@@ -742,13 +779,13 @@ fun CameraCreatorScreen(
                                 Icon(
                                     Icons.Filled.PushPin,
                                     contentDescription = "Ghim",
-                                    tint = if (isPinned) LocketAccent else TextSecondary,
+                                    tint = if (isPinned) AccentPrimary else TextSecondary,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = if (isPinned) "📌 Đã ghim Widget" else "📌 Ghim Widget",
-                                    color = if (isPinned) LocketAccent else TextPrimary,
+                                    color = if (isPinned) AccentPrimary else TextPrimary,
                                     fontSize = 12.sp,
                                     fontWeight = if (isPinned) FontWeight.Bold else FontWeight.Medium
                                 )
@@ -759,32 +796,32 @@ fun CameraCreatorScreen(
 
                 Spacer(modifier = Modifier.height(18.dp))
 
-                // Primary Button: "Save & Pin to Widget 🚀"
-                Button(
-                    onClick = {
-                        val finalPhoto = capturedPhotoPath ?: ""
-                        val task = Task(
-                            title = title.ifBlank { "Việc cần làm" },
-                            beforeImageUri = finalPhoto,
-                            tag = selectedTag.name,
-                            priority = selectedPriority.name,
-                            isPinnedToWidget = isPinned,
-                            reminderTime = reminderTime,
-                            reminderType = reminderType
-                        )
-                        onSaveTask(task)
-                    },
+                // Primary Button: "Lưu & Ghim Widget 🚀" with Aurora Gradient
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = LocketAccent,
-                        contentColor = NotionDarkBg
-                    )
+                        .height(52.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(AuroraGradient)
+                        .clickable {
+                            val finalPhoto = capturedPhotoPath ?: ""
+                            val task = Task(
+                                title = title.ifBlank { "Việc cần làm" },
+                                beforeImageUri = finalPhoto,
+                                tag = selectedTag.name,
+                                folderName = selectedFolder,
+                                priority = selectedPriority.name,
+                                isPinnedToWidget = isPinned,
+                                reminderTime = reminderTime,
+                                reminderType = reminderType
+                            )
+                            onSaveTask(task)
+                        },
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Save & Pin to Widget 🚀",
+                        text = "Lưu & Ghim Widget 🚀",
+                        color = Color.White,
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp
                     )
