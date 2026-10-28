@@ -2,6 +2,7 @@ package com.snaptask.app.ui.screens.editor
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -50,10 +51,13 @@ import com.snaptask.app.ui.theme.LocketAccent
 import com.snaptask.app.ui.theme.NotionBorder
 import com.snaptask.app.ui.theme.NotionCardSurface
 import com.snaptask.app.ui.theme.NotionDarkBg
+import com.snaptask.app.ui.theme.StatusDanger
+import com.snaptask.app.ui.theme.StatusSuccess
 import com.snaptask.app.ui.theme.TextMuted
 import com.snaptask.app.ui.theme.TextPrimary
 import com.snaptask.app.ui.theme.TextSecondary
 import com.snaptask.app.util.DateTimeUtils
+import com.snaptask.app.util.NotificationPermissionHelper
 import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,6 +71,11 @@ fun ReminderPickerDialog(
     val context = LocalContext.current
     var selectedTime by remember { mutableStateOf(initialReminderTime) }
     var selectedType by remember { mutableStateOf(if (initialReminderType == "NONE") "NOTIFICATION" else initialReminderType) }
+    val notificationsEnabled = remember { NotificationPermissionHelper.areNotificationsEnabled(context) }
+
+    fun setQuickSeconds(offsetSeconds: Int) {
+        selectedTime = System.currentTimeMillis() + offsetSeconds * 1000L
+    }
 
     fun setQuickTime(offsetMinutes: Int) {
         selectedTime = System.currentTimeMillis() + offsetMinutes * 60 * 1000L
@@ -148,6 +157,27 @@ fun ReminderPickerDialog(
                 }
             }
 
+            // Notification permission warning if turned off in system settings
+            if (!notificationsEnabled) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(StatusDanger.copy(alpha = 0.15f))
+                        .border(1.dp, StatusDanger, RoundedCornerShape(12.dp))
+                        .clickable { NotificationPermissionHelper.openNotificationSettings(context) }
+                        .padding(10.dp)
+                ) {
+                    Text(
+                        text = "⚠️ Quyền thông báo đang TẮT. Chạm vào đây để bật trong Cài đặt!",
+                        color = StatusDanger,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             // 1. Mode Selector (Notification vs Alarm)
@@ -214,7 +244,7 @@ fun ReminderPickerDialog(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Báo thức lớn",
+                            text = "Báo thức lớn 🔔",
                             color = if (isAlarm) NotionDarkBg else TextPrimary,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
@@ -236,6 +266,32 @@ fun ReminderPickerDialog(
             Spacer(modifier = Modifier.height(8.dp))
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Highlighted 5s Quick Test Button (Step 5)
+                val is5sSelected = selectedTime != null && (selectedTime!! - System.currentTimeMillis()) in 1..8000
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (is5sSelected) LocketAccent else LocketAccent.copy(alpha = 0.16f))
+                        .border(1.5.dp, LocketAccent, RoundedCornerShape(12.dp))
+                        .clickable { setQuickSeconds(5) }
+                        .padding(vertical = 11.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "⚡ TEST THỬ (SAU 5 GIÂY)",
+                            color = if (is5sSelected) NotionDarkBg else LocketAccent,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        if (is5sSelected) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(text = "✓ Đã chọn", color = NotionDarkBg, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -335,6 +391,10 @@ fun ReminderPickerDialog(
             // Action Buttons
             Button(
                 onClick = {
+                    if (!NotificationPermissionHelper.areNotificationsEnabled(context)) {
+                        Toast.makeText(context, "⚠️ Cần bật quyền thông báo để chuông hoạt động!", Toast.LENGTH_LONG).show()
+                        NotificationPermissionHelper.openNotificationSettings(context)
+                    }
                     onConfirm(selectedTime, selectedType)
                 },
                 enabled = selectedTime != null,

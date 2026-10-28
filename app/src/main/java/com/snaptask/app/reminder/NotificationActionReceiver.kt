@@ -22,6 +22,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
     companion object {
         const val ACTION_COMPLETE_TASK = "com.snaptask.app.ACTION_COMPLETE_TASK"
         const val ACTION_SNOOZE_TASK = "com.snaptask.app.ACTION_SNOOZE_TASK"
+        const val ACTION_STOP_ALARM = "com.snaptask.app.ACTION_STOP_ALARM"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -30,35 +31,46 @@ class NotificationActionReceiver : BroadcastReceiver() {
 
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
+        // Always silence any ringing alarm sound/vibration immediately
+        AlarmSoundPlayer.stop()
+
         when (intent.action) {
-            ACTION_COMPLETE_TASK -> {
-                // Dismiss notification immediately
+            ACTION_STOP_ALARM -> {
                 notificationManager.cancel(taskId.toInt())
+                Toast.makeText(context, "Đã tắt chuông báo thức! 🔕", Toast.LENGTH_SHORT).show()
+            }
+
+            ACTION_COMPLETE_TASK -> {
+                notificationManager.cancel(taskId.toInt())
+                val pendingResult = goAsync()
 
                 CoroutineScope(Dispatchers.IO).launch {
-                    val db = AppDatabase.getInstance(context)
-                    db.taskDao().toggleCompleted(taskId, true, System.currentTimeMillis())
-
-                    TaskReminderScheduler.cancelReminder(context, taskId)
-
-                    // Refresh all widgets
                     try {
-                        SnapTaskWidget().updateAll(context)
-                        LocketFocusWidget().updateAll(context)
-                        NotionStackWidget().updateAll(context)
-                    } catch (_: Exception) {}
+                        val db = AppDatabase.getInstance(context)
+                        db.taskDao().toggleCompleted(taskId, true, System.currentTimeMillis())
+                        TaskReminderScheduler.cancelReminder(context, taskId)
 
-                    Handler(Looper.getMainLooper()).post {
-                        Toast.makeText(context, "Đã hoàn thành công việc! ✅", Toast.LENGTH_SHORT).show()
+                        // Refresh all home screen widgets
+                        try {
+                            SnapTaskWidget().updateAll(context)
+                            LocketFocusWidget().updateAll(context)
+                            NotionStackWidget().updateAll(context)
+                        } catch (_: Exception) {}
+
+                        Handler(Looper.getMainLooper()).post {
+                            Toast.makeText(context, "Đã hoàn thành công việc! ✅", Toast.LENGTH_SHORT).show()
+                        }
+                    } finally {
+                        pendingResult.finish()
                     }
                 }
             }
 
             ACTION_SNOOZE_TASK -> {
-                // Dismiss active notification
                 notificationManager.cancel(taskId.toInt())
 
                 val title = intent.getStringExtra(TaskReminderScheduler.EXTRA_TASK_TITLE) ?: "Việc cần làm"
+                val desc = intent.getStringExtra(TaskReminderScheduler.EXTRA_TASK_DESC) ?: ""
                 val image = intent.getStringExtra(TaskReminderScheduler.EXTRA_TASK_IMAGE) ?: ""
                 val type = intent.getStringExtra(TaskReminderScheduler.EXTRA_REMINDER_TYPE) ?: "NOTIFICATION"
 
@@ -67,13 +79,13 @@ class NotificationActionReceiver : BroadcastReceiver() {
                 val snoozedTask = Task(
                     id = taskId,
                     title = title,
+                    description = desc,
                     beforeImageUri = image,
                     reminderTime = snoozeTime,
                     reminderType = type
                 )
 
                 TaskReminderScheduler.scheduleReminder(context, snoozedTask)
-
                 Toast.makeText(context, "Sẽ nhắc lại sau 10 phút! 💤", Toast.LENGTH_SHORT).show()
             }
         }

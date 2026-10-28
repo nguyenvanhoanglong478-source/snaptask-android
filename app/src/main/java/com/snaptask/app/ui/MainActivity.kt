@@ -2,6 +2,7 @@ package com.snaptask.app.ui
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -11,6 +12,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -22,12 +24,14 @@ import androidx.core.content.ContextCompat
 import androidx.glance.appwidget.updateAll
 import com.snaptask.app.SnapTaskApplication
 import com.snaptask.app.domain.model.Task
+import com.snaptask.app.reminder.AlarmSoundPlayer
 import com.snaptask.app.ui.screens.board.BoardScreen
 import com.snaptask.app.ui.screens.camera.CameraAfterProofScreen
 import com.snaptask.app.ui.screens.camera.CameraCreatorScreen
 import com.snaptask.app.ui.screens.detail.TaskDetailScreen
 import com.snaptask.app.ui.screens.home.HomeScreen
 import com.snaptask.app.ui.theme.SnapTaskTheme
+import com.snaptask.app.util.NotificationPermissionHelper
 import com.snaptask.app.widget.LocketFocusWidget
 import com.snaptask.app.widget.NotionStackWidget
 import com.snaptask.app.widget.SnapTaskWidget
@@ -42,6 +46,17 @@ enum class ScreenState {
 }
 
 class MainActivity : ComponentActivity() {
+
+    override fun onResume() {
+        super.onResume()
+        AlarmSoundPlayer.stop()
+    }
+
+    override fun onNewIntent(intent: android.content.Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        AlarmSoundPlayer.stop()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -71,6 +86,42 @@ class MainActivity : ComponentActivity() {
                     selectedTask?.let { curr ->
                         tasks.find { it.id == curr.id }?.let { matched ->
                             if (matched != curr) selectedTask = matched
+                        }
+                    }
+
+                    // Notification permission launcher for Android 13+ (API 33+)
+                    val notifPermissionLauncher = rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.RequestPermission()
+                    ) { isGranted ->
+                        if (!isGranted) {
+                            Toast.makeText(this@MainActivity, "Thông báo đang tắt. Bạn có thể bật lại trong Cài đặt.", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+
+                    // Prompt for notification permission on app launch if not enabled
+                    LaunchedEffect(Unit) {
+                        AlarmSoundPlayer.stop()
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            if (!NotificationPermissionHelper.areNotificationsEnabled(this@MainActivity)) {
+                                notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                        }
+                    }
+
+                    fun formatReminderConfirmation(task: Task): String {
+                        if (!task.hasReminder || task.reminderTime == null) return ""
+                        val diffMs = task.reminderTime!! - System.currentTimeMillis()
+                        val diffSec = diffMs / 1000
+                        val diffMin = diffSec / 60
+                        return when {
+                            diffSec in 0..10 -> "\n⏰ Đã đặt nhắc nhở sau ${diffSec.coerceAtLeast(1)} giây!"
+                            diffMin < 60 -> "\n⏰ Đã đặt nhắc nhở sau ${diffMin} phút nữa"
+                            else -> {
+                                val hours = diffMin / 60
+                                val remMin = diffMin % 60
+                                if (remMin > 0) "\n⏰ Đã đặt nhắc nhở sau ${hours}h ${remMin}m nữa"
+                                else "\n⏰ Đã đặt nhắc nhở sau ${hours} giờ nữa"
+                            }
                         }
                     }
 
@@ -147,7 +198,8 @@ class MainActivity : ComponentActivity() {
                                         repository.createTask(newTask)
                                         updateWidgets()
                                         currentScreen = ScreenState.HOME
-                                        Toast.makeText(this@MainActivity, "Đã lưu việc cần làm! 🚀", Toast.LENGTH_SHORT).show()
+                                        val reminderNotice = formatReminderConfirmation(newTask)
+                                        Toast.makeText(this@MainActivity, "Đã lưu việc cần làm! 🚀$reminderNotice", Toast.LENGTH_LONG).show()
                                     }
                                 },
                                 onClose = {
@@ -196,7 +248,8 @@ class MainActivity : ComponentActivity() {
                                             repository.updateTask(updated)
                                             selectedTask = updated
                                             updateWidgets()
-                                            Toast.makeText(this@MainActivity, "Đã cập nhật việc cần làm!", Toast.LENGTH_SHORT).show()
+                                            val reminderNotice = formatReminderConfirmation(updated)
+                                            Toast.makeText(this@MainActivity, "Đã cập nhật việc cần làm!$reminderNotice", Toast.LENGTH_LONG).show()
                                         }
                                     },
                                     onDeleteTask = { toDelete ->
