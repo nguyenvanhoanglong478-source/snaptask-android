@@ -226,7 +226,7 @@ fun TaskDetailScreen(
                             modifier = Modifier
                                 .align(Alignment.BottomStart)
                                 .padding(8.dp)
-                                .background(Color(0xD9000000), RoundedCornerShape(8.dp))
+                                .background(Color(0xD9000000), RoundedCornerShape(8.dp)) // Dark scrim overlay for timestamp on photo
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Text(text = "BEFORE", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)

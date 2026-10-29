@@ -422,8 +422,8 @@ fun CameraAfterProofScreen(
                             .align(Alignment.TopCenter)
                             .padding(top = 14.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(if (isGhostOverlayEnabled) colors.flash else Color(0x80000000))
-                            .border(1.dp, if (isGhostOverlayEnabled) colors.flash else Color(0x33FFFFFF), RoundedCornerShape(12.dp))
+                            .background(if (isGhostOverlayEnabled) colors.flash else Color(0x80000000)) // Semi-transparent black scrim for ghost toggle over preview
+                            .border(1.dp, if (isGhostOverlayEnabled) colors.flash else Color(0x33FFFFFF), RoundedCornerShape(12.dp)) // Translucent white border for ghost toggle over preview
                             .clickable { isGhostOverlayEnabled = !isGhostOverlayEnabled }
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
@@ -452,7 +452,7 @@ fun CameraAfterProofScreen(
                             .align(Alignment.TopStart)
                             .padding(14.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xCC000000))
+                            .background(Color(0xCC000000)) // Camera viewfinder dark backdrop
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
                         Text(
@@ -487,7 +487,7 @@ fun CameraAfterProofScreen(
                     modifier = Modifier
                         .size(46.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF15171E))
+                        .background(colors.surface)
                         .border(1.dp, if (flashMode != CameraFlashMode.OFF) colors.flash else colors.border, CircleShape)
                         .clickable { applyFlashMode(flashMode.next()) },
                     contentAlignment = Alignment.Center
@@ -558,7 +558,7 @@ fun CameraAfterProofScreen(
                     modifier = Modifier
                         .size(46.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF15171E))
+                        .background(colors.surface)
                         .border(1.dp, colors.border, CircleShape)
                         .clickable(enabled = !isCapturing && cameraState == CameraState.PREVIEWING) {
                             camera?.cameraControl?.enableTorch(false)

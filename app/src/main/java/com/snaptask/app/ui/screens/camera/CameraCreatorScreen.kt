@@ -436,7 +436,7 @@ fun CameraCreatorScreen(
                             .align(Alignment.TopStart)
                             .padding(14.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xCC000000))
+                            .background(Color(0xCC000000)) // Camera viewfinder dark backdrop
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
                         Text(
@@ -471,7 +471,7 @@ fun CameraCreatorScreen(
                     modifier = Modifier
                         .size(46.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF15171E))
+                        .background(colors.surface)
                         .border(1.dp, if (flashMode != CameraFlashMode.OFF) colors.flash else colors.border, CircleShape)
                         .clickable { applyFlashMode(flashMode.next()) },
                     contentAlignment = Alignment.Center
@@ -542,7 +542,7 @@ fun CameraCreatorScreen(
                     modifier = Modifier
                         .size(46.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF15171E))
+                        .background(colors.surface)
                         .border(1.dp, colors.border, CircleShape)
                         .clickable(enabled = !isCapturing && cameraState == CameraState.PREVIEWING) {
                             camera?.cameraControl?.enableTorch(false)
@@ -644,7 +644,7 @@ fun CameraCreatorScreen(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF15171E))
+                            .background(colors.surface)
                             .border(1.dp, if (selectedPriority != TaskPriority.LOW) priorityColor else colors.border, RoundedCornerShape(12.dp))
                             .clickable {
                                 val nextIndex = (selectedPriority.ordinal + 1) % TaskPriority.entries.size

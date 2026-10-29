@@ -284,7 +284,7 @@ fun QuickNoteFeedCard(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF15171E))
+                        .background(colors.elevated)
                         .border(1.dp, colors.border, CircleShape)
                         .clickable(onClick = onTogglePin),
                     contentAlignment = Alignment.Center
@@ -443,7 +443,7 @@ private fun AfterFaceContent(
 
                 Box(
                     modifier = Modifier
-                        .background(Color(0xCC000000), RoundedCornerShape(10.dp))
+                        .background(Color(0xCC000000), RoundedCornerShape(10.dp)) // Dark scrim overlay for legibility on camera photos
                         .padding(horizontal = 7.dp, vertical = 4.dp)
                 ) {
                     Text(
@@ -520,7 +520,7 @@ private fun AfterFaceContent(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF15171E).copy(alpha = 0.85f))
+                        .background(colors.glass)
                         .border(1.dp, colors.border, CircleShape)
                         .clickable(onClick = onTogglePin),
                     contentAlignment = Alignment.Center
@@ -589,7 +589,7 @@ private fun BeforeFlippedFaceContent(
 
                 Box(
                     modifier = Modifier
-                        .background(Color(0xCC000000), RoundedCornerShape(10.dp))
+                        .background(Color(0xCC000000), RoundedCornerShape(10.dp)) // Dark scrim overlay for legibility on camera photos
                         .padding(horizontal = 7.dp, vertical = 4.dp)
                 ) {
                     Text(
@@ -662,7 +662,7 @@ private fun BeforeFlippedFaceContent(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xCC000000))
+                        .background(Color(0xCC000000)) // Dark placeholder backdrop
                         .clickable(onClick = onToggleFlip)
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
@@ -713,7 +713,7 @@ private fun StandardBeforeFaceContent(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(
                     modifier = Modifier
-                        .background(Color(0xCC000000), RoundedCornerShape(10.dp))
+                        .background(Color(0xCC000000), RoundedCornerShape(10.dp)) // Dark scrim overlay for legibility on camera photos
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
@@ -751,7 +751,7 @@ private fun StandardBeforeFaceContent(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF15171E).copy(alpha = 0.85f))
+                    .background(colors.glass)
                     .border(1.dp, colors.border, CircleShape)
                     .clickable(onClick = onTogglePin),
                 contentAlignment = Alignment.Center
@@ -853,7 +853,7 @@ private fun MiniPipThumbnail(
                 .align(Alignment.BottomEnd)
                 .padding(3.dp)
                 .size(20.dp)
-                .background(Color(0xCC000000), CircleShape),
+                .background(Color(0xCC000000), CircleShape) // Dark circular overlay for flip icon over thumbnail,
             contentAlignment = Alignment.Center
         ) {
             Icon(

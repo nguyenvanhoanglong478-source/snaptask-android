@@ -798,8 +798,8 @@ private fun FloatingGlassDock(
             .shadow(
                 elevation = 8.dp,
                 shape = RoundedCornerShape(36.dp),
-                ambientColor = if (isDark) Color.Transparent else Color(0x1F17140A),
-                spotColor = if (isDark) Color.Transparent else Color(0x1F17140A)
+                ambientColor = if (isDark) Color.Transparent else Color(0x1F17140A), // 12% ink shadow for light dock
+                spotColor = if (isDark) Color.Transparent else Color(0x1F17140A) // 12% ink shadow for light dock
             )
             .clip(RoundedCornerShape(36.dp))
             .background(colors.surface)
@@ -1031,7 +1031,7 @@ fun BentoTaskCard(
                     ) {
                         Box(
                             modifier = Modifier
-                                .background(if (task.hasProof) (if (isDark) colors.done.copy(alpha = 0.2f) else colors.done) else Color(0xCC000000), RoundedCornerShape(7.dp))
+                                .background(if (task.hasProof) (if (isDark) colors.done.copy(alpha = 0.2f) else colors.done) else Color(0xCC000000), RoundedCornerShape(7.dp)) // Dark scrim overlay for photo badge
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
