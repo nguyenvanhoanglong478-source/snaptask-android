@@ -126,6 +126,8 @@ fun HomeScreen(
     onSaveQuickNote: (Task) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val colors = MaterialTheme.snapColors
+    val isDark = isSystemInDarkTheme()
     val haptic = LocalHapticFeedback.current
     var viewMode by remember { mutableStateOf(ViewMode.FEED_FULL) }
     var selectedSmartFolder by remember { mutableStateOf<SmartFolderType?>(SmartFolderType.ALL) }

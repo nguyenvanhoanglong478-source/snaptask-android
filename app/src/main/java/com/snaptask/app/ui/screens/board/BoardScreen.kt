@@ -1,5 +1,6 @@
 package com.snaptask.app.ui.screens.board
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,12 +44,12 @@ import com.snaptask.app.ui.screens.home.components.TaskSnapCard
 import com.snaptask.app.ui.theme.snapColors
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun BoardScreen(
     tasks: List<Task>,
     onToggleTaskStatus: (Task) -> Unit,
-    onTaskClick: (Long) -> Unit,
+    onTaskClick: (Task) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -176,7 +177,7 @@ fun BoardScreen(
                                 TaskSnapCard(
                                     task = task,
                                     onToggleStatus = { onToggleTaskStatus(task) },
-                                    onClick = { onTaskClick(task.id) }
+                                    onClick = { onTaskClick(task) }
                                 )
                             }
                         }

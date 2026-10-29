@@ -73,6 +73,7 @@ fun QuickNoteBottomSheet(
     onSave: (Task) -> Unit,
     existingFolders: List<String> = listOf("Cá nhân", "Công việc", "Học tập", "Mua sắm")
 ) {
+    val colors = MaterialTheme.snapColors
     val context = LocalContext.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -450,9 +451,8 @@ fun QuickNoteBottomSheet(
                         checked = isPinned,
                         onCheckedChange = { isPinned = it },
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
+                            checkedThumbColor = colors.onFlash,
                             checkedTrackColor = colors.flash,
-                    checkedThumbColor = colors.onFlash,
                             uncheckedThumbColor = colors.textMuted,
                             uncheckedTrackColor = colors.elevated
                         )

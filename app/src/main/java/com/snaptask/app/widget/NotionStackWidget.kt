@@ -125,56 +125,59 @@ class NotionStackWidget : GlanceAppWidget() {
                             )
                         }
 
-                        // Top Pill on photo: Progress Done/Total
-                        Box(
-                            modifier = GlanceModifier
-                                .padding(6.dp)
-                                .background(WidgetColors.pillProvider)
-                                .cornerRadius(8.dp)
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "$completedCount/$totalCount xong",
-                                style = TextStyle(
-                                    color = WidgetColors.accentProvider,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 9.sp
-                                )
-                            )
-                        }
-
-                        // Bottom Title Bar with Done Checkmark Image Button
-                        val taskIdParam = ActionParameters.Key<Long>("taskId")
-                        Row(
-                            modifier = GlanceModifier
-                                .fillMaxWidth()
-                                .align(Alignment.BottomCenter)
-                                .background(WidgetColors.glassProvider)
-                                .padding(horizontal = 6.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = topTask.title,
-                                style = TextStyle(
-                                    color = WidgetColors.textProvider,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 11.sp
-                                ),
-                                maxLines = 1,
-                                modifier = GlanceModifier.defaultWeight()
-                            )
-                            Spacer(modifier = GlanceModifier.width(4.dp))
-                            Image(
-                                provider = ImageProvider(R.drawable.ic_widget_check_done),
-                                contentDescription = "Hoàn thành",
+                        Column(modifier = GlanceModifier.fillMaxSize()) {
+                            // Top Pill on photo: Progress Done/Total
+                            Box(
                                 modifier = GlanceModifier
-                                    .size(28.dp)
-                                    .clickable(
-                                        actionRunCallback<CompleteTaskActionCallback>(
-                                            actionParametersOf(taskIdParam to topTask.id)
-                                        )
+                                    .padding(6.dp)
+                                    .background(WidgetColors.pillProvider)
+                                    .cornerRadius(8.dp)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "$completedCount/$totalCount xong",
+                                    style = TextStyle(
+                                        color = WidgetColors.accentProvider,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 9.sp
                                     )
-                            )
+                                )
+                            }
+
+                            Spacer(modifier = GlanceModifier.defaultWeight())
+
+                            // Bottom Title Bar with Done Checkmark Image Button
+                            val taskIdParam = ActionParameters.Key<Long>("taskId")
+                            Row(
+                                modifier = GlanceModifier
+                                    .fillMaxWidth()
+                                    .background(WidgetColors.glassProvider)
+                                    .padding(horizontal = 6.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = topTask.title,
+                                    style = TextStyle(
+                                        color = WidgetColors.textProvider,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp
+                                    ),
+                                    maxLines = 1,
+                                    modifier = GlanceModifier.defaultWeight()
+                                )
+                                Spacer(modifier = GlanceModifier.width(4.dp))
+                                Image(
+                                    provider = ImageProvider(R.drawable.ic_widget_check_done),
+                                    contentDescription = "Hoàn thành",
+                                    modifier = GlanceModifier
+                                        .size(28.dp)
+                                        .clickable(
+                                            actionRunCallback<CompleteTaskActionCallback>(
+                                                actionParametersOf(taskIdParam to topTask.id)
+                                            )
+                                        )
+                                )
+                            }
                         }
                     }
                 } else {

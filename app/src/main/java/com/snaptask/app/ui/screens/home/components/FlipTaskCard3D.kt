@@ -194,6 +194,8 @@ fun QuickNoteFeedCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = MaterialTheme.snapColors
+    val isDark = isSystemInDarkTheme()
     val haptic = LocalHapticFeedback.current
     var isCheckedInternal by remember(task.isCompleted) { mutableStateOf(task.isCompleted) }
     val checkScale by animateFloatAsState(
@@ -404,6 +406,8 @@ private fun AfterFaceContent(
     onToggleStatus: () -> Unit,
     onTogglePin: () -> Unit
 ) {
+    val colors = MaterialTheme.snapColors
+    val isDark = isSystemInDarkTheme()
     val haptic = LocalHapticFeedback.current
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -549,6 +553,8 @@ private fun BeforeFlippedFaceContent(
     onToggleStatus: () -> Unit,
     onTogglePin: () -> Unit
 ) {
+    val colors = MaterialTheme.snapColors
+    val isDark = isSystemInDarkTheme()
     val haptic = LocalHapticFeedback.current
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -687,6 +693,8 @@ private fun StandardBeforeFaceContent(
     onToggleStatus: () -> Unit,
     onTogglePin: () -> Unit
 ) {
+    val colors = MaterialTheme.snapColors
+    val isDark = isSystemInDarkTheme()
     val haptic = LocalHapticFeedback.current
 
     Box(modifier = Modifier.fillMaxSize()) {

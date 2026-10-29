@@ -82,6 +82,8 @@ fun TaskDetailScreen(
     onOpenAfterCamera: (Task) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = MaterialTheme.snapColors
+    val isDark = isSystemInDarkTheme()
     val converters = remember { Converters() }
     val scrollState = rememberScrollState()
 
@@ -453,7 +455,7 @@ fun TaskDetailScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             LinearProgressIndicator(
-                progress = progressFraction,
+                progress = { progressFraction },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(6.dp)
