@@ -74,11 +74,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun extractTaskId(intent: Intent?) {
-        val taskId = intent?.getLongExtra(TaskReminderScheduler.EXTRA_TASK_ID, -1L)?.takeIf { it != -1L }
-        if (taskId != null) {
-            pendingTaskIdState.value = taskId
-            intent.removeExtra(TaskReminderScheduler.EXTRA_TASK_ID)
-        }
+        val i = intent ?: return
+        val taskId = i.getLongExtra(TaskReminderScheduler.EXTRA_TASK_ID, -1L).takeIf { it != -1L } ?: return
+        pendingTaskIdState.value = taskId
+        i.removeExtra(TaskReminderScheduler.EXTRA_TASK_ID)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
