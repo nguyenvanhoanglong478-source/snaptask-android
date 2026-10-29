@@ -9,6 +9,9 @@ import com.snaptask.app.data.local.AppDatabase
 import com.snaptask.app.data.repository.TaskRepository
 import com.snaptask.app.data.repository.TaskRepositoryImpl
 import com.snaptask.app.util.FileUtils
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class SnapTaskApplication : Application() {
 
@@ -42,8 +45,10 @@ class SnapTaskApplication : Application() {
             .build()
         Coil.setImageLoader(imageLoader)
 
-        // Background cleanup of stale temp files
-        FileUtils.clearOldTempFiles(this)
+        // Background cleanup of stale temp files on IO thread
+        CoroutineScope(Dispatchers.IO).launch {
+            FileUtils.clearOldTempFiles(this@SnapTaskApplication)
+        }
     }
 
     override fun onTrimMemory(level: Int) {
