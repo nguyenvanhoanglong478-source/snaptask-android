@@ -39,15 +39,13 @@ class TaskReminderReceiver : BroadcastReceiver() {
     }
 
     private suspend fun handleReminder(context: Context, intent: Intent, incomingAction: String) {
-        // 1. Device reboot: restore all reminders from database
+        // 1. Device reboot: restore all future reminders from database without limit
         if (incomingAction == Intent.ACTION_BOOT_COMPLETED || incomingAction == Intent.ACTION_MY_PACKAGE_REPLACED) {
             val db = AppDatabase.getInstance(context)
-            val pending = db.taskDao().getPendingTasksForWidget()
-            for (entity in pending) {
-                val task = entity.toDomain()
-                if (task.hasReminder) {
-                    TaskReminderScheduler.scheduleReminder(context, task)
-                }
+            val now = System.currentTimeMillis()
+            val pendingWithReminder = db.taskDao().getPendingTasksWithFutureReminder(now)
+            for (entity in pendingWithReminder) {
+                TaskReminderScheduler.scheduleReminder(context, entity.toDomain())
             }
             return
         }

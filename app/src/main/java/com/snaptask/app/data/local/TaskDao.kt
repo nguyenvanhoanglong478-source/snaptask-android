@@ -32,6 +32,9 @@ interface TaskDao {
     @Query("SELECT * FROM tasks WHERE isCompleted = 0 ORDER BY isPinnedToWidget DESC, createdAt DESC LIMIT 5")
     suspend fun getPendingTasksForWidget(): List<TaskEntity>
 
+    @Query("SELECT * FROM tasks WHERE isCompleted = 0 AND reminderTime IS NOT NULL AND reminderTime > :now AND reminderType != 'NONE' ORDER BY reminderTime ASC")
+    suspend fun getPendingTasksWithFutureReminder(now: Long): List<TaskEntity>
+
     @Query("SELECT COUNT(*) FROM tasks WHERE isCompleted = 1")
     suspend fun getCompletedCount(): Int
 
