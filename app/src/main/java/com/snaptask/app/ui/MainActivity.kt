@@ -3,6 +3,7 @@ package com.snaptask.app.ui
 import android.Manifest
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -10,6 +11,7 @@ import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -22,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.animation.doOnEnd
@@ -32,6 +35,7 @@ import androidx.lifecycle.lifecycleScope
 import com.snaptask.app.SnapTaskApplication
 import com.snaptask.app.domain.model.Task
 import com.snaptask.app.reminder.AlarmSoundPlayer
+import com.snaptask.app.reminder.TaskReminderScheduler
 import com.snaptask.app.ui.screens.board.BoardScreen
 import com.snaptask.app.ui.screens.camera.CameraAfterProofScreen
 import com.snaptask.app.ui.screens.camera.CameraCreatorScreen
@@ -55,20 +59,32 @@ enum class ScreenState {
 
 class MainActivity : ComponentActivity() {
 
+    private val pendingTaskIdState = mutableStateOf<Long?>(null)
+
     override fun onResume() {
         super.onResume()
         AlarmSoundPlayer.stop()
     }
 
-    override fun onNewIntent(intent: android.content.Intent?) {
+    override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         setIntent(intent)
         AlarmSoundPlayer.stop()
+        extractTaskId(intent)
+    }
+
+    private fun extractTaskId(intent: Intent?) {
+        val taskId = intent?.getLongExtra(TaskReminderScheduler.EXTRA_TASK_ID, -1L)?.takeIf { it != -1L }
+        if (taskId != null) {
+            pendingTaskIdState.value = taskId
+            intent.removeExtra(TaskReminderScheduler.EXTRA_TASK_ID)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+        extractTaskId(intent)
 
         var keepSplashScreen = true
         splashScreen.setKeepOnScreenCondition { keepSplashScreen }
@@ -97,10 +113,33 @@ class MainActivity : ComponentActivity() {
         setContent {
             SnapTaskTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    var currentScreen by remember { mutableStateOf(ScreenState.HOME) }
-                    var selectedTask by remember { mutableStateOf<Task?>(null) }
-                    val tasks by repository.getAllTasks().collectAsState(initial = emptyList())
+                    var currentScreen by rememberSaveable { mutableStateOf(ScreenState.HOME) }
+                    var selectedTaskId by rememberSaveable { mutableStateOf<Long?>(null) }
+                    val tasksState = repository.getAllTasks().collectAsState(initial = null)
+                    val tasks = tasksState.value
+                    val displayTasks = tasks ?: emptyList()
+                    val selectedTask = displayTasks.find { it.id == selectedTaskId }
                     val scope = rememberCoroutineScope()
+
+                    // BackHandler: Return to HOME from other screens, default behavior on HOME
+                    BackHandler(enabled = currentScreen != ScreenState.HOME) {
+                        currentScreen = ScreenState.HOME
+                        selectedTaskId = null
+                    }
+
+                    // Deep link from notification: navigate to DETAIL of the task once tasks are loaded
+                    LaunchedEffect(tasks, pendingTaskIdState.value) {
+                        val targetId = pendingTaskIdState.value ?: return@LaunchedEffect
+                        val loadedTasks = tasks ?: return@LaunchedEffect
+                        val found = loadedTasks.find { it.id == targetId }
+                        if (found != null) {
+                            selectedTaskId = targetId
+                            currentScreen = ScreenState.DETAIL
+                        } else {
+                            currentScreen = ScreenState.HOME
+                        }
+                        pendingTaskIdState.value = null
+                    }
 
                     fun updateWidgets() {
                         scope.launch {
@@ -109,13 +148,6 @@ class MainActivity : ComponentActivity() {
                                 LocketFocusWidget().updateAll(this@MainActivity)
                                 NotionStackWidget().updateAll(this@MainActivity)
                             } catch (_: Exception) {}
-                        }
-                    }
-
-                    // Keep selectedTask synchronized with updated tasks list
-                    selectedTask?.let { curr ->
-                        tasks.find { it.id == curr.id }?.let { matched ->
-                            if (matched != curr) selectedTask = matched
                         }
                     }
 
@@ -184,10 +216,10 @@ class MainActivity : ComponentActivity() {
                     when (currentScreen) {
                         ScreenState.HOME -> {
                             HomeScreen(
-                                tasks = tasks,
+                                tasks = displayTasks,
                                 onOpenLiveCamera = { openCameraWithCheck(ScreenState.CAMERA_CREATOR) },
                                 onOpenProofCamera = { task ->
-                                    selectedTask = task
+                                    selectedTaskId = task.id
                                     openCameraWithCheck(ScreenState.CAMERA_AFTER_PROOF)
                                 },
                                 onQuickComplete = { task ->
@@ -215,7 +247,7 @@ class MainActivity : ComponentActivity() {
                                     }
                                 },
                                 onTaskClick = { task ->
-                                    selectedTask = task
+                                    selectedTaskId = task.id
                                     currentScreen = ScreenState.DETAIL
                                 },
                                 onSaveQuickNote = { newTask ->
@@ -259,17 +291,19 @@ class MainActivity : ComponentActivity() {
                                                 completedAt = System.currentTimeMillis()
                                             )
                                             updateWidgets()
-                                            selectedTask = null
+                                            selectedTaskId = null
                                             currentScreen = ScreenState.HOME
                                             Toast.makeText(this@MainActivity, "Đã hoàn thành Before / After!", Toast.LENGTH_SHORT).show()
                                         }
                                     },
                                     onClose = {
                                         currentScreen = ScreenState.HOME
+                                        selectedTaskId = null
                                     }
                                 )
                             } ?: run {
                                 currentScreen = ScreenState.HOME
+                                selectedTaskId = null
                             }
                         }
 
@@ -279,12 +313,11 @@ class MainActivity : ComponentActivity() {
                                     task = task,
                                     onBack = {
                                         currentScreen = ScreenState.HOME
-                                        selectedTask = null
+                                        selectedTaskId = null
                                     },
                                     onSaveTask = { updated ->
                                         scope.launch {
                                             repository.updateTask(updated)
-                                            selectedTask = updated
                                             updateWidgets()
                                             val reminderNotice = formatReminderConfirmation(updated)
                                             Toast.makeText(this@MainActivity, "Đã cập nhật việc cần làm!$reminderNotice", Toast.LENGTH_LONG).show()
@@ -294,24 +327,25 @@ class MainActivity : ComponentActivity() {
                                         scope.launch {
                                             repository.deleteTask(toDelete)
                                             updateWidgets()
-                                            selectedTask = null
+                                            selectedTaskId = null
                                             currentScreen = ScreenState.HOME
                                             Toast.makeText(this@MainActivity, "Đã xóa việc cần làm!", Toast.LENGTH_SHORT).show()
                                         }
                                     },
                                     onOpenAfterCamera = {
-                                        selectedTask = task
+                                        selectedTaskId = task.id
                                         openCameraWithCheck(ScreenState.CAMERA_AFTER_PROOF)
                                     }
                                 )
                             } ?: run {
                                 currentScreen = ScreenState.HOME
+                                selectedTaskId = null
                             }
                         }
 
                         ScreenState.BOARD -> {
                             BoardScreen(
-                                tasks = tasks,
+                                tasks = displayTasks,
                                 onToggleTaskStatus = { task ->
                                     scope.launch {
                                         repository.toggleTaskStatus(task.id, task.status)
@@ -319,10 +353,13 @@ class MainActivity : ComponentActivity() {
                                     }
                                 },
                                 onTaskClick = { task ->
-                                    selectedTask = task
+                                    selectedTaskId = task.id
                                     currentScreen = ScreenState.DETAIL
                                 },
-                                onBack = { currentScreen = ScreenState.HOME }
+                                onBack = {
+                                    currentScreen = ScreenState.HOME
+                                    selectedTaskId = null
+                                }
                             )
                         }
                     }
