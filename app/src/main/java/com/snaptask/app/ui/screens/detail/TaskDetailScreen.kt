@@ -1,8 +1,12 @@
 package com.snaptask.app.ui.screens.detail
 
+import android.content.Intent
+import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,21 +30,30 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CompareArrows
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material.icons.outlined.PushPin
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,9 +62,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -63,8 +78,6 @@ import com.snaptask.app.domain.model.SubTask
 import com.snaptask.app.domain.model.Task
 import com.snaptask.app.domain.model.TaskPriority
 import com.snaptask.app.ui.screens.editor.ReminderPickerDialog
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
 import com.snaptask.app.ui.theme.snapColors
 import com.snaptask.app.util.DateTimeUtils
 import java.io.File
@@ -84,6 +97,7 @@ fun TaskDetailScreen(
 ) {
     val colors = MaterialTheme.snapColors
     val isDark = isSystemInDarkTheme()
+    val context = LocalContext.current
     val converters = remember { Converters() }
     val scrollState = rememberScrollState()
 
@@ -97,6 +111,8 @@ fun TaskDetailScreen(
     var showReminderPicker by remember { mutableStateOf(false) }
     var subtasks by remember { mutableStateOf(task.parsedSubtasks) }
     var newSubtaskText by remember { mutableStateOf("") }
+    var showMenu by remember { mutableStateOf(false) }
+    var isEditing by remember { mutableStateOf(false) }
 
     val completedCount = subtasks.count { it.isDone }
     val progressFraction = if (subtasks.isEmpty()) {
@@ -105,12 +121,18 @@ fun TaskDetailScreen(
         completedCount.toFloat() / subtasks.size.toFloat()
     }
 
-    val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
+    val beforeFile = remember(task.beforeImageUri) { File(task.beforeImageUri) }
+    val hasBefore = beforeFile.exists()
+    val afterFile = remember(task.afterImageUri) {
+        if (!task.afterImageUri.isNullOrBlank()) File(task.afterImageUri) else null
+    }
+    val hasAfter = afterFile != null && afterFile.exists()
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = colors.bg,
         topBar = {
+            // 1. Top Bar: [<] on Left, Status Pill in Center, [...] on Right (Page 6)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -118,12 +140,15 @@ fun TaskDetailScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = onBack,
+                // Back Button
+                Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .background(colors.surface, RoundedCornerShape(12.dp))
-                        .border(1.dp, colors.border, RoundedCornerShape(12.dp))
+                        .clip(CircleShape)
+                        .background(colors.surface)
+                        .border(1.dp, colors.border, CircleShape)
+                        .clickable(onClick = onBack),
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Filled.ArrowBack,
@@ -133,41 +158,112 @@ fun TaskDetailScreen(
                     )
                 }
 
-                Text(
-                    text = "Chi tiết công việc",
-                    color = colors.text,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 17.sp
-                )
+                // Center: Status Pill (Green "✓ Đã xong" or "Chưa xong")
+                if (isCompleted) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(colors.done.copy(alpha = 0.16f))
+                            .border(1.dp, colors.done.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
+                            .clickable {
+                                isCompleted = false
+                                onSaveTask(task.copy(isCompleted = false))
+                            }
+                            .padding(horizontal = 14.dp, vertical = 6.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = null,
+                                tint = colors.done,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Text(
+                                text = "Đã xong",
+                                color = colors.done,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(colors.elevated)
+                            .border(1.dp, colors.border, RoundedCornerShape(14.dp))
+                            .clickable {
+                                isCompleted = true
+                                onSaveTask(task.copy(isCompleted = true))
+                            }
+                            .padding(horizontal = 14.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = "Chưa xong",
+                            color = colors.textSecondary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    IconButton(
-                        onClick = { isPinned = !isPinned },
+                // Right: More Options Button (...)
+                Box {
+                    Box(
                         modifier = Modifier
                             .size(40.dp)
-                            .background(colors.surface, RoundedCornerShape(12.dp))
-                            .border(1.dp, colors.border, RoundedCornerShape(12.dp))
+                            .clip(CircleShape)
+                            .background(colors.surface)
+                            .border(1.dp, colors.border, CircleShape)
+                            .clickable { showMenu = true },
+                        contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = if (isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
-                            contentDescription = "Ghim ra widget",
-                            tint = if (isPinned) colors.flash else colors.textSecondary,
+                            imageVector = Icons.Filled.MoreVert,
+                            contentDescription = "Tùy chọn",
+                            tint = colors.text,
                             modifier = Modifier.size(20.dp)
                         )
                     }
 
-                    IconButton(
-                        onClick = { onDeleteTask(task) },
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
                         modifier = Modifier
-                            .size(40.dp)
-                            .background(colors.surface, RoundedCornerShape(12.dp))
+                            .background(colors.surface)
                             .border(1.dp, colors.border, RoundedCornerShape(12.dp))
                     ) {
-                        Icon(
-                            imageVector = Icons.Filled.Delete,
-                            contentDescription = "Xóa task",
-                            tint = colors.urgent,
-                            modifier = Modifier.size(20.dp)
+                        DropdownMenuItem(
+                            text = { Text(if (isPinned) "Bỏ ghim widget" else "Ghim ra widget", color = colors.text) },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = if (isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+                                    contentDescription = null,
+                                    tint = if (isPinned) colors.flash else colors.textSecondary
+                                )
+                            },
+                            onClick = {
+                                isPinned = !isPinned
+                                onSaveTask(task.copy(isPinnedToWidget = isPinned))
+                                showMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Chỉnh sửa", color = colors.text) },
+                            leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null, tint = colors.textSecondary) },
+                            onClick = {
+                                isEditing = !isEditing
+                                showMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Xoá việc", color = colors.urgent) },
+                            leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null, tint = colors.urgent) },
+                            onClick = {
+                                showMenu = false
+                                onDeleteTask(task)
+                            }
                         )
                     }
                 }
@@ -181,481 +277,409 @@ fun TaskDetailScreen(
                 .verticalScroll(scrollState)
                 .padding(horizontal = 18.dp, vertical = 8.dp)
         ) {
-            // 1. Before & After Photo Comparison
-            Text(
-                text = "HÌNH ẢNH KHOẢNH KHẮC",
-                color = colors.textSecondary,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-
-            val hasAfter = !task.afterImageUri.isNullOrBlank() && File(task.afterImageUri).exists()
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Before Photo (Square 1:1)
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
-                        .aspectRatio(1f),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = colors.surface),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
-                ) {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        val beforeFile = File(task.beforeImageUri)
-                        if (beforeFile.exists()) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(LocalContext.current)
-                                    .data(beforeFile)
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = "Before Photo",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Text("Chưa có ảnh", color = colors.textMuted, fontSize = 12.sp)
-                            }
-                        }
-
-                        // Badge
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.BottomStart)
-                                .padding(8.dp)
-                                .background(Color(0xD9000000), RoundedCornerShape(8.dp)) // Dark scrim overlay for timestamp on photo
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text(text = "BEFORE", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-
-                // After Photo (Square 1:1) or Snap Action
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
-                        .aspectRatio(1f)
-                        .clickable { onOpenAfterCamera(task) },
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = colors.surface),
-                    border = androidx.compose.foundation.BorderStroke(
-                        1.dp,
-                        if (hasAfter) colors.done else colors.border
+            // 2. Title & Timestamp Meta (Page 6)
+            if (isEditing) {
+                OutlinedTextField(
+                    value = currentTitle,
+                    onValueChange = { currentTitle = it },
+                    label = { Text("Tiêu đề công việc", color = colors.textSecondary) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = colors.text,
+                        unfocusedTextColor = colors.text,
+                        focusedContainerColor = colors.elevated,
+                        unfocusedContainerColor = colors.elevated,
+                        focusedBorderColor = colors.flash,
+                        unfocusedBorderColor = colors.border
                     )
+                )
+            } else {
+                Text(
+                    text = currentTitle,
+                    color = colors.text,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    lineHeight = 34.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            val timeMeta = if (isCompleted && task.completedAt != null) {
+                val startStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(task.createdAt))
+                val endStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(task.completedAt))
+                val durationMin = maxOf(1, ((task.completedAt - task.createdAt) / 60000).toInt())
+                "Bắt đầu $startStr · Xong $endStr · mất $durationMin phút"
+            } else if (task.reminderTime != null) {
+                "Hạn ${DateTimeUtils.formatDateTime(task.reminderTime)} · ${task.folderName}"
+            } else "Hôm nay · ${task.folderName}"
+
+            Text(
+                text = timeMeta,
+                color = colors.textSecondary,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 3. Before / After Split Photo Comparison View (Page 6)
+            if (hasBefore && hasAfter) {
+                // Split Before & After Unified Card
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(240.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = colors.surface),
+                    border = BorderStroke(1.dp, colors.border)
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
-                        if (hasAfter) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(LocalContext.current)
-                                    .data(File(task.afterImageUri!!))
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = "After Photo",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
-                            // Badge
+                        Row(modifier = Modifier.fillMaxSize()) {
+                            // Left: BEFORE Photo
+                            Box(modifier = Modifier.weight(1f).fillMaxSize()) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context).data(beforeFile).crossfade(true).build(),
+                                    contentDescription = "Trước",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                                // TRƯỚC Pill
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopStart)
+                                        .padding(12.dp)
+                                        .background(Color(0xD9000000), RoundedCornerShape(8.dp))
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Text(text = "TRƯỚC", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+
+                            // Divider line
                             Box(
                                 modifier = Modifier
-                                    .align(Alignment.BottomStart)
-                                    .padding(8.dp)
-                                    .background(if (isDark) colors.done.copy(alpha = 0.2f) else colors.done, RoundedCornerShape(8.dp))
-                                    .padding(horizontal = 8.dp, vertical = 4.dp)
-                            ) {
-                                Text(text = "AFTER", color = if (isDark) colors.done else Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                            }
-                        } else {
-                            Column(
-                                modifier = Modifier
+                                    .width(2.dp)
                                     .fillMaxSize()
-                                    .padding(12.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.CameraAlt,
-                                    contentDescription = "Chụp sau",
-                                    tint = colors.flash,
-                                    modifier = Modifier.size(32.dp)
+                                    .background(colors.border)
+                            )
+
+                            // Right: AFTER Photo
+                            Box(modifier = Modifier.weight(1f).fillMaxSize()) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context).data(afterFile).crossfade(true).build(),
+                                    contentDescription = "Sau",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
                                 )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = "Chụp kết quả\n(After)",
-                                    color = colors.text,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    lineHeight = 14.sp
-                                )
+                                // SAU Pill (Flash Yellow background, #17140A text as in Page 6)
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(12.dp)
+                                        .background(colors.flash, RoundedCornerShape(8.dp))
+                                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                                ) {
+                                    Text(text = "SAU", color = colors.onFlash, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
+                        }
+
+                        // Center Split Handle Icon (< >)
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .size(34.dp)
+                                .clip(CircleShape)
+                                .background(colors.surface)
+                                .border(1.5.dp, colors.border, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.CompareArrows,
+                                contentDescription = "So sánh",
+                                tint = colors.text,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
+            } else if (hasBefore) {
+                // Only Before Photo Present -> Prompt for After photo
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(220.dp)
+                        .clickable { onOpenAfterCamera(task) },
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = colors.surface),
+                    border = BorderStroke(1.dp, colors.border)
+                ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context).data(beforeFile).crossfade(true).build(),
+                            contentDescription = "Trước",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(12.dp)
+                                .background(Color(0xD9000000), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(text = "TRƯỚC", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                        // Bottom CTA pill over image
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = 14.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(colors.flash)
+                                .clickable { onOpenAfterCamera(task) }
+                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = "Chụp ảnh kết quả (SAU)",
+                                color = colors.onFlash,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // 2. Task Title Input
-            OutlinedTextField(
-                value = currentTitle,
-                onValueChange = { currentTitle = it },
-                label = { Text("Tiêu đề", color = colors.textSecondary) },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = colors.text,
-                    unfocusedTextColor = colors.text,
-                    focusedContainerColor = colors.surface,
-                    unfocusedContainerColor = colors.surface,
-                    focusedBorderColor = colors.flash,
-                    unfocusedBorderColor = colors.border
-                )
-            )
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // 3. Notion Metadata Row (Status + Priority + Tag)
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = colors.surface),
-                border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
-            ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    // Status Toggle Row
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { isCompleted = !isCompleted },
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(text = "Trạng thái", color = colors.textSecondary, fontSize = 13.sp)
-                        Box(
-                            modifier = Modifier
-                                .background(
-                                    if (isCompleted) (if (isDark) colors.done.copy(alpha = 0.16f) else colors.done) else colors.warning.copy(alpha = 0.12f),
-                                    RoundedCornerShape(8.dp)
-                                )
-                                .border(
-                                    1.dp,
-                                    if (isCompleted) (if (isDark) colors.done else Color.White) else colors.warning,
-                                    RoundedCornerShape(8.dp)
-                                )
-                                .padding(horizontal = 10.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = if (isCompleted) "Đã hoàn thành" else "Đang thực hiện",
-                                color = if (isCompleted) (if (isDark) colors.done else Color.White) else colors.warning,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    // Priority Row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(text = "Ưu tiên", color = colors.textSecondary, fontSize = 13.sp)
-                        Text(
-                            text = task.priorityEnum.label,
-                            color = when (task.priorityEnum) {
-                                TaskPriority.LOW -> colors.done
-                                TaskPriority.MEDIUM -> colors.warning
-                                TaskPriority.HIGH -> colors.urgent
-                            },
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    // Reminder Row
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showReminderPicker = true },
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(text = "Nhắc nhở / Báo thức", color = colors.textSecondary, fontSize = 13.sp)
-                        Box(
-                            modifier = Modifier
-                                .background(
-                                    if (reminderTime != null) colors.flash else colors.elevated,
-                                    RoundedCornerShape(8.dp)
-                                )
-                                .border(
-                                    1.dp,
-                                    if (reminderTime != null) colors.flash else colors.border,
-                                    RoundedCornerShape(8.dp)
-                                )
-                                .padding(horizontal = 10.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = if (reminderTime != null) "${if (reminderType == "ALARM") "Báo thức" else "Nhắc"}: ${DateTimeUtils.formatDateTime(reminderTime!!)}" else "Chưa đặt",
-                                color = if (reminderTime != null) colors.onFlash else colors.textMuted,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    // Created At Row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(text = "Tạo lúc", color = colors.textSecondary, fontSize = 13.sp)
-                        Text(
-                            text = dateFormat.format(Date(task.createdAt)),
-                            color = colors.textMuted,
-                            fontSize = 12.sp
-                        )
-                    }
+            // 4. Caption Quote Box: “Xong rồi, giờ có chỗ đặt laptop thoải mái.” (Page 6)
+            val quoteText = currentCompletionCaption.ifBlank {
+                if (isCompleted) "“Xong rồi, hoàn thành xuất sắc!”" else task.description
+            }
+            if (quoteText.isNotBlank()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(colors.elevated)
+                        .border(1.dp, colors.border, RoundedCornerShape(14.dp))
+                        .padding(14.dp)
+                ) {
+                    Text(
+                        text = quoteText,
+                        color = colors.text,
+                        fontSize = 14.sp,
+                        fontStyle = FontStyle.Italic,
+                        lineHeight = 20.sp
+                    )
                 }
+                Spacer(modifier = Modifier.height(14.dp))
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // 4. Notion Sub-tasks / Checklist Block
+            // 5. Metadata Tags Row: [Cao] [Nhà] [Hạn 29/10 · 18:00] (Page 6)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "CHECKLIST TIẾN ĐỘ",
-                    color = colors.textSecondary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
-                )
-                Text(
-                    text = "${(progressFraction * 100).toInt()}% (${completedCount}/${subtasks.size})",
-                    color = if (isDark) colors.flash else colors.text,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                // Priority Pill
+                val priorityBg = when (task.priorityEnum) {
+                    TaskPriority.HIGH -> colors.urgent.copy(alpha = 0.2f)
+                    TaskPriority.MEDIUM -> colors.warning.copy(alpha = 0.2f)
+                    TaskPriority.LOW -> colors.elevated
+                }
+                val priorityText = when (task.priorityEnum) {
+                    TaskPriority.HIGH -> colors.urgent
+                    TaskPriority.MEDIUM -> colors.warning
+                    TaskPriority.LOW -> colors.textSecondary
+                }
+                Box(
+                    modifier = Modifier
+                        .background(priorityBg, RoundedCornerShape(8.dp))
+                        .padding(horizontal = 9.dp, vertical = 4.dp)
+                ) {
+                    Text(text = task.priorityEnum.label, color = priorityText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+
+                // Folder Pill
+                Box(
+                    modifier = Modifier
+                        .background(colors.elevated, RoundedCornerShape(8.dp))
+                        .padding(horizontal = 9.dp, vertical = 4.dp)
+                ) {
+                    Text(text = task.folderName, color = colors.text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+
+                // Due Date Pill
+                val dueStr = if (task.reminderTime != null) {
+                    "Hạn ${DateTimeUtils.formatDateTime(task.reminderTime)}"
+                } else "Hôm nay"
+                Box(
+                    modifier = Modifier
+                        .background(colors.elevated, RoundedCornerShape(8.dp))
+                        .padding(horizontal = 9.dp, vertical = 4.dp)
+                ) {
+                    Text(text = dueStr, color = colors.textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                }
             }
-            Spacer(modifier = Modifier.height(8.dp))
 
-            LinearProgressIndicator(
-                progress = { progressFraction },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(6.dp)
-                    .clip(CircleShape),
-                color = if (isDark) colors.flash else colors.text,
-                trackColor = colors.elevated
-            )
+            Spacer(modifier = Modifier.height(18.dp))
 
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Sub-tasks Items
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = colors.surface),
-                border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
-            ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    if (subtasks.isEmpty()) {
-                        Text(
-                            text = "Chưa có checklist con. Thêm các bước cụ thể bên dưới:",
-                            color = colors.textMuted,
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(vertical = 6.dp)
-                        )
-                    } else {
-                        subtasks.forEachIndexed { index, item ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                IconButton(
-                                    onClick = {
-                                        val updated = subtasks.toMutableList()
-                                        updated[index] = item.copy(isDone = !item.isDone)
-                                        subtasks = updated
-                                    },
-                                    modifier = Modifier.size(24.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = if (item.isDone) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
-                                        contentDescription = "Toggle Subtask",
-                                        tint = if (item.isDone) colors.done else colors.textSecondary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
+            // 6. Subtasks Checklist (Page 6)
+            if (subtasks.isNotEmpty() || isEditing) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    subtasks.forEachIndexed { index, st ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    val updated = subtasks.toMutableList()
+                                    updated[index] = st.copy(isDone = !st.isDone)
+                                    subtasks = updated
+                                    onSaveTask(task.copy(subTasksJson = converters.fromSubTaskList(updated)))
                                 }
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = item.title,
-                                    color = if (item.isDone) colors.textMuted else colors.text,
-                                    textDecoration = if (item.isDone) TextDecoration.LineThrough else TextDecoration.None,
-                                    fontSize = 14.sp,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                IconButton(
-                                    onClick = {
-                                        val updated = subtasks.toMutableList()
-                                        updated.removeAt(index)
-                                        subtasks = updated
-                                    },
-                                    modifier = Modifier.size(24.dp)
-                                ) {
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .background(if (st.isDone) colors.done else colors.elevated)
+                                    .border(1.dp, if (st.isDone) colors.done else colors.border, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (st.isDone) {
                                     Icon(
-                                        imageVector = Icons.Filled.Close,
-                                        contentDescription = "Xóa subtask",
-                                        tint = colors.textMuted,
-                                        modifier = Modifier.size(16.dp)
+                                        imageVector = Icons.Filled.Check,
+                                        contentDescription = null,
+                                        tint = Color(0xFF17140A),
+                                        modifier = Modifier.size(15.dp)
                                     )
                                 }
                             }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = st.title,
+                                color = if (st.isDone) colors.textMuted else colors.text,
+                                textDecoration = if (st.isDone) TextDecoration.LineThrough else TextDecoration.None,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                            )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Quick Add Sub-task row
+                    // Add Subtask Row if editing or has checklist
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         OutlinedTextField(
                             value = newSubtaskText,
                             onValueChange = { newSubtaskText = it },
-                            placeholder = { Text("Thêm bước việc cần làm...", color = colors.textMuted, fontSize = 12.sp) },
+                            placeholder = { Text("Thêm bước nhỏ...", color = colors.textMuted, fontSize = 13.sp) },
                             modifier = Modifier.weight(1f),
                             singleLine = true,
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedTextColor = colors.text,
                                 unfocusedTextColor = colors.text,
-                                focusedContainerColor = colors.bg,
-                                unfocusedContainerColor = colors.bg,
+                                focusedContainerColor = colors.elevated,
+                                unfocusedContainerColor = colors.elevated,
                                 focusedBorderColor = colors.flash,
                                 unfocusedBorderColor = colors.border
                             )
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        IconButton(
-                            onClick = {
-                                if (newSubtaskText.isNotBlank()) {
-                                    subtasks = subtasks + SubTask(
-                                        id = UUID.randomUUID().toString(),
-                                        title = newSubtaskText.trim(),
-                                        isDone = false
-                                    )
-                                    newSubtaskText = ""
-                                }
-                            },
+                        Box(
                             modifier = Modifier
                                 .size(44.dp)
-                                .background(colors.flash, RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(colors.flash)
+                                .clickable {
+                                    if (newSubtaskText.isNotBlank()) {
+                                        val updated = subtasks + SubTask(UUID.randomUUID().toString(), newSubtaskText.trim(), false)
+                                        subtasks = updated
+                                        newSubtaskText = ""
+                                        onSaveTask(task.copy(subTasksJson = converters.fromSubTaskList(updated)))
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Filled.Add, contentDescription = "Thêm", tint = colors.onFlash)
+                            Icon(Icons.Filled.Add, contentDescription = "Thêm", tint = colors.onFlash, modifier = Modifier.size(20.dp))
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
-            // 5. Notes & Completion Caption
-            Text(
-                text = "GHI CHÚ & CẢM NGHĨ HOÀN THÀNH",
-                color = colors.textSecondary,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = currentCompletionCaption,
-                onValueChange = { currentCompletionCaption = it },
-                placeholder = { Text("Ghi chú tiến độ hoặc cảm nhận khi hoàn thành...", color = colors.textMuted, fontSize = 13.sp) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(100.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = colors.text,
-                    unfocusedTextColor = colors.text,
-                    focusedContainerColor = colors.surface,
-                    unfocusedContainerColor = colors.surface,
-                    focusedBorderColor = colors.flash,
-                    unfocusedBorderColor = colors.border
-                )
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // 6. Save & Update Button
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(colors.flash)
-                    .clickable {
-                        val updatedTask = task.copy(
-                            title = currentTitle.ifBlank { "Việc cần làm" },
-                            description = currentDescription,
-                            completionCaption = currentCompletionCaption,
-                            isCompleted = isCompleted,
-                            isPinnedToWidget = isPinned,
-                            reminderTime = reminderTime,
-                            reminderType = reminderType,
-                            subTasksJson = converters.fromSubTaskList(subtasks),
-                            completedAt = if (isCompleted && task.completedAt == null) System.currentTimeMillis() else task.completedAt
-                        )
-                        onSaveTask(updatedTask)
-                    },
-                contentAlignment = Alignment.Center
+            // 7. Bottom Action Bar: [Chỉnh sửa] & [Chia sẻ Before / After] (Page 6)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Check, contentDescription = "Save", tint = Color.White, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
+                // Left: Secondary Button [Chỉnh sửa]
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(colors.elevated)
+                        .border(1.dp, colors.border, RoundedCornerShape(14.dp))
+                        .clickable {
+                            isEditing = !isEditing
+                            if (!isEditing) {
+                                onSaveTask(task.copy(title = currentTitle, description = currentDescription))
+                                Toast.makeText(context, "Đã lưu thay đổi!", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
-                        text = "Lưu & Cập nhật Task",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
+                        text = if (isEditing) "Lưu xong" else "Chỉnh sửa",
+                        color = colors.text,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                // Right: Primary CTA [Chia sẻ Before / After] or [Chụp kết quả]
+                val ctaText = if (hasAfter) "Chia sẻ Before / After" else "Chụp ảnh kết quả (SAU)"
+                Box(
+                    modifier = Modifier
+                        .weight(1.4f)
+                        .height(48.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(colors.flash)
+                        .clickable {
+                            if (hasAfter) {
+                                val sendIntent: Intent = Intent().apply {
+                                    action = Intent.ACTION_SEND
+                                    putExtra(Intent.EXTRA_TEXT, "Đã hoàn thành '${task.title}' với SnapTask! Before / After minh chứng.")
+                                    type = "text/plain"
+                                }
+                                context.startActivity(Intent.createChooser(sendIntent, "Chia sẻ thành quả"))
+                            } else {
+                                onOpenAfterCamera(task)
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = ctaText,
+                        color = colors.onFlash,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(32.dp))
         }
-    }
-
-    if (showReminderPicker) {
-        ReminderPickerDialog(
-            initialReminderTime = reminderTime,
-            initialReminderType = reminderType,
-            onConfirm = { time, type ->
-                reminderTime = time
-                reminderType = type
-                showReminderPicker = false
-            },
-            onDismiss = { showReminderPicker = false }
-        )
     }
 }

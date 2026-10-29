@@ -253,6 +253,9 @@ class MainActivity : ComponentActivity() {
                                     selectedTaskId = task.id
                                     currentScreen = ScreenState.DETAIL
                                 },
+                                onOpenBoard = {
+                                    currentScreen = ScreenState.BOARD
+                                },
                                 onSaveQuickNote = { newTask ->
                                     scope.launch {
                                         repository.createTask(newTask)

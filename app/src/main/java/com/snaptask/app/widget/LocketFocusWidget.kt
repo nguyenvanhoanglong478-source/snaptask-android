@@ -225,54 +225,51 @@ class LocketFocusWidget : GlanceAppWidget() {
 
                 Spacer(modifier = GlanceModifier.defaultWeight())
 
-                // 3. Bottom Glassmorphism Bar: Title + Checkmark Button + Next Button
-                Column(
+                // 3. Bottom Glassmorphism Bar (Page 7): Title & "Còn X việc nữa" on Left, Checkmark Button on Right
+                Row(
                     modifier = GlanceModifier
                         .fillMaxWidth()
                         .background(WidgetColors.glassProvider)
-                        .padding(horizontal = 10.dp, vertical = 8.dp)
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = title.ifBlank { "Việc cần làm" },
-                        style = TextStyle(
-                            color = WidgetColors.textProvider,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
-                        ),
-                        maxLines = 1
-                    )
-
-                    Spacer(modifier = GlanceModifier.height(6.dp))
-
-                    Row(
-                        modifier = GlanceModifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val taskIdParam = ActionParameters.Key<Long>("taskId")
-                        Image(
-                            provider = ImageProvider(R.drawable.ic_widget_check_done),
-                            contentDescription = "Hoàn thành",
-                            modifier = GlanceModifier
-                                .size(34.dp)
-                                .clickable(
-                                    actionRunCallback<CompleteTaskActionCallback>(
-                                        actionParametersOf(taskIdParam to taskId)
-                                    )
-                                )
-                        )
-
-                        Spacer(modifier = GlanceModifier.width(8.dp))
-
-                        Button(
-                            text = "Tiếp",
-                            onClick = actionRunCallback<NextTaskActionCallback>(),
-                            colors = ButtonDefaults.buttonColors(
-                                backgroundColor = WidgetColors.elevatedProvider,
-                                contentColor = WidgetColors.textProvider
+                    Column(modifier = GlanceModifier.defaultWeight()) {
+                        Text(
+                            text = title.ifBlank { "Việc cần làm" },
+                            style = TextStyle(
+                                color = WidgetColors.textProvider,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
                             ),
-                            modifier = GlanceModifier.defaultWeight()
+                            maxLines = 2
+                        )
+                        Spacer(modifier = GlanceModifier.height(2.dp))
+                        val remaining = maxOf(0, totalTasks - taskIndex)
+                        Text(
+                            text = if (remaining > 0) "Còn $remaining việc nữa" else "Hết việc cần làm",
+                            style = TextStyle(
+                                color = WidgetColors.textSecondaryProvider,
+                                fontWeight = FontWeight.Normal,
+                                fontSize = 10.sp
+                            ),
+                            maxLines = 1
                         )
                     }
+
+                    Spacer(modifier = GlanceModifier.width(6.dp))
+
+                    val taskIdParam = ActionParameters.Key<Long>("taskId")
+                    Image(
+                        provider = ImageProvider(R.drawable.ic_widget_check_done),
+                        contentDescription = "Hoàn thành",
+                        modifier = GlanceModifier
+                            .size(36.dp)
+                            .clickable(
+                                actionRunCallback<CompleteTaskActionCallback>(
+                                    actionParametersOf(taskIdParam to taskId)
+                                )
+                            )
+                    )
                 }
             }
         }

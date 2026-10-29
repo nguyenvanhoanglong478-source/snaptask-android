@@ -36,6 +36,8 @@ import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Cameraswitch
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Notes
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FlashAuto
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
@@ -360,7 +362,7 @@ fun CameraCreatorScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Top Bar
+            // 1. Top Bar: [X] on Left, "Việc mới" in Center, [Flash] on Right (Page 5)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -368,36 +370,64 @@ fun CameraCreatorScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = onClose,
+                // Left: Close Button
+                Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .background(colors.surface, CircleShape)
+                        .clip(CircleShape)
+                        .background(colors.surface)
                         .border(1.dp, colors.border, CircleShape)
+                        .clickable(onClick = onClose),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Filled.Close, contentDescription = "Đóng", tint = colors.text)
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "Đóng",
+                        tint = colors.text,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
 
+                // Center: Screen Title
                 Text(
-                    text = "Tạo Task Mới",
+                    text = "Việc mới",
                     color = colors.text,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 17.sp
+                    fontSize = 18.sp
                 )
 
-                // Placeholder to keep title balanced center
-                Spacer(modifier = Modifier.size(40.dp))
+                // Right: Flash Button
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(if (flashMode != CameraFlashMode.OFF) colors.flash else colors.surface)
+                        .border(1.dp, if (flashMode != CameraFlashMode.OFF) colors.flash else colors.border, CircleShape)
+                        .clickable { applyFlashMode(flashMode.next()) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = when (flashMode) {
+                            CameraFlashMode.OFF -> SnapTaskIcons.FlashOff
+                            CameraFlashMode.ON, CameraFlashMode.TORCH -> SnapTaskIcons.FlashOn
+                            CameraFlashMode.AUTO -> SnapTaskIcons.FlashAuto
+                        },
+                        contentDescription = "Flash: ${flashMode.name}",
+                        tint = if (flashMode != CameraFlashMode.OFF) colors.onFlash else colors.text,
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // 1. Camera Viewfinder 1:1 Aspect Ratio with HUD Controls
+            // 2. Camera Viewfinder 1:1 Aspect Ratio with Overlay Text Pill (Page 5)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
-                    .clip(RoundedCornerShape(32.dp))
-                    .border(2.dp, if (cameraState == CameraState.CAPTURED) colors.flash else colors.border, RoundedCornerShape(32.dp))
+                    .clip(RoundedCornerShape(24.dp))
+                    .border(2.dp, if (cameraState == CameraState.CAPTURED) colors.flash else colors.border, RoundedCornerShape(24.dp))
                     .background(Color.Black),
                 contentAlignment = Alignment.Center
             ) {
@@ -419,6 +449,23 @@ fun CameraCreatorScreen(
                         },
                         modifier = Modifier.fillMaxSize()
                     )
+
+                    // Overlay Pill at bottom inside viewfinder: "Chụp thứ cần làm, đặt tên sau cũng được" (Page 5)
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 16.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color(0xCC1B1A17))
+                            .padding(horizontal = 14.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = "Chụp thứ cần làm, đặt tên sau cũng được",
+                            color = Color(0xFFF5F1E8),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 } else {
                     // Instantly display captured image in 1:1 squircle
                     AsyncImage(
@@ -437,7 +484,7 @@ fun CameraCreatorScreen(
                             .align(Alignment.TopStart)
                             .padding(14.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xCC000000)) // Camera viewfinder dark backdrop
+                            .background(Color(0xCC000000))
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
                         Text(
@@ -459,47 +506,159 @@ fun CameraCreatorScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // 2. Camera Controls: 3 Circular Buttons (Flash - Shutter/Retake - Flip) spaced by 32dp
+            // 3. Title Input Field: Pill with Pen Icon (Page 5: "Tên việc, ví dụ: Tưới cây")
+            OutlinedTextField(
+                value = title,
+                onValueChange = { title = it },
+                placeholder = { Text("Tên việc, ví dụ: Tưới cây", color = colors.textMuted, fontSize = 14.sp) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Filled.Edit,
+                        contentDescription = null,
+                        tint = colors.textSecondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = colors.text,
+                    unfocusedTextColor = colors.text,
+                    focusedContainerColor = colors.elevated,
+                    unfocusedContainerColor = colors.elevated,
+                    focusedBorderColor = colors.flash,
+                    unfocusedBorderColor = colors.border
+                )
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 4. Option Chips Row: [⏰ Hôm nay 18:00] [Ưu tiên: Cao] [Nhà] (Page 5)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(32.dp, Alignment.CenterHorizontally),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Left: Flash Button (46x46 circular)
+                // Chip 1: Reminder Chip
+                val hasReminder = reminderTime != null
+                val reminderLabel = if (hasReminder) {
+                    "⏰ ${DateTimeUtils.formatDateTime(reminderTime)}"
+                } else "⏰ Đặt giờ nhắc"
+
                 Box(
                     modifier = Modifier
-                        .size(46.dp)
-                        .clip(CircleShape)
-                        .background(colors.surface)
-                        .border(1.dp, if (flashMode != CameraFlashMode.OFF) colors.flash else colors.border, CircleShape)
-                        .clickable { applyFlashMode(flashMode.next()) },
-                    contentAlignment = Alignment.Center
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(if (hasReminder) colors.flash else colors.elevated)
+                        .border(1.dp, if (hasReminder) colors.flash else colors.border, RoundedCornerShape(14.dp))
+                        .clickable { showReminderPicker = true }
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
                 ) {
-                    Icon(
-                        imageVector = when (flashMode) {
-                            CameraFlashMode.OFF -> SnapTaskIcons.FlashOff
-                            CameraFlashMode.ON, CameraFlashMode.TORCH -> SnapTaskIcons.FlashOn
-                            CameraFlashMode.AUTO -> SnapTaskIcons.FlashAuto
-                        },
-                        contentDescription = "Flash: ${flashMode.name}",
-                        tint = if (flashMode != CameraFlashMode.OFF) colors.flash else Color.White,
-                        modifier = Modifier.size(20.dp)
+                    Text(
+                        text = reminderLabel,
+                        color = if (hasReminder) colors.onFlash else colors.text,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
                     )
                 }
 
-                // Center: Shutter (88x88) or Retake (56x56)
-                if (cameraState == CameraState.PREVIEWING) {
+                // Chip 2: Priority Chip
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(colors.elevated)
+                        .border(1.dp, colors.border, RoundedCornerShape(14.dp))
+                        .clickable {
+                            val nextIndex = (selectedPriority.ordinal + 1) % TaskPriority.entries.size
+                            selectedPriority = TaskPriority.entries[nextIndex]
+                        }
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = "Ưu tiên: ${selectedPriority.label}",
+                        color = when (selectedPriority) {
+                            TaskPriority.HIGH -> colors.urgent
+                            TaskPriority.MEDIUM -> colors.warning
+                            TaskPriority.LOW -> colors.text
+                        },
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
+                    )
+                }
+
+                // Chip 3: Folder Chip
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(colors.elevated)
+                        .border(1.dp, colors.border, RoundedCornerShape(14.dp))
+                        .clickable {
+                            val nextIdx = (folderOptions.indexOf(selectedFolder) + 1) % folderOptions.size
+                            selectedFolder = folderOptions[nextIdx]
+                        }
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = selectedFolder,
+                        color = colors.text,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // 5. Bottom Controls Bar: [☰] (Quick Note) - (O) (Big Shutter) - [🔄] (Flip Lens) (Page 5)
+            if (cameraState == CameraState.PREVIEWING) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Left: Quick Note / Text Task Mode
                     Box(
                         modifier = Modifier
-                            .size(88.dp)
+                            .size(46.dp)
                             .clip(CircleShape)
-                            .background(Color.Transparent)
-                            .border(4.dp, colors.flash, CircleShape)
-                            .clickable(enabled = !isCapturing) {
-                                takePhoto()
+                            .background(colors.surface)
+                            .border(1.dp, colors.border, CircleShape)
+                            .clickable {
+                                // Save task as text-only task
+                                val task = Task(
+                                    title = title.ifBlank { "Ghi chú mới" },
+                                    beforeImageUri = "",
+                                    tag = selectedTag.name,
+                                    folderName = selectedFolder,
+                                    priority = selectedPriority.name,
+                                    isPinnedToWidget = isPinned,
+                                    reminderTime = reminderTime,
+                                    reminderType = reminderType
+                                )
+                                onSaveTask(task)
                             },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Notes,
+                            contentDescription = "Ghi chú không ảnh",
+                            tint = colors.textSecondary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    // Center: Big Shutter Button (72dp outer ring, 56dp inner disk solid Flash Yellow)
+                    Box(
+                        modifier = Modifier
+                            .size(76.dp)
+                            .clip(CircleShape)
+                            .border(3.5.dp, colors.flash, CircleShape)
+                            .clickable(enabled = !isCapturing) { takePhoto() },
                         contentAlignment = Alignment.Center
                     ) {
                         if (isCapturing) {
@@ -511,232 +670,95 @@ fun CameraCreatorScreen(
                         } else {
                             Box(
                                 modifier = Modifier
-                                    .size(66.dp)
-                                    .background(colors.flash, CircleShape)
+                                    .size(56.dp)
+                                    .clip(CircleShape)
+                                    .background(colors.flash)
                             )
                         }
                     }
-                } else {
+
+                    // Right: Camera Lens Flip Button
                     Box(
                         modifier = Modifier
-                            .size(56.dp)
+                            .size(46.dp)
                             .clip(CircleShape)
                             .background(colors.surface)
-                            .border(1.5.dp, colors.urgent, CircleShape)
+                            .border(1.dp, colors.border, CircleShape)
+                            .clickable(enabled = !isCapturing) {
+                                camera?.cameraControl?.enableTorch(false)
+                                cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
+                                    CameraSelector.DEFAULT_FRONT_CAMERA
+                                } else {
+                                    CameraSelector.DEFAULT_BACK_CAMERA
+                                }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = SnapTaskIcons.CameraFlip,
+                            contentDescription = "Đổi ống kính",
+                            tint = colors.textSecondary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            } else {
+                // In CAPTURED state: Retake Button on Left, Save Task Button on Right
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Retake
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(colors.elevated)
+                            .border(1.dp, colors.border, RoundedCornerShape(14.dp))
                             .clickable {
                                 capturedPhotoPath?.let { File(it).delete() }
                                 capturedPhotoPath = null
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = SnapTaskIcons.Retake,
-                            contentDescription = "Chụp lại",
-                            tint = colors.urgent,
-                            modifier = Modifier.size(24.dp)
+                        Text(
+                            text = "Chụp lại",
+                            color = colors.text,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
                         )
                     }
-                }
 
-                // Right: Flip Camera Button (46x46 circular)
-                Box(
-                    modifier = Modifier
-                        .size(46.dp)
-                        .clip(CircleShape)
-                        .background(colors.surface)
-                        .border(1.dp, colors.border, CircleShape)
-                        .clickable(enabled = !isCapturing && cameraState == CameraState.PREVIEWING) {
-                            camera?.cameraControl?.enableTorch(false)
-                            cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
-                                CameraSelector.DEFAULT_FRONT_CAMERA
-                            } else {
-                                CameraSelector.DEFAULT_BACK_CAMERA
-                            }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = SnapTaskIcons.CameraFlip,
-                        contentDescription = "Đổi camera",
-                        tint = if (cameraState == CameraState.PREVIEWING) Color.White else colors.textMuted,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // 3. Properties & Details Card
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(colors.surface, RoundedCornerShape(20.dp))
-                    .border(1.dp, colors.border, RoundedCornerShape(20.dp))
-                    .padding(16.dp)
-            ) {
-                // Task Title Input
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    placeholder = { Text("Bạn cần làm gì với bức ảnh này?", color = colors.textMuted, fontSize = 14.sp) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(14.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = colors.text,
-                        unfocusedTextColor = colors.text,
-                        focusedContainerColor = colors.elevated,
-                        unfocusedContainerColor = colors.elevated,
-                        focusedBorderColor = colors.flash,
-                        unfocusedBorderColor = colors.border
-                    )
-                )
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Quick Property Chips (1 single horizontal row of height 44.dp, fillMaxWidth, spacedBy 10.dp)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(44.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // 1. Folder selector chip (weight 1f, height 44dp, rounded 12dp)
+                    // Save Task CTA
                     Box(
                         modifier = Modifier
-                            .weight(1f)
-                            .height(44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(colors.elevated)
-                            .border(1.dp, colors.border, RoundedCornerShape(12.dp))
+                            .weight(1.5f)
+                            .height(50.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(colors.flash)
                             .clickable {
-                                val nextIdx = (folderOptions.indexOf(selectedFolder) + 1) % folderOptions.size
-                                selectedFolder = folderOptions[nextIdx]
-                            }
-                            .padding(horizontal = 12.dp),
-                        contentAlignment = Alignment.CenterStart
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = SnapTaskIcons.Folder,
-                                contentDescription = "Thư mục",
-                                tint = colors.flash,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = selectedFolder,
-                                color = colors.text,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1
-                            )
-                        }
-                    }
-
-                    // 2. Priority button (Icon-only 44.dp x 44.dp)
-                    val priorityColor = when (selectedPriority) {
-                        TaskPriority.LOW -> colors.done
-                        TaskPriority.MEDIUM -> colors.warning
-                        TaskPriority.HIGH -> colors.urgent
-                    }
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(colors.surface)
-                            .border(1.dp, if (selectedPriority != TaskPriority.LOW) priorityColor else colors.border, RoundedCornerShape(12.dp))
-                            .clickable {
-                                val nextIndex = (selectedPriority.ordinal + 1) % TaskPriority.entries.size
-                                selectedPriority = TaskPriority.entries[nextIndex]
+                                val finalPhoto = capturedPhotoPath ?: ""
+                                val task = Task(
+                                    title = title.ifBlank { "Việc cần làm" },
+                                    beforeImageUri = finalPhoto,
+                                    tag = selectedTag.name,
+                                    folderName = selectedFolder,
+                                    priority = selectedPriority.name,
+                                    isPinnedToWidget = isPinned,
+                                    reminderTime = reminderTime,
+                                    reminderType = reminderType
+                                )
+                                onSaveTask(task)
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = SnapTaskIcons.FlagPriority,
-                            contentDescription = "Mức độ ưu tiên",
-                            tint = priorityColor,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    // 3. Reminder button (Icon-only 44.dp x 44.dp)
-                    val hasReminder = reminderTime != null
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (hasReminder) colors.flash else colors.elevated)
-                            .border(1.dp, if (hasReminder) colors.flash else colors.border, RoundedCornerShape(12.dp))
-                            .clickable { showReminderPicker = true },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = SnapTaskIcons.AlarmClock,
-                            contentDescription = "Nhắc nhở",
-                            tint = if (hasReminder) colors.onFlash else colors.textSecondary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    // 4. Pin button (Icon-only 44.dp x 44.dp)
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (isPinned) colors.flash else colors.elevated)
-                            .border(1.dp, if (isPinned) colors.flash else colors.border, RoundedCornerShape(12.dp))
-                            .clickable { isPinned = !isPinned },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = SnapTaskIcons.Pin,
-                            contentDescription = "Ghim widget",
-                            tint = if (isPinned) colors.onFlash else colors.textSecondary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Primary Action Button: "Lưu Task" (52dp, rounded 16dp, Aurora gradient)
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(colors.flash)
-                        .clickable {
-                            val finalPhoto = capturedPhotoPath ?: ""
-                            val task = Task(
-                                title = title.ifBlank { "Việc cần làm" },
-                                beforeImageUri = finalPhoto,
-                                tag = selectedTag.name,
-                                folderName = selectedFolder,
-                                priority = selectedPriority.name,
-                                isPinnedToWidget = isPinned,
-                                reminderTime = reminderTime,
-                                reminderType = reminderType
-                            )
-                            onSaveTask(task)
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = SnapTaskIcons.Check,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Lưu Task",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp
+                            text = "Lưu việc",
+                            color = colors.onFlash,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }

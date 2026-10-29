@@ -209,17 +209,26 @@ class NotionStackWidget : GlanceAppWidget() {
                     .defaultWeight()
                     .fillMaxHeight()
             ) {
-                // Header
+                // Header (Page 7): "TIẾP THEO" on Left, "3/7" on Right
                 Row(
                     modifier = GlanceModifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "CHECKLIST TIẾP",
+                        text = "TIẾP THEO",
                         style = TextStyle(
                             color = WidgetColors.textSecondaryProvider,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 10.sp
+                            fontSize = 11.sp
+                        )
+                    )
+                    Spacer(modifier = GlanceModifier.defaultWeight())
+                    Text(
+                        text = "$completedCount/$totalCount",
+                        style = TextStyle(
+                            color = WidgetColors.accentProvider,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp
                         )
                     )
                 }
@@ -256,7 +265,7 @@ class NotionStackWidget : GlanceAppWidget() {
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "- ",
+                                    text = "◯ ",
                                     style = TextStyle(
                                         color = WidgetColors.accentProvider,
                                         fontWeight = FontWeight.Bold,
@@ -281,7 +290,7 @@ class NotionStackWidget : GlanceAppWidget() {
 
                 // Quick Add Photo Button in 4x2 widget: #FFD23F background, #17140A text
                 Button(
-                    text = "Chụp việc mới",
+                    text = "+ Chụp việc mới",
                     onClick = actionStartActivity<MainActivity>(),
                     colors = ButtonDefaults.buttonColors(
                         backgroundColor = WidgetColors.accentProvider,
