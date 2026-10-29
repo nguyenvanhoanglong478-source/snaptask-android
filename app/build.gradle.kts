@@ -19,12 +19,6 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
-
-        javaCompileOptions {
-            annotationProcessorOptions {
-                arguments["room.schemaLocation"] = "$projectDir/schemas"
-            }
-        }
     }
 
     // CI/CD Safeguard: Do not abort build on Lint warnings/errors during APK generation
