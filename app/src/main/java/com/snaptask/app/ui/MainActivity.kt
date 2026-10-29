@@ -15,6 +15,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -83,7 +84,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
-        extractTaskId(intent)
+        if (savedInstanceState == null) {
+            extractTaskId(intent)
+        }
 
         var keepSplashScreen = true
         splashScreen.setKeepOnScreenCondition { keepSplashScreen }
@@ -279,13 +282,15 @@ class MainActivity : ComponentActivity() {
                         }
 
                         ScreenState.CAMERA_AFTER_PROOF -> {
-                            selectedTask?.let { taskToProve ->
+                            if (tasks == null) {
+                                Box(modifier = Modifier.fillMaxSize())
+                            } else if (selectedTask != null) {
                                 CameraAfterProofScreen(
-                                    task = taskToProve,
+                                    task = selectedTask,
                                     onProofCaptured = { afterUri, caption ->
                                         scope.launch {
                                             repository.completeTaskWithProof(
-                                                taskId = taskToProve.id,
+                                                taskId = selectedTask.id,
                                                 afterImageUri = afterUri,
                                                 completionCaption = caption,
                                                 completedAt = System.currentTimeMillis()
@@ -301,16 +306,20 @@ class MainActivity : ComponentActivity() {
                                         selectedTaskId = null
                                     }
                                 )
-                            } ?: run {
-                                currentScreen = ScreenState.HOME
-                                selectedTaskId = null
+                            } else {
+                                LaunchedEffect(Unit) {
+                                    currentScreen = ScreenState.HOME
+                                    selectedTaskId = null
+                                }
                             }
                         }
 
                         ScreenState.DETAIL -> {
-                            selectedTask?.let { task ->
+                            if (tasks == null) {
+                                Box(modifier = Modifier.fillMaxSize())
+                            } else if (selectedTask != null) {
                                 TaskDetailScreen(
-                                    task = task,
+                                    task = selectedTask,
                                     onBack = {
                                         currentScreen = ScreenState.HOME
                                         selectedTaskId = null
@@ -333,13 +342,15 @@ class MainActivity : ComponentActivity() {
                                         }
                                     },
                                     onOpenAfterCamera = {
-                                        selectedTaskId = task.id
+                                        selectedTaskId = selectedTask.id
                                         openCameraWithCheck(ScreenState.CAMERA_AFTER_PROOF)
                                     }
                                 )
-                            } ?: run {
-                                currentScreen = ScreenState.HOME
-                                selectedTaskId = null
+                            } else {
+                                LaunchedEffect(Unit) {
+                                    currentScreen = ScreenState.HOME
+                                    selectedTaskId = null
+                                }
                             }
                         }
 
