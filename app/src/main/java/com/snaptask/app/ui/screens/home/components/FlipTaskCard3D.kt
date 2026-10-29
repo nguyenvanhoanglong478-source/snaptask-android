@@ -853,7 +853,7 @@ private fun MiniPipThumbnail(
                 .align(Alignment.BottomEnd)
                 .padding(3.dp)
                 .size(20.dp)
-                .background(Color(0xCC000000), CircleShape) // Dark circular overlay for flip icon over thumbnail,
+                .background(Color(0xCC000000), CircleShape), // Dark circular overlay for flip icon over thumbnail
             contentAlignment = Alignment.Center
         ) {
             Icon(
