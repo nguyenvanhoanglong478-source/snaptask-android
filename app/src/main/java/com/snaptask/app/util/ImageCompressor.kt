@@ -43,23 +43,24 @@ object ImageCompressor {
             val sampledBitmap = decodeSampledBitmap(rawFile.absolutePath, MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION)
                 ?: throw IllegalArgumentException("Không thể giải mã file ảnh từ máy ảnh: ${rawFile.name}")
 
-            val rotatedBitmap = rotateBitmapIfRequired(sampledBitmap, orientation)
-
-            // 3. Clamp long edge to exactly 1280px if long edge > 1280 (preserving aspect ratio)
-            val maxEdge = max(rotatedBitmap.width, rotatedBitmap.height)
-            val finalFullBitmap = if (maxEdge > MAX_IMAGE_DIMENSION) {
+            // 3. Clamp long edge to exactly 1280px before rotation to minimize RAM peak
+            val maxEdge = max(sampledBitmap.width, sampledBitmap.height)
+            val scaledBitmap = if (maxEdge > MAX_IMAGE_DIMENSION) {
                 val scale = MAX_IMAGE_DIMENSION.toFloat() / maxEdge
-                val targetWidth = (rotatedBitmap.width * scale).toInt()
-                val targetHeight = (rotatedBitmap.height * scale).toInt()
-                Bitmap.createScaledBitmap(rotatedBitmap, targetWidth, targetHeight, true)
+                val targetWidth = (sampledBitmap.width * scale).toInt()
+                val targetHeight = (sampledBitmap.height * scale).toInt()
+                Bitmap.createScaledBitmap(sampledBitmap, targetWidth, targetHeight, true)
             } else {
-                rotatedBitmap
+                sampledBitmap
             }
 
-            // 4. Compress clamped full image to WebP
+            // 4. Rotate clamped image according to EXIF
+            val finalFullBitmap = rotateBitmapIfRequired(scaledBitmap, orientation)
+
+            // 5. Compress full image to WebP
             saveBitmapAsWebp(finalFullBitmap, targetFullFile, WEBP_QUALITY)
 
-            // 5. Create miniature 360px thumbnail for Widget & Grid view
+            // 6. Create miniature 360px thumbnail for Widget & Grid view
             val thumbBitmap = Bitmap.createScaledBitmap(
                 finalFullBitmap,
                 THUMBNAIL_DIMENSION,
@@ -68,15 +69,17 @@ object ImageCompressor {
             )
             saveBitmapAsWebp(thumbBitmap, targetThumbFile, 70)
 
-            // Clean up Bitmaps to free native memory immediately
-            if (finalFullBitmap != rotatedBitmap) {
-                finalFullBitmap.recycle()
+            // Clean up Bitmaps to free native memory immediately without double-recycling
+            val bitmapsToRecycle = LinkedHashSet<Bitmap>()
+            bitmapsToRecycle.add(sampledBitmap)
+            bitmapsToRecycle.add(scaledBitmap)
+            bitmapsToRecycle.add(finalFullBitmap)
+            bitmapsToRecycle.add(thumbBitmap)
+            for (bmp in bitmapsToRecycle) {
+                if (!bmp.isRecycled) {
+                    bmp.recycle()
+                }
             }
-            if (rotatedBitmap != sampledBitmap) {
-                rotatedBitmap.recycle()
-            }
-            sampledBitmap.recycle()
-            thumbBitmap.recycle()
 
             CompressedResult(
                 fullImagePath = targetFullFile.absolutePath,
