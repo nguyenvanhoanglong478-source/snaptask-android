@@ -8,82 +8,47 @@
             android:viewportWidth="108"
             android:viewportHeight="108">
 
-            <!-- 1. Viewfinder Brackets Group -->
+            <!-- 1. Outer Ring Group -->
             <group
-                android:name="viewfinder_group"
+                android:name="ring_group"
                 android:pivotX="54"
                 android:pivotY="54">
                 <path
-                    android:name="brackets_path"
-                    android:strokeColor="#F8FAFC"
-                    android:strokeWidth="3.5"
-                    android:strokeLineCap="round"
-                    android:strokeLineJoin="round"
-                    android:pathData="M33,45 L33,37 A4,4 0 0 1 37,33 L45,33 M63,33 L71,33 A4,4 0 0 1 75,37 L75,45 M75,63 L75,71 A4,4 0 0 1 71,75 L63,75 M45,75 L37,75 A4,4 0 0 1 33,71 L33,63" />
-            </group>
-
-            <!-- 2. Center Lens & Checkmark Group -->
-            <group
-                android:name="center_group"
-                android:pivotX="54"
-                android:pivotY="54">
-                <!-- Lens Ring -->
-                <path
-                    android:name="lens_ring"
-                    android:strokeColor="#6366F1"
-                    android:strokeWidth="3.2"
+                    android:name="outer_ring"
+                    android:strokeColor="#FFD23F"
+                    android:strokeWidth="7"
                     android:strokeLineCap="round"
                     android:fillColor="#00000000"
-                    android:pathData="M54,40 A14,14 0 1 1 53.99,40"
+                    android:pathData="M54,24.5 A29.5,29.5 0 1,1 53.99,24.5"
                     android:trimPathEnd="0" />
+            </group>
 
-                <!-- Center Task Checkmark -->
+            <!-- 2. Inner Disk & Tick Mark Group -->
+            <group
+                android:name="disk_group"
+                android:pivotX="54"
+                android:pivotY="54">
                 <path
-                    android:name="check_mark"
-                    android:strokeColor="#10B981"
-                    android:strokeWidth="3.8"
+                    android:name="inner_disk"
+                    android:fillColor="#FFD23F"
+                    android:pathData="M54,35 A19,19 0 1,1 53.99,35 Z" />
+
+                <path
+                    android:name="tick_mark"
+                    android:strokeColor="#17140A"
+                    android:strokeWidth="6.5"
                     android:strokeLineCap="round"
                     android:strokeLineJoin="round"
-                    android:pathData="M46,54.5 L51.5,60 L63,47.5"
+                    android:pathData="M45,55 L51.5,61.5 L63.5,47"
                     android:trimPathEnd="0" />
             </group>
         </vector>
     </aapt:attr>
 
-    <!-- Animation Target: Viewfinder Brackets (Scale + Rotation) -->
-    <target android:name="viewfinder_group">
-        <aapt:attr name="android:animation">
-            <set android:ordering="together">
-                <objectAnimator
-                    android:duration="450"
-                    android:interpolator="@android:interpolator/overshoot"
-                    android:propertyName="scaleX"
-                    android:valueFrom="0.65"
-                    android:valueTo="1.0"
-                    android:valueType="floatType" />
-                <objectAnimator
-                    android:duration="450"
-                    android:interpolator="@android:interpolator/overshoot"
-                    android:propertyName="scaleY"
-                    android:valueFrom="0.65"
-                    android:valueTo="1.0"
-                    android:valueType="floatType" />
-                <objectAnimator
-                    android:duration="450"
-                    android:interpolator="@android:interpolator/fast_out_slow_in"
-                    android:propertyName="rotation"
-                    android:valueFrom="-12"
-                    android:valueTo="0"
-                    android:valueType="floatType" />
-            </set>
-        </aapt:attr>
-    </target>
-
-    <!-- Animation Target: Center Lens Ring (trimPathEnd 0 -> 1) -->
-    <target android:name="lens_ring">
+    <!-- Animation Target: Outer Ring (trimPathEnd 0 -> 1) -->
+    <target android:name="outer_ring">
         <aapt:attr name="android:animation">
             <objectAnimator
-                android:startOffset="50"
                 android:duration="450"
                 android:interpolator="@android:interpolator/fast_out_slow_in"
                 android:propertyName="trimPathEnd"
@@ -93,12 +58,36 @@
         </aapt:attr>
     </target>
 
-    <!-- Animation Target: Checkmark (trimPathEnd 0 -> 1) -->
-    <target android:name="check_mark">
+    <!-- Animation Target: Inner Disk Group (Scale 0 -> 1 with Overshoot) -->
+    <target android:name="disk_group">
+        <aapt:attr name="android:animation">
+            <set android:ordering="together">
+                <objectAnimator
+                    android:startOffset="80"
+                    android:duration="380"
+                    android:interpolator="@android:interpolator/overshoot"
+                    android:propertyName="scaleX"
+                    android:valueFrom="0.0"
+                    android:valueTo="1.0"
+                    android:valueType="floatType" />
+                <objectAnimator
+                    android:startOffset="80"
+                    android:duration="380"
+                    android:interpolator="@android:interpolator/overshoot"
+                    android:propertyName="scaleY"
+                    android:valueFrom="0.0"
+                    android:valueTo="1.0"
+                    android:valueType="floatType" />
+            </set>
+        </aapt:attr>
+    </target>
+
+    <!-- Animation Target: Tick Mark (trimPathEnd 0 -> 1) -->
+    <target android:name="tick_mark">
         <aapt:attr name="android:animation">
             <objectAnimator
-                android:startOffset="240"
-                android:duration="380"
+                android:startOffset="320"
+                android:duration="280"
                 android:interpolator="@android:interpolator/fast_out_slow_in"
                 android:propertyName="trimPathEnd"
                 android:valueFrom="0.0"

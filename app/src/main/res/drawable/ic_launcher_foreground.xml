@@ -1,31 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- 4 Viewfinder Brackets in Safe Zone (33..75) -->
+    <!-- Outer Ring: circle cx=54 cy=54 r=29.5, no fill, stroke #FFD23F, strokeWidth 7 -->
     <path
-        android:strokeColor="#F8FAFC"
-        android:strokeWidth="3.5"
+        android:strokeColor="#FFD23F"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:pathData="M54,24.5 A29.5,29.5 0 1,1 53.99,24.5" />
+
+    <!-- Inner Disk: circle cx=54 cy=54 r=19, fill #FFD23F -->
+    <path
+        android:fillColor="#FFD23F"
+        android:pathData="M54,35 A19,19 0 1,1 53.99,35 Z" />
+
+    <!-- Negative Space Tick Mark: stroke #17140A, strokeWidth 6.5, round cap/join -->
+    <path
+        android:strokeColor="#17140A"
+        android:strokeWidth="6.5"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M33,45 L33,37 A4,4 0 0 1 37,33 L45,33 M63,33 L71,33 A4,4 0 0 1 75,37 L75,45 M75,63 L75,71 A4,4 0 0 1 71,75 L63,75 M45,75 L37,75 A4,4 0 0 1 33,71 L33,63" />
-
-    <!-- Center Camera Lens Ring (Electric Indigo) -->
-    <path
-        android:strokeColor="#6366F1"
-        android:strokeWidth="3.2"
-        android:strokeLineCap="round"
-        android:fillColor="#00000000"
-        android:pathData="M54,40 A14,14 0 1 1 53.99,40" />
-
-    <!-- Center Task Checkmark (Emerald Mint) -->
-    <path
-        android:strokeColor="#10B981"
-        android:strokeWidth="3.8"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M46,54.5 L51.5,60 L63,47.5" />
+        android:pathData="M45,55 L51.5,61.5 L63.5,47" />
 
 </vector>

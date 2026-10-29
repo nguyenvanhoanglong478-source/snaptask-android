@@ -117,7 +117,8 @@ class TaskReminderReceiver : BroadcastReceiver() {
         val photoBitmap = WidgetBitmapHelper.loadOptimizedBitmap(taskImage, maxSize = 600)
 
         val builder = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.ic_launcher)
+            .setSmallIcon(R.drawable.ic_stat_snaptask)
+            .setColor(0xFFFFD23F.toInt())
             .setContentTitle(if (isAlarmMode) "Báo thức: $taskTitle" else "Đến giờ làm: $taskTitle")
             .setContentText(if (taskDesc.isNotBlank()) taskDesc else "Chạm để chụp ảnh hoàn thành (After Proof)")
             .setContentIntent(contentPendingIntent)
