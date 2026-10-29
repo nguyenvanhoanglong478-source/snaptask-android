@@ -118,7 +118,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
 
         val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_stat_snaptask)
-            .setColor(0xFFFFD23F.toInt())
+            .setColor(0xFFFFD23F.toInt()) // System notification accent tint color: #FFD23F
             .setContentTitle(if (isAlarmMode) "Báo thức: $taskTitle" else "Đến giờ làm: $taskTitle")
             .setContentText(if (taskDesc.isNotBlank()) taskDesc else "Chạm để chụp ảnh hoàn thành (After Proof)")
             .setContentIntent(contentPendingIntent)
