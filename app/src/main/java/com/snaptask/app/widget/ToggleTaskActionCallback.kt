@@ -4,8 +4,10 @@ import android.content.Context
 import androidx.glance.GlanceId
 import androidx.glance.action.ActionParameters
 import androidx.glance.appwidget.action.ActionCallback
+import androidx.glance.appwidget.updateAll
 import com.snaptask.app.data.local.AppDatabase
 import com.snaptask.app.domain.model.TaskStatus
+import com.snaptask.app.reminder.TaskReminderScheduler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -24,7 +26,11 @@ class ToggleTaskActionCallback : ActionCallback {
             database.taskDao().updateTaskStatus(taskId, TaskStatus.DONE.name)
         }
 
-        // Re-render widget with the next top pending task
-        SnapTaskWidget().update(context, glanceId)
+        TaskReminderScheduler.cancelReminder(context, taskId)
+
+        // Refresh all 3 widgets to reflect completion
+        SnapTaskWidget().updateAll(context)
+        LocketFocusWidget().updateAll(context)
+        NotionStackWidget().updateAll(context)
     }
 }

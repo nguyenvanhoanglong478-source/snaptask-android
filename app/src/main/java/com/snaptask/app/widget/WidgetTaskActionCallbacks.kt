@@ -6,6 +6,7 @@ import androidx.glance.action.ActionParameters
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.updateAll
 import com.snaptask.app.data.local.AppDatabase
+import com.snaptask.app.reminder.TaskReminderScheduler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -24,10 +25,12 @@ class CompleteTaskActionCallback : ActionCallback {
             database.taskDao().toggleCompleted(taskId, true, System.currentTimeMillis())
         }
 
+        TaskReminderScheduler.cancelReminder(context, taskId)
+
         // Refresh all widgets to reflect completion
-        LocketFocusWidget().update(context, glanceId)
-        NotionStackWidget().updateAll(context)
         SnapTaskWidget().updateAll(context)
+        LocketFocusWidget().updateAll(context)
+        NotionStackWidget().updateAll(context)
     }
 }
 

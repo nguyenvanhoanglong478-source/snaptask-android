@@ -56,6 +56,13 @@ class TaskReminderReceiver : BroadcastReceiver() {
         val taskId = intent.getLongExtra(TaskReminderScheduler.EXTRA_TASK_ID, -1L)
         if (taskId == -1L) return
 
+        // Verify task exists and is not completed before alerting
+        val db = AppDatabase.getInstance(context)
+        val taskEntity = db.taskDao().getTaskById(taskId)
+        if (taskEntity == null || taskEntity.isCompleted) {
+            return
+        }
+
         val taskTitle = intent.getStringExtra(TaskReminderScheduler.EXTRA_TASK_TITLE) ?: "Việc cần làm"
         val taskDesc = intent.getStringExtra(TaskReminderScheduler.EXTRA_TASK_DESC) ?: ""
         val taskImage = intent.getStringExtra(TaskReminderScheduler.EXTRA_TASK_IMAGE) ?: ""
