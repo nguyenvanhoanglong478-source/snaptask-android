@@ -1,8 +1,13 @@
 package com.snaptask.app.ui.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -12,92 +17,68 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.snaptask.app.ui.theme.AccentPrimary
-import com.snaptask.app.ui.theme.StatusSuccess
-import com.snaptask.app.ui.theme.TextPrimary
+import com.snaptask.app.ui.theme.snapColors
 
 @Composable
 fun SnapTaskLogo(
     modifier: Modifier = Modifier,
     size: Dp = 28.dp,
-    bracketColor: Color = TextPrimary,
-    lensColor: Color = AccentPrimary,
-    checkColor: Color = StatusSuccess
+    ringColor: Color = MaterialTheme.snapColors.flash,
+    diskColor: Color = MaterialTheme.snapColors.flash,
+    tickColor: Color = MaterialTheme.snapColors.onFlash
 ) {
     Canvas(modifier = modifier.size(size)) {
         val w = this.size.width
         val h = this.size.height
+        val scale = w / 108f
+        val center = Offset(w / 2f, h / 2f)
 
-        val strokeWidth = (w * 0.085f).coerceAtLeast(1.8f)
-        val cornerArm = w * 0.24f
-        val cornerArc = w * 0.10f
-
-        val strokeStyle = Stroke(
-            width = strokeWidth,
-            cap = StrokeCap.Round,
-            join = StrokeJoin.Round
-        )
-
-        // 1. Top-Left Viewfinder Bracket
-        val pathTL = Path().apply {
-            moveTo(cornerArm, strokeWidth / 2)
-            lineTo(cornerArc, strokeWidth / 2)
-            quadraticBezierTo(strokeWidth / 2, strokeWidth / 2, strokeWidth / 2, cornerArc)
-            lineTo(strokeWidth / 2, cornerArm)
-        }
-        drawPath(pathTL, bracketColor, style = strokeStyle)
-
-        // 2. Top-Right Viewfinder Bracket
-        val pathTR = Path().apply {
-            moveTo(w - cornerArm, strokeWidth / 2)
-            lineTo(w - cornerArc, strokeWidth / 2)
-            quadraticBezierTo(w - strokeWidth / 2, strokeWidth / 2, w - strokeWidth / 2, cornerArc)
-            lineTo(w - strokeWidth / 2, cornerArm)
-        }
-        drawPath(pathTR, bracketColor, style = strokeStyle)
-
-        // 3. Bottom-Right Viewfinder Bracket
-        val pathBR = Path().apply {
-            moveTo(w - strokeWidth / 2, h - cornerArm)
-            lineTo(w - strokeWidth / 2, h - cornerArc)
-            quadraticBezierTo(w - strokeWidth / 2, h - strokeWidth / 2, w - cornerArc, h - strokeWidth / 2)
-            lineTo(w - cornerArm, h - strokeWidth / 2)
-        }
-        drawPath(pathBR, bracketColor, style = strokeStyle)
-
-        // 4. Bottom-Left Viewfinder Bracket
-        val pathBL = Path().apply {
-            moveTo(strokeWidth / 2, h - cornerArm)
-            lineTo(strokeWidth / 2, h - cornerArc)
-            quadraticBezierTo(strokeWidth / 2, h - strokeWidth / 2, cornerArc, h - strokeWidth / 2)
-            lineTo(cornerArm, h - strokeWidth / 2)
-        }
-        drawPath(pathBL, bracketColor, style = strokeStyle)
-
-        // 5. Center Camera Lens Ring (Electric Indigo)
-        val center = Offset(w / 2, h / 2)
-        val lensRadius = w * 0.25f
+        // 1. Outer Ring (circle cx=54 cy=54 r=29.5, stroke 7)
         drawCircle(
-            color = lensColor,
-            radius = lensRadius,
+            color = ringColor,
+            radius = 29.5f * scale,
             center = center,
-            style = Stroke(width = strokeWidth * 0.9f, cap = StrokeCap.Round)
+            style = Stroke(width = 7f * scale)
         )
 
-        // 6. Center Task Checkmark (Emerald Mint)
-        val checkPath = Path().apply {
-            moveTo(w * 0.43f, h * 0.50f)
-            lineTo(w * 0.49f, h * 0.57f)
-            lineTo(w * 0.61f, h * 0.43f)
+        // 2. Inner Disk (circle cx=54 cy=54 r=19, fill)
+        drawCircle(
+            color = diskColor,
+            radius = 19f * scale,
+            center = center
+        )
+
+        // 3. Cutout Tick Mark (path "M45 55 L51.5 61.5 L63.5 47", stroke 6.5)
+        val tickPath = Path().apply {
+            moveTo(45f * scale, 55f * scale)
+            lineTo(51.5f * scale, 61.5f * scale)
+            lineTo(63.5f * scale, 47f * scale)
         }
         drawPath(
-            checkPath,
-            color = checkColor,
+            tickPath,
+            color = tickColor,
             style = Stroke(
-                width = strokeWidth * 1.1f,
+                width = 6.5f * scale,
                 cap = StrokeCap.Round,
                 join = StrokeJoin.Round
             )
         )
+    }
+}
+
+@Composable
+fun SnapTaskLogoBadge(
+    modifier: Modifier = Modifier,
+    size: Dp = 36.dp,
+    backgroundColor: Color = Color(0xFF17140A), // Ink background
+    logoSize: Dp = 24.dp
+) {
+    Box(
+        modifier = modifier
+            .size(size)
+            .background(backgroundColor, RoundedCornerShape(10.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        SnapTaskLogo(size = logoSize)
     }
 }

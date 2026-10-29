@@ -3,6 +3,7 @@ package com.snaptask.app.ui.screens.editor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,21 +45,7 @@ import coil.request.ImageRequest
 import com.snaptask.app.domain.model.Task
 import com.snaptask.app.domain.model.TaskPriority
 import com.snaptask.app.domain.model.TaskTag
-import com.snaptask.app.ui.theme.AlmondHearth
-import com.snaptask.app.ui.theme.BrandAmber
-import com.snaptask.app.ui.theme.BrandGreen
-import com.snaptask.app.ui.theme.BrandRed
-import com.snaptask.app.ui.theme.ChipActiveBackground
-import com.snaptask.app.ui.theme.ChipActiveContent
-import com.snaptask.app.ui.theme.ChipInactiveBackground
-import com.snaptask.app.ui.theme.ChipInactiveBorder
-import com.snaptask.app.ui.theme.ChipInactiveContent
-import com.snaptask.app.ui.theme.ObsidianElevated
-import com.snaptask.app.ui.theme.ObsidianInk
-import com.snaptask.app.ui.theme.TextHighContrast
-import com.snaptask.app.ui.theme.TextMediumContrast
-import com.snaptask.app.ui.theme.TextMuted
-import com.snaptask.app.ui.theme.VelvetCurfewLight
+import com.snaptask.app.ui.theme.snapColors
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -70,6 +57,9 @@ fun QuickSnapSheet(
     onDismiss: () -> Unit,
     sheetState: SheetState
 ) {
+    val colors = MaterialTheme.snapColors
+    val isDark = isSystemInDarkTheme()
+
     var title by remember { mutableStateOf("") }
     var selectedTag by remember { mutableStateOf(TaskTag.PERSONAL) }
     var selectedPriority by remember { mutableStateOf(TaskPriority.MEDIUM) }
@@ -77,8 +67,8 @@ fun QuickSnapSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Color(0xFF1E1719), // Dark plum charcoal
-        contentColor = TextHighContrast,
+        containerColor = colors.surface,
+        contentColor = colors.text,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ) {
         Column(
@@ -90,7 +80,7 @@ fun QuickSnapSheet(
             Text(
                 text = "Tạo việc cần làm mới",
                 style = MaterialTheme.typography.headlineMedium,
-                color = TextHighContrast,
+                color = colors.text,
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp
             )
@@ -117,7 +107,7 @@ fun QuickSnapSheet(
                         modifier = Modifier
                             .size(76.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .border(1.5.dp, AlmondHearth, RoundedCornerShape(12.dp)),
+                            .border(1.5.dp, colors.flash, RoundedCornerShape(12.dp)),
                         contentScale = ContentScale.Crop
                     )
                     Spacer(modifier = Modifier.width(12.dp))
@@ -129,7 +119,7 @@ fun QuickSnapSheet(
                     placeholder = { 
                         Text(
                             text = "Bạn cần làm gì với ảnh này?", 
-                            color = TextMuted,
+                            color = colors.textMuted,
                             fontSize = 14.sp
                         ) 
                     },
@@ -138,13 +128,13 @@ fun QuickSnapSheet(
                     maxLines = 3,
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = TextHighContrast,
-                        unfocusedTextColor = TextHighContrast,
-                        focusedContainerColor = Color(0xFF281C21),
-                        unfocusedContainerColor = Color(0xFF281C21),
-                        focusedBorderColor = AlmondHearth,
-                        unfocusedBorderColor = ChipInactiveBorder,
-                        cursorColor = AlmondHearth
+                        focusedTextColor = colors.text,
+                        unfocusedTextColor = colors.text,
+                        focusedContainerColor = colors.elevated,
+                        unfocusedContainerColor = colors.elevated,
+                        focusedBorderColor = colors.flash,
+                        unfocusedBorderColor = colors.border,
+                        cursorColor = colors.flash
                     )
                 )
             }
@@ -154,7 +144,7 @@ fun QuickSnapSheet(
             // Tag Selection (High-Contrast Pills)
             Text(
                 text = "Danh mục",
-                color = TextMediumContrast,
+                color = colors.textSecondary,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -165,10 +155,10 @@ fun QuickSnapSheet(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(10.dp))
-                            .background(if (isSelected) ChipActiveBackground else ChipInactiveBackground)
+                            .background(if (isSelected) colors.flash else colors.elevated)
                             .border(
                                 width = 1.dp,
-                                color = if (isSelected) AlmondHearth else ChipInactiveBorder,
+                                color = if (isSelected) colors.flash else colors.border,
                                 shape = RoundedCornerShape(10.dp)
                             )
                             .clickable { selectedTag = tag }
@@ -176,7 +166,7 @@ fun QuickSnapSheet(
                     ) {
                         Text(
                             text = tag.displayName,
-                            color = if (isSelected) ChipActiveContent else ChipInactiveContent,
+                            color = if (isSelected) colors.onFlash else colors.textSecondary,
                             fontSize = 12.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold
                         )
@@ -189,7 +179,7 @@ fun QuickSnapSheet(
             // Priority Selection (Clear 3-way toggle)
             Text(
                 text = "Mức độ ưu tiên",
-                color = TextMediumContrast,
+                color = colors.textSecondary,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -198,20 +188,24 @@ fun QuickSnapSheet(
                 TaskPriority.entries.forEach { priority ->
                     val isSelected = selectedPriority == priority
                     val (colorAccent, label) = when (priority) {
-                        TaskPriority.LOW -> Pair(BrandGreen, "Thấp")
-                        TaskPriority.MEDIUM -> Pair(BrandAmber, "Vừa")
-                        TaskPriority.HIGH -> Pair(BrandRed, "GẤP")
+                        TaskPriority.LOW -> Pair(colors.done, "Thấp")
+                        TaskPriority.MEDIUM -> Pair(colors.warning, "Vừa")
+                        TaskPriority.HIGH -> Pair(colors.urgent, "GẤP")
                     }
 
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(10.dp))
                             .background(
-                                if (isSelected) colorAccent.copy(alpha = 0.22f) else ChipInactiveBackground
+                                if (isSelected) {
+                                    if (priority == TaskPriority.HIGH && !isDark) colors.urgent else colorAccent.copy(alpha = 0.22f)
+                                } else {
+                                    colors.elevated
+                                }
                             )
                             .border(
                                 width = if (isSelected) 1.5.dp else 1.dp,
-                                color = if (isSelected) colorAccent else ChipInactiveBorder,
+                                color = if (isSelected) colorAccent else colors.border,
                                 shape = RoundedCornerShape(10.dp)
                             )
                             .clickable { selectedPriority = priority }
@@ -219,7 +213,11 @@ fun QuickSnapSheet(
                     ) {
                         Text(
                             text = label,
-                            color = if (isSelected) colorAccent else ChipInactiveContent,
+                            color = if (isSelected) {
+                                if (priority == TaskPriority.HIGH && !isDark) Color.White else colorAccent
+                            } else {
+                                colors.textSecondary
+                            },
                             fontSize = 13.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                         )
@@ -242,18 +240,18 @@ fun QuickSnapSheet(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp),
+                    .height(48.dp),
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = AlmondHearth,
-                    contentColor = ObsidianInk
+                    containerColor = colors.flash,
+                    contentColor = colors.onFlash
                 )
             ) {
                 Text(
                     text = "Lưu & Ghim Lên Widget",
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
-                    color = ObsidianInk
+                    color = colors.onFlash
                 )
             }
 

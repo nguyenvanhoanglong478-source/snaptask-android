@@ -1,8 +1,6 @@
 package com.snaptask.app.ui.screens.board
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,10 +8,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -45,24 +40,19 @@ import androidx.compose.ui.unit.sp
 import com.snaptask.app.domain.model.Task
 import com.snaptask.app.domain.model.TaskStatus
 import com.snaptask.app.ui.screens.home.components.TaskSnapCard
-import com.snaptask.app.ui.theme.AlmondHearth
-import com.snaptask.app.ui.theme.ChipInactiveBackground
-import com.snaptask.app.ui.theme.ChipInactiveBorder
-import com.snaptask.app.ui.theme.SnapTaskVerticalGradient
-import com.snaptask.app.ui.theme.TextHighContrast
-import com.snaptask.app.ui.theme.TextMediumContrast
-import com.snaptask.app.ui.theme.TextMuted
+import com.snaptask.app.ui.theme.snapColors
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BoardScreen(
     tasks: List<Task>,
     onToggleTaskStatus: (Task) -> Unit,
-    onTaskClick: (Task) -> Unit,
+    onTaskClick: (Long) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = MaterialTheme.snapColors
     val statuses = TaskStatus.entries
     val pagerState = rememberPagerState(pageCount = { statuses.size })
     val scope = rememberCoroutineScope()
@@ -70,7 +60,7 @@ fun BoardScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(SnapTaskVerticalGradient)
+            .background(colors.bg)
     ) {
         Scaffold(
             containerColor = Color.Transparent,
@@ -80,7 +70,7 @@ fun BoardScreen(
                         Text(
                             text = "Bảng Cột Tiến Độ (Board)",
                             fontWeight = FontWeight.Bold,
-                            color = TextHighContrast,
+                            color = colors.text,
                             fontSize = 20.sp
                         )
                     },
@@ -89,7 +79,7 @@ fun BoardScreen(
                             Icon(
                                 imageVector = Icons.Filled.ArrowBack,
                                 contentDescription = "Quay lại",
-                                tint = TextHighContrast
+                                tint = colors.text
                             )
                         }
                     },
@@ -108,11 +98,11 @@ fun BoardScreen(
                 TabRow(
                     selectedTabIndex = pagerState.currentPage,
                     containerColor = Color.Transparent,
-                    contentColor = AlmondHearth,
+                    contentColor = colors.flash,
                     indicator = { tabPositions ->
                         TabRowDefaults.SecondaryIndicator(
                             modifier = Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]),
-                            color = AlmondHearth,
+                            color = colors.flash,
                             height = 3.dp
                         )
                     }
@@ -130,14 +120,14 @@ fun BoardScreen(
                                     Text(
                                         text = status.label,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
-                                        color = if (isSelected) TextHighContrast else TextMuted,
+                                        color = if (isSelected) colors.text else colors.textMuted,
                                         fontSize = 14.sp
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Box(
                                         modifier = Modifier
                                             .background(
-                                                if (isSelected) AlmondHearth else ChipInactiveBackground,
+                                                if (isSelected) colors.flash else colors.elevated,
                                                 RoundedCornerShape(8.dp)
                                             )
                                             .padding(horizontal = 6.dp, vertical = 2.dp)
@@ -146,7 +136,7 @@ fun BoardScreen(
                                             text = "$count",
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = if (isSelected) Color(0xFF151311) else TextHighContrast
+                                            color = if (isSelected) colors.onFlash else colors.text
                                         )
                                     }
                                 }
@@ -172,7 +162,7 @@ fun BoardScreen(
                             Text(
                                 text = "Không có việc nào trong cột '${currentStatus.label}'",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = TextMediumContrast,
+                                color = colors.textSecondary,
                                 fontSize = 14.sp
                             )
                         }
@@ -186,7 +176,7 @@ fun BoardScreen(
                                 TaskSnapCard(
                                     task = task,
                                     onToggleStatus = { onToggleTaskStatus(task) },
-                                    onClick = { onTaskClick(task) }
+                                    onClick = { onTaskClick(task.id) }
                                 )
                             }
                         }

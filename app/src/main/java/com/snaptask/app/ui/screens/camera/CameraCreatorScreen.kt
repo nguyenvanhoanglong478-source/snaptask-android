@@ -78,30 +78,10 @@ import com.snaptask.app.domain.model.TaskPriority
 import com.snaptask.app.domain.model.TaskTag
 import com.snaptask.app.ui.screens.editor.ReminderPickerDialog
 import androidx.compose.material.icons.filled.Folder
-import com.snaptask.app.ui.theme.AccentPrimary
-import com.snaptask.app.ui.theme.AccentSecondary
-import com.snaptask.app.ui.theme.AuroraGradient
-import com.snaptask.app.ui.theme.BgElevated
-import com.snaptask.app.ui.theme.BgPrimary
-import com.snaptask.app.ui.theme.BgSurface
-import com.snaptask.app.ui.theme.BorderHighlight
-import com.snaptask.app.ui.theme.BorderSubtle
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.MaterialTheme
 import com.snaptask.app.ui.theme.SnapTaskIcons
-import com.snaptask.app.ui.theme.StatusUrgent
-import com.snaptask.app.ui.theme.ChipActiveBg
-import com.snaptask.app.ui.theme.ChipActiveText
-import com.snaptask.app.ui.theme.ChipInactiveBg
-import com.snaptask.app.ui.theme.ChipInactiveBorder
-import com.snaptask.app.ui.theme.LocketAccent
-import com.snaptask.app.ui.theme.NotionBorder
-import com.snaptask.app.ui.theme.NotionCardSurface
-import com.snaptask.app.ui.theme.NotionDarkBg
-import com.snaptask.app.ui.theme.StatusAmber
-import com.snaptask.app.ui.theme.StatusDanger
-import com.snaptask.app.ui.theme.StatusSuccess
-import com.snaptask.app.ui.theme.TextMuted
-import com.snaptask.app.ui.theme.TextPrimary
-import com.snaptask.app.ui.theme.TextSecondary
+import com.snaptask.app.ui.theme.snapColors
 import com.snaptask.app.util.DateTimeUtils
 import com.snaptask.app.util.ImageCompressor
 import kotlinx.coroutines.delay
@@ -371,7 +351,7 @@ fun CameraCreatorScreen(
 
     val folderOptions = remember { listOf("Cá nhân", "Công việc", "Học tập", "Mua sắm") }
 
-    Box(modifier = modifier.fillMaxSize().background(BgPrimary)) {
+    Box(modifier = modifier.fillMaxSize().background(colors.bg)) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -391,15 +371,15 @@ fun CameraCreatorScreen(
                     onClick = onClose,
                     modifier = Modifier
                         .size(40.dp)
-                        .background(BgSurface, CircleShape)
-                        .border(1.dp, BorderSubtle, CircleShape)
+                        .background(colors.surface, CircleShape)
+                        .border(1.dp, colors.border, CircleShape)
                 ) {
-                    Icon(Icons.Filled.Close, contentDescription = "Đóng", tint = TextPrimary)
+                    Icon(Icons.Filled.Close, contentDescription = "Đóng", tint = colors.text)
                 }
 
                 Text(
                     text = "Tạo Task Mới",
-                    color = TextPrimary,
+                    color = colors.text,
                     fontWeight = FontWeight.Bold,
                     fontSize = 17.sp
                 )
@@ -416,7 +396,7 @@ fun CameraCreatorScreen(
                     .fillMaxWidth()
                     .aspectRatio(1f)
                     .clip(RoundedCornerShape(32.dp))
-                    .border(2.dp, if (cameraState == CameraState.CAPTURED) AccentPrimary else BorderSubtle, RoundedCornerShape(32.dp))
+                    .border(2.dp, if (cameraState == CameraState.CAPTURED) colors.flash else colors.border, RoundedCornerShape(32.dp))
                     .background(Color.Black),
                 contentAlignment = Alignment.Center
             ) {
@@ -461,7 +441,7 @@ fun CameraCreatorScreen(
                     ) {
                         Text(
                             text = "ĐÃ CHỤP",
-                            color = AccentPrimary,
+                            color = colors.flash,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -492,7 +472,7 @@ fun CameraCreatorScreen(
                         .size(46.dp)
                         .clip(CircleShape)
                         .background(Color(0xFF15171E))
-                        .border(1.dp, if (flashMode != CameraFlashMode.OFF) AccentPrimary else BorderSubtle, CircleShape)
+                        .border(1.dp, if (flashMode != CameraFlashMode.OFF) colors.flash else colors.border, CircleShape)
                         .clickable { applyFlashMode(flashMode.next()) },
                     contentAlignment = Alignment.Center
                 ) {
@@ -503,22 +483,19 @@ fun CameraCreatorScreen(
                             CameraFlashMode.AUTO -> SnapTaskIcons.FlashAuto
                         },
                         contentDescription = "Flash: ${flashMode.name}",
-                        tint = if (flashMode != CameraFlashMode.OFF) AccentPrimary else Color.White,
+                        tint = if (flashMode != CameraFlashMode.OFF) colors.flash else Color.White,
                         modifier = Modifier.size(20.dp)
                     )
                 }
 
-                // Center: Shutter (72x72) or Retake (56x56)
+                // Center: Shutter (88x88) or Retake (56x56)
                 if (cameraState == CameraState.PREVIEWING) {
                     Box(
                         modifier = Modifier
-                            .size(72.dp)
+                            .size(88.dp)
                             .clip(CircleShape)
                             .background(Color.Transparent)
-                            .border(2.5.dp, Color.White.copy(alpha = 0.9f), CircleShape)
-                            .padding(5.dp)
-                            .clip(CircleShape)
-                            .background(AuroraGradient)
+                            .border(4.dp, colors.flash, CircleShape)
                             .clickable(enabled = !isCapturing) {
                                 takePhoto()
                             },
@@ -526,15 +503,15 @@ fun CameraCreatorScreen(
                     ) {
                         if (isCapturing) {
                             CircularProgressIndicator(
-                                color = Color.White,
-                                modifier = Modifier.size(26.dp),
+                                color = colors.flash,
+                                modifier = Modifier.size(32.dp),
                                 strokeWidth = 3.dp
                             )
                         } else {
                             Box(
                                 modifier = Modifier
-                                    .size(22.dp)
-                                    .background(Color.White, CircleShape)
+                                    .size(66.dp)
+                                    .background(colors.flash, CircleShape)
                             )
                         }
                     }
@@ -543,8 +520,8 @@ fun CameraCreatorScreen(
                         modifier = Modifier
                             .size(56.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFF15171E))
-                            .border(1.5.dp, StatusUrgent, CircleShape)
+                            .background(colors.surface)
+                            .border(1.5.dp, colors.urgent, CircleShape)
                             .clickable {
                                 capturedPhotoPath?.let { File(it).delete() }
                                 capturedPhotoPath = null
@@ -554,7 +531,7 @@ fun CameraCreatorScreen(
                         Icon(
                             imageVector = SnapTaskIcons.Retake,
                             contentDescription = "Chụp lại",
-                            tint = StatusUrgent,
+                            tint = colors.urgent,
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -566,7 +543,7 @@ fun CameraCreatorScreen(
                         .size(46.dp)
                         .clip(CircleShape)
                         .background(Color(0xFF15171E))
-                        .border(1.dp, BorderSubtle, CircleShape)
+                        .border(1.dp, colors.border, CircleShape)
                         .clickable(enabled = !isCapturing && cameraState == CameraState.PREVIEWING) {
                             camera?.cameraControl?.enableTorch(false)
                             cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
@@ -580,7 +557,7 @@ fun CameraCreatorScreen(
                     Icon(
                         imageVector = SnapTaskIcons.CameraFlip,
                         contentDescription = "Đổi camera",
-                        tint = if (cameraState == CameraState.PREVIEWING) Color.White else TextMuted,
+                        tint = if (cameraState == CameraState.PREVIEWING) Color.White else colors.textMuted,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -592,25 +569,25 @@ fun CameraCreatorScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(BgSurface, RoundedCornerShape(24.dp))
-                    .border(1.dp, BorderSubtle, RoundedCornerShape(24.dp))
+                    .background(colors.surface, RoundedCornerShape(20.dp))
+                    .border(1.dp, colors.border, RoundedCornerShape(20.dp))
                     .padding(16.dp)
             ) {
                 // Task Title Input
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    placeholder = { Text("Bạn cần làm gì với bức ảnh này?", color = TextMuted, fontSize = 14.sp) },
+                    placeholder = { Text("Bạn cần làm gì với bức ảnh này?", color = colors.textMuted, fontSize = 14.sp) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     shape = RoundedCornerShape(14.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary,
-                        focusedContainerColor = BgElevated,
-                        unfocusedContainerColor = BgElevated,
-                        focusedBorderColor = AccentPrimary,
-                        unfocusedBorderColor = BorderSubtle
+                        focusedTextColor = colors.text,
+                        unfocusedTextColor = colors.text,
+                        focusedContainerColor = colors.elevated,
+                        unfocusedContainerColor = colors.elevated,
+                        focusedBorderColor = colors.flash,
+                        unfocusedBorderColor = colors.border
                     )
                 )
 
@@ -630,8 +607,8 @@ fun CameraCreatorScreen(
                             .weight(1f)
                             .height(44.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(BgElevated)
-                            .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
+                            .background(colors.elevated)
+                            .border(1.dp, colors.border, RoundedCornerShape(12.dp))
                             .clickable {
                                 val nextIdx = (folderOptions.indexOf(selectedFolder) + 1) % folderOptions.size
                                 selectedFolder = folderOptions[nextIdx]
@@ -643,13 +620,13 @@ fun CameraCreatorScreen(
                             Icon(
                                 imageVector = SnapTaskIcons.Folder,
                                 contentDescription = "Thư mục",
-                                tint = AccentPrimary,
+                                tint = colors.flash,
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = selectedFolder,
-                                color = TextPrimary,
+                                color = colors.text,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 1
@@ -659,16 +636,16 @@ fun CameraCreatorScreen(
 
                     // 2. Priority button (Icon-only 44.dp x 44.dp)
                     val priorityColor = when (selectedPriority) {
-                        TaskPriority.LOW -> TextMuted
-                        TaskPriority.MEDIUM -> Color(0xFFF59E0B)
-                        TaskPriority.HIGH -> Color(0xFFF43F5E)
+                        TaskPriority.LOW -> colors.done
+                        TaskPriority.MEDIUM -> colors.warning
+                        TaskPriority.HIGH -> colors.urgent
                     }
                     Box(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .background(Color(0xFF15171E))
-                            .border(1.dp, if (selectedPriority != TaskPriority.LOW) priorityColor else BorderSubtle, RoundedCornerShape(12.dp))
+                            .border(1.dp, if (selectedPriority != TaskPriority.LOW) priorityColor else colors.border, RoundedCornerShape(12.dp))
                             .clickable {
                                 val nextIndex = (selectedPriority.ordinal + 1) % TaskPriority.entries.size
                                 selectedPriority = TaskPriority.entries[nextIndex]
@@ -689,15 +666,15 @@ fun CameraCreatorScreen(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(if (hasReminder) AccentPrimary.copy(alpha = 0.2f) else Color(0xFF15171E))
-                            .border(1.dp, if (hasReminder) AccentPrimary else BorderSubtle, RoundedCornerShape(12.dp))
+                            .background(if (hasReminder) colors.flash else colors.elevated)
+                            .border(1.dp, if (hasReminder) colors.flash else colors.border, RoundedCornerShape(12.dp))
                             .clickable { showReminderPicker = true },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = SnapTaskIcons.AlarmClock,
                             contentDescription = "Nhắc nhở",
-                            tint = if (hasReminder) AccentPrimary else TextSecondary,
+                            tint = if (hasReminder) colors.onFlash else colors.textSecondary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -707,15 +684,15 @@ fun CameraCreatorScreen(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(if (isPinned) AccentPrimary.copy(alpha = 0.2f) else Color(0xFF15171E))
-                            .border(1.dp, if (isPinned) AccentPrimary else BorderSubtle, RoundedCornerShape(12.dp))
+                            .background(if (isPinned) colors.flash else colors.elevated)
+                            .border(1.dp, if (isPinned) colors.flash else colors.border, RoundedCornerShape(12.dp))
                             .clickable { isPinned = !isPinned },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = SnapTaskIcons.Pin,
                             contentDescription = "Ghim widget",
-                            tint = if (isPinned) AccentPrimary else TextSecondary,
+                            tint = if (isPinned) colors.onFlash else colors.textSecondary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -729,7 +706,7 @@ fun CameraCreatorScreen(
                         .fillMaxWidth()
                         .height(52.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(AuroraGradient)
+                        .background(colors.flash)
                         .clickable {
                             val finalPhoto = capturedPhotoPath ?: ""
                             val task = Task(

@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -42,15 +43,7 @@ import coil.request.ImageRequest
 import com.snaptask.app.domain.model.Task
 import com.snaptask.app.domain.model.TaskPriority
 import com.snaptask.app.domain.model.TaskStatus
-import com.snaptask.app.ui.theme.AlmondHearth
-import com.snaptask.app.ui.theme.BrandAmber
-import com.snaptask.app.ui.theme.BrandGreen
-import com.snaptask.app.ui.theme.BrandRed
-import com.snaptask.app.ui.theme.ChipInactiveBorder
-import com.snaptask.app.ui.theme.TextHighContrast
-import com.snaptask.app.ui.theme.TextMediumContrast
-import com.snaptask.app.ui.theme.TextMuted
-import com.snaptask.app.ui.theme.VelvetCurfew
+import com.snaptask.app.ui.theme.snapColors
 import java.io.File
 
 @Composable
@@ -60,15 +53,18 @@ fun TaskSnapCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = MaterialTheme.snapColors
+    val isDark = isSystemInDarkTheme()
+
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF241B1F) // Deep plum obsidian container
+            containerColor = colors.surface
         ),
-        border = BorderStroke(1.dp, ChipInactiveBorder),
+        border = BorderStroke(1.dp, colors.border),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
@@ -77,7 +73,7 @@ fun TaskSnapCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1.05f)
-                    .background(VelvetCurfew)
+                    .background(colors.elevated)
             ) {
                 val imageFile = when {
                     task.thumbnailPath.isNotBlank() && File(task.thumbnailPath).exists() -> File(task.thumbnailPath)
@@ -95,7 +91,7 @@ fun TaskSnapCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .aspectRatio(1.05f)
-                            .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp)),
+                            .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)),
                         contentScale = ContentScale.Crop
                     )
                 }
@@ -120,21 +116,56 @@ fun TaskSnapCard(
                 }
 
                 // Priority Badge
-                if (task.priorityEnum == TaskPriority.HIGH) {
-                    Box(
-                        modifier = Modifier
-                            .padding(8.dp)
-                            .align(Alignment.TopEnd)
-                            .background(BrandRed, shape = RoundedCornerShape(8.dp))
-                            .padding(horizontal = 7.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = "GẤP",
-                            color = Color.White,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        )
+                when (task.priorityEnum) {
+                    TaskPriority.HIGH -> {
+                        Box(
+                            modifier = Modifier
+                                .padding(8.dp)
+                                .align(Alignment.TopEnd)
+                                .background(
+                                    if (isDark) colors.urgent.copy(alpha = 0.16f) else colors.urgent,
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .border(
+                                    1.dp,
+                                    if (isDark) colors.urgent else Color.Transparent,
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .padding(horizontal = 7.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                text = "GẤP",
+                                color = if (isDark) colors.urgent else Color.White,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        }
                     }
+                    TaskPriority.MEDIUM -> {
+                        Box(
+                            modifier = Modifier
+                                .padding(8.dp)
+                                .align(Alignment.TopEnd)
+                                .background(
+                                    colors.warning.copy(alpha = 0.12f),
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .border(
+                                    1.dp,
+                                    colors.warning,
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .padding(horizontal = 7.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                text = "VỪA",
+                                color = colors.warning,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    TaskPriority.LOW -> {}
                 }
             }
 
@@ -160,7 +191,7 @@ fun TaskSnapCard(
                                 Icon(
                                     imageVector = Icons.Filled.CheckCircle,
                                     contentDescription = "Hoàn thành",
-                                    tint = BrandGreen,
+                                    tint = colors.done,
                                     modifier = Modifier.size(24.dp)
                                 )
                             }
@@ -168,7 +199,7 @@ fun TaskSnapCard(
                                 Icon(
                                     imageVector = Icons.Outlined.Schedule,
                                     contentDescription = "Đang thực hiện",
-                                    tint = BrandAmber,
+                                    tint = colors.warning,
                                     modifier = Modifier.size(22.dp)
                                 )
                             }
@@ -176,7 +207,7 @@ fun TaskSnapCard(
                                 Icon(
                                     imageVector = Icons.Outlined.Circle,
                                     contentDescription = "Cần làm",
-                                    tint = AlmondHearth,
+                                    tint = colors.textSecondary,
                                     modifier = Modifier.size(22.dp)
                                 )
                             }
@@ -191,7 +222,7 @@ fun TaskSnapCard(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None,
-                        color = if (task.isCompleted) TextMuted else TextHighContrast,
+                        color = if (task.isCompleted) colors.textMuted else colors.text,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp,
                         modifier = Modifier.weight(1f)
@@ -204,7 +235,7 @@ fun TaskSnapCard(
                     Text(
                         text = "Tiến độ: ${task.completedSubtasksCount}/${task.subtasks.size}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextMediumContrast,
+                        color = colors.textSecondary,
                         fontSize = 11.sp
                     )
                 }

@@ -62,18 +62,8 @@ import com.snaptask.app.domain.model.SubTask
 import com.snaptask.app.domain.model.Task
 import com.snaptask.app.domain.model.TaskPriority
 import com.snaptask.app.ui.screens.editor.ReminderPickerDialog
-import com.snaptask.app.ui.theme.AccentPrimary
-import com.snaptask.app.ui.theme.AuroraGradient
-import com.snaptask.app.ui.theme.BgElevated
-import com.snaptask.app.ui.theme.BgPrimary
-import com.snaptask.app.ui.theme.BgSurface
-import com.snaptask.app.ui.theme.BorderHighlight
-import com.snaptask.app.ui.theme.BorderSubtle
-import com.snaptask.app.ui.theme.StatusAmber
-import com.snaptask.app.ui.theme.StatusUrgent
-import com.snaptask.app.ui.theme.TextMuted
-import com.snaptask.app.ui.theme.TextPrimary
-import com.snaptask.app.ui.theme.TextSecondary
+import androidx.compose.material3.MaterialTheme
+import com.snaptask.app.ui.theme.snapColors
 import com.snaptask.app.util.DateTimeUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -107,14 +97,14 @@ fun QuickNoteBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
-        containerColor = BgSurface,
+        containerColor = colors.surface,
         tonalElevation = 8.dp,
         dragHandle = {
             Box(
                 modifier = Modifier
                     .padding(vertical = 10.dp)
                     .size(width = 36.dp, height = 4.dp)
-                    .background(BorderHighlight, CircleShape)
+                    .background(colors.borderHighlight, CircleShape)
             )
         }
     ) {
@@ -134,20 +124,20 @@ fun QuickNoteBottomSheet(
                     Box(
                         modifier = Modifier
                             .size(32.dp)
-                            .background(AccentPrimary.copy(alpha = 0.15f), RoundedCornerShape(8.dp)),
+                            .background(colors.flash.copy(alpha = 0.2f), RoundedCornerShape(8.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Filled.EditNote,
                             contentDescription = null,
-                            tint = AccentPrimary,
+                            tint = colors.flash,
                             modifier = Modifier.size(18.dp)
                         )
                     }
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
                         text = "Ghi chú nhanh",
-                        color = TextPrimary,
+                        color = colors.text,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -157,13 +147,13 @@ fun QuickNoteBottomSheet(
                     onClick = onDismissRequest,
                     modifier = Modifier
                         .size(32.dp)
-                        .background(BgElevated, CircleShape)
-                        .border(1.dp, BorderSubtle, CircleShape)
+                        .background(colors.elevated, CircleShape)
+                        .border(1.dp, colors.border, CircleShape)
                 ) {
                     Icon(
                         Icons.Filled.Close,
                         contentDescription = "Đóng",
-                        tint = TextSecondary,
+                        tint = colors.textSecondary,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -176,22 +166,22 @@ fun QuickNoteBottomSheet(
                 value = title,
                 onValueChange = { title = it },
                 placeholder = {
-                    Text("Nhập việc cần làm...", color = TextMuted, fontSize = 16.sp)
+                    Text("Nhập việc cần làm...", color = colors.textMuted, fontSize = 16.sp)
                 },
                 modifier = Modifier.fillMaxWidth(),
                 textStyle = androidx.compose.ui.text.TextStyle(
-                    color = TextPrimary,
+                    color = colors.text,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold
                 ),
                 shape = RoundedCornerShape(14.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary,
-                    focusedContainerColor = BgElevated,
-                    unfocusedContainerColor = BgElevated,
-                    focusedBorderColor = AccentPrimary,
-                    unfocusedBorderColor = BorderSubtle
+                    focusedTextColor = colors.text,
+                    unfocusedTextColor = colors.text,
+                    focusedContainerColor = colors.elevated,
+                    unfocusedContainerColor = colors.elevated,
+                    focusedBorderColor = colors.flash,
+                    unfocusedBorderColor = colors.border
                 ),
                 singleLine = true
             )
@@ -203,23 +193,23 @@ fun QuickNoteBottomSheet(
                 value = description,
                 onValueChange = { description = it },
                 placeholder = {
-                    Text("Ghi chú chi tiết (không bắt buộc)...", color = TextMuted, fontSize = 13.sp)
+                    Text("Ghi chú chi tiết (không bắt buộc)...", color = colors.textMuted, fontSize = 13.sp)
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(88.dp),
                 textStyle = androidx.compose.ui.text.TextStyle(
-                    color = TextSecondary,
+                    color = colors.textSecondary,
                     fontSize = 13.sp
                 ),
                 shape = RoundedCornerShape(14.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary,
-                    focusedContainerColor = BgElevated,
-                    unfocusedContainerColor = BgElevated,
-                    focusedBorderColor = AccentPrimary,
-                    unfocusedBorderColor = BorderSubtle
+                    focusedTextColor = colors.text,
+                    unfocusedTextColor = colors.text,
+                    focusedContainerColor = colors.elevated,
+                    unfocusedContainerColor = colors.elevated,
+                    focusedBorderColor = colors.flash,
+                    unfocusedBorderColor = colors.border
                 ),
                 maxLines = 3
             )
@@ -229,7 +219,7 @@ fun QuickNoteBottomSheet(
             // Checklist / Sub-tasks Section
             Text(
                 text = "Danh sách việc nhỏ (Checklist)",
-                color = TextSecondary,
+                color = colors.textSecondary,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold
             )
@@ -241,14 +231,14 @@ fun QuickNoteBottomSheet(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp)
-                        .background(BgElevated, RoundedCornerShape(10.dp))
+                        .background(colors.elevated, RoundedCornerShape(10.dp))
                         .padding(horizontal = 10.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         imageVector = if (subtask.isDone) Icons.Filled.Check else Icons.Outlined.Circle,
                         contentDescription = null,
-                        tint = if (subtask.isDone) AccentPrimary else TextMuted,
+                        tint = if (subtask.isDone) colors.done else colors.textMuted,
                         modifier = Modifier
                             .size(18.dp)
                             .clickable {
@@ -260,7 +250,7 @@ fun QuickNoteBottomSheet(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = subtask.title,
-                        color = if (subtask.isDone) TextMuted else TextPrimary,
+                        color = if (subtask.isDone) colors.textMuted else colors.text,
                         fontSize = 13.sp,
                         modifier = Modifier.weight(1f)
                     )
@@ -273,7 +263,7 @@ fun QuickNoteBottomSheet(
                         Icon(
                             Icons.Outlined.Delete,
                             contentDescription = "Xoá",
-                            tint = TextMuted,
+                            tint = colors.textMuted,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -290,17 +280,17 @@ fun QuickNoteBottomSheet(
                 OutlinedTextField(
                     value = newSubtaskText,
                     onValueChange = { newSubtaskText = it },
-                    placeholder = { Text("Thêm bước thực hiện...", color = TextMuted, fontSize = 12.sp) },
+                    placeholder = { Text("Thêm bước thực hiện...", color = colors.textMuted, fontSize = 12.sp) },
                     modifier = Modifier.weight(1f),
-                    textStyle = androidx.compose.ui.text.TextStyle(color = TextPrimary, fontSize = 13.sp),
+                    textStyle = androidx.compose.ui.text.TextStyle(color = colors.text, fontSize = 13.sp),
                     shape = RoundedCornerShape(10.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary,
-                        focusedContainerColor = BgElevated,
-                        unfocusedContainerColor = BgElevated,
-                        focusedBorderColor = AccentPrimary,
-                        unfocusedBorderColor = BorderSubtle
+                        focusedTextColor = colors.text,
+                        unfocusedTextColor = colors.text,
+                        focusedContainerColor = colors.elevated,
+                        unfocusedContainerColor = colors.elevated,
+                        focusedBorderColor = colors.flash,
+                        unfocusedBorderColor = colors.border
                     ),
                     singleLine = true
                 )
@@ -314,7 +304,7 @@ fun QuickNoteBottomSheet(
                     },
                     modifier = Modifier
                         .size(44.dp)
-                        .background(AccentPrimary, RoundedCornerShape(10.dp))
+                        .background(colors.flash, RoundedCornerShape(10.dp))
                 ) {
                     Icon(Icons.Filled.Add, contentDescription = "Thêm", tint = Color.White)
                 }
@@ -325,7 +315,7 @@ fun QuickNoteBottomSheet(
             // Folder Selection Chips
             Text(
                 text = "Thư mục phân loại",
-                color = TextSecondary,
+                color = colors.textSecondary,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold
             )
@@ -336,8 +326,8 @@ fun QuickNoteBottomSheet(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(10.dp))
-                            .background(if (isSelected) AccentPrimary else BgElevated)
-                            .border(1.dp, if (isSelected) AccentPrimary else BorderSubtle, RoundedCornerShape(10.dp))
+                            .background(if (isSelected) colors.flash else colors.elevated)
+                            .border(1.dp, if (isSelected) colors.flash else colors.border, RoundedCornerShape(10.dp))
                             .clickable { selectedFolder = folder }
                             .padding(horizontal = 12.dp, vertical = 7.dp)
                     ) {
@@ -345,13 +335,13 @@ fun QuickNoteBottomSheet(
                             Icon(
                                 Icons.Filled.Folder,
                                 contentDescription = null,
-                                tint = if (isSelected) Color.White else TextSecondary,
+                                tint = if (isSelected) colors.onFlash else colors.textSecondary,
                                 modifier = Modifier.size(14.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = folder,
-                                color = if (isSelected) Color.White else TextSecondary,
+                                color = if (isSelected) colors.onFlash else colors.textSecondary,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -365,7 +355,7 @@ fun QuickNoteBottomSheet(
             // Priority Selection
             Text(
                 text = "Mức độ ưu tiên",
-                color = TextSecondary,
+                color = colors.textSecondary,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold
             )
@@ -382,23 +372,23 @@ fun QuickNoteBottomSheet(
                         TaskPriority.HIGH -> "Gấp"
                     }
                     val badgeColor = when (p) {
-                        TaskPriority.LOW -> TextMuted
-                        TaskPriority.MEDIUM -> StatusAmber
-                        TaskPriority.HIGH -> StatusUrgent
+                        TaskPriority.LOW -> colors.textMuted
+                        TaskPriority.MEDIUM -> colors.warning
+                        TaskPriority.HIGH -> colors.urgent
                     }
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(if (isSelected) badgeColor.copy(alpha = 0.25f) else BgElevated)
-                            .border(1.dp, if (isSelected) badgeColor else BorderSubtle, RoundedCornerShape(10.dp))
+                            .background(if (isSelected) badgeColor.copy(alpha = 0.25f) else colors.elevated)
+                            .border(1.dp, if (isSelected) badgeColor else colors.border, RoundedCornerShape(10.dp))
                             .clickable { priority = p }
                             .padding(vertical = 8.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = label,
-                            color = if (isSelected) badgeColor else TextSecondary,
+                            color = if (isSelected) badgeColor else colors.textSecondary,
                             fontSize = 12.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                         )
@@ -418,8 +408,8 @@ fun QuickNoteBottomSheet(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
-                        .background(if (reminderTime != null) AccentPrimary.copy(alpha = 0.2f) else BgElevated)
-                        .border(1.dp, if (reminderTime != null) AccentPrimary else BorderSubtle, RoundedCornerShape(10.dp))
+                        .background(if (reminderTime != null) colors.flash else colors.elevated)
+                        .border(1.dp, if (reminderTime != null) colors.flash else colors.border, RoundedCornerShape(10.dp))
                         .clickable { showReminderDialog = true }
                         .padding(horizontal = 12.dp, vertical = 8.dp)
                 ) {
@@ -427,13 +417,13 @@ fun QuickNoteBottomSheet(
                         Icon(
                             imageVector = if (reminderType == "ALARM") Icons.Filled.Alarm else Icons.Filled.Notifications,
                             contentDescription = null,
-                            tint = if (reminderTime != null) AccentPrimary else TextSecondary,
+                            tint = if (reminderTime != null) colors.onFlash else colors.textSecondary,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = reminderTime?.let { DateTimeUtils.formatDateTime(it) } ?: "Hẹn giờ nhắc",
-                            color = if (reminderTime != null) AccentPrimary else TextSecondary,
+                            color = if (reminderTime != null) colors.onFlash else colors.textSecondary,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -445,13 +435,13 @@ fun QuickNoteBottomSheet(
                     Icon(
                         imageVector = if (isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
                         contentDescription = null,
-                        tint = if (isPinned) AccentPrimary else TextMuted,
+                        tint = if (isPinned) colors.flash else colors.textMuted,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "Ghim Widget",
-                        color = if (isPinned) TextPrimary else TextMuted,
+                        color = if (isPinned) colors.text else colors.textMuted,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium
                     )
@@ -461,9 +451,10 @@ fun QuickNoteBottomSheet(
                         onCheckedChange = { isPinned = it },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
-                            checkedTrackColor = AccentPrimary,
-                            uncheckedThumbColor = TextMuted,
-                            uncheckedTrackColor = BgElevated
+                            checkedTrackColor = colors.flash,
+                    checkedThumbColor = colors.onFlash,
+                            uncheckedThumbColor = colors.textMuted,
+                            uncheckedTrackColor = colors.elevated
                         )
                     )
                 }
@@ -477,7 +468,7 @@ fun QuickNoteBottomSheet(
                     .fillMaxWidth()
                     .height(50.dp)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(AuroraGradient)
+                    .background(colors.flash)
                     .clickable {
                         if (title.isBlank()) {
                             Toast.makeText(context, "Vui lòng nhập tiêu đề task!", Toast.LENGTH_SHORT).show()
@@ -502,7 +493,7 @@ fun QuickNoteBottomSheet(
             ) {
                 Text(
                     text = "Lưu ghi chú",
-                    color = Color.White,
+                    color = colors.onFlash,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold
                 )

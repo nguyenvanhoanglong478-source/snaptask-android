@@ -12,37 +12,32 @@ val SnapTaskTypography = Typography(
         fontWeight = FontWeight.Bold,
         fontSize = 26.sp,
         lineHeight = 32.sp,
-        letterSpacing = (-0.5).sp,
-        color = Neutral900
+        letterSpacing = (-0.5).sp
     ),
     headlineMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.SemiBold,
         fontSize = 20.sp,
         lineHeight = 26.sp,
-        letterSpacing = (-0.25).sp,
-        color = Neutral900
+        letterSpacing = (-0.25).sp
     ),
     titleMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.SemiBold,
         fontSize = 15.sp,
-        lineHeight = 20.sp,
-        color = Neutral900
+        lineHeight = 20.sp
     ),
     bodyMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
-        lineHeight = 20.sp,
-        color = Neutral700
+        lineHeight = 20.sp
     ),
     bodySmall = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Normal,
         fontSize = 12.sp,
-        lineHeight = 16.sp,
-        color = Neutral500
+        lineHeight = 16.sp
     ),
     labelSmall = TextStyle(
         fontFamily = FontFamily.SansSerif,

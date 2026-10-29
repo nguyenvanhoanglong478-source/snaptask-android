@@ -65,19 +65,10 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.snaptask.app.domain.model.Task
 import com.snaptask.app.domain.model.TaskPriority
-import com.snaptask.app.ui.theme.AccentPrimary
-import com.snaptask.app.ui.theme.BgElevated
-import com.snaptask.app.ui.theme.BgPrimary
-import com.snaptask.app.ui.theme.BgSurface
-import com.snaptask.app.ui.theme.BorderSubtle
-import com.snaptask.app.ui.theme.CardBottomScrim
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.MaterialTheme
 import com.snaptask.app.ui.theme.SnapTaskIcons
-import com.snaptask.app.ui.theme.StatusAmber
-import com.snaptask.app.ui.theme.StatusSuccess
-import com.snaptask.app.ui.theme.StatusUrgent
-import com.snaptask.app.ui.theme.TextMuted
-import com.snaptask.app.ui.theme.TextPrimary
-import com.snaptask.app.ui.theme.TextSecondary
+import com.snaptask.app.ui.theme.snapColors
 import java.io.File
 
 @Composable
@@ -90,6 +81,8 @@ fun FlipTaskCard3D(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = MaterialTheme.snapColors
+    val isDark = isSystemInDarkTheme()
     // If it's a Quick Note without an image, display the dedicated Quick Note card
     if (task.isQuickNote || task.beforeImageUri.isBlank()) {
         QuickNoteFeedCard(
@@ -137,14 +130,14 @@ fun FlipTaskCard3D(
                 cameraDistance = 16f * density
             },
         shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = BgSurface),
-        border = BorderStroke(1.dp, if (task.isCompleted) StatusSuccess.copy(alpha = 0.4f) else BorderSubtle)
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
+        border = BorderStroke(1.dp, if (task.isCompleted) colors.done.copy(alpha = 0.4f) else colors.border)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
-                .background(BgPrimary)
+                .background(colors.bg)
         ) {
             if (rotation <= 90f) {
                 // FRONT FACE:
@@ -213,9 +206,9 @@ fun QuickNoteFeedCard(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = BgSurface),
-        border = BorderStroke(1.dp, if (task.isCompleted) StatusSuccess.copy(alpha = 0.35f) else BorderSubtle)
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
+        border = BorderStroke(1.dp, if (task.isCompleted) colors.done.copy(alpha = 0.35f) else colors.border)
     ) {
         Column(
             modifier = Modifier
@@ -235,13 +228,13 @@ fun QuickNoteFeedCard(
                     // Folder badge
                     Box(
                         modifier = Modifier
-                            .background(BgElevated, RoundedCornerShape(8.dp))
-                            .border(1.dp, BorderSubtle, RoundedCornerShape(8.dp))
+                            .background(colors.elevated, RoundedCornerShape(8.dp))
+                            .border(1.dp, colors.border, RoundedCornerShape(8.dp))
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
                             text = task.folderName,
-                            color = TextSecondary,
+                            color = colors.textSecondary,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -251,13 +244,13 @@ fun QuickNoteFeedCard(
                     if (task.priorityEnum == TaskPriority.HIGH) {
                         Box(
                             modifier = Modifier
-                                .background(StatusUrgent.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
-                                .border(1.dp, StatusUrgent.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                                .background(if (isDark) colors.urgent.copy(alpha = 0.16f) else colors.urgent, RoundedCornerShape(8.dp))
+                                .border(1.dp, if (isDark) colors.urgent else Color.Transparent, RoundedCornerShape(8.dp))
                                 .padding(horizontal = 7.dp, vertical = 4.dp)
                         ) {
                             Text(
                                 text = "Gấp",
-                                color = StatusUrgent,
+                                color = if (isDark) colors.urgent else Color.White,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -268,16 +261,16 @@ fun QuickNoteFeedCard(
                     if (task.hasReminder) {
                         Box(
                             modifier = Modifier
-                                .background(AccentPrimary.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
-                                .border(1.dp, AccentPrimary.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                                .background(colors.elevated, RoundedCornerShape(8.dp))
+                                .border(1.dp, colors.borderHighlight, RoundedCornerShape(8.dp))
                                 .padding(horizontal = 7.dp, vertical = 4.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(SnapTaskIcons.AlarmClock, contentDescription = null, tint = AccentPrimary, modifier = Modifier.size(11.dp))
+                                Icon(SnapTaskIcons.AlarmClock, contentDescription = null, tint = colors.text, modifier = Modifier.size(11.dp))
                                 Spacer(modifier = Modifier.width(3.dp))
                                 Text(
                                     text = task.reminderFormatted ?: "",
-                                    color = AccentPrimary,
+                                    color = colors.text,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -292,14 +285,14 @@ fun QuickNoteFeedCard(
                         .size(36.dp)
                         .clip(CircleShape)
                         .background(Color(0xFF15171E))
-                        .border(1.dp, BorderSubtle, CircleShape)
+                        .border(1.dp, colors.border, CircleShape)
                         .clickable(onClick = onTogglePin),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = SnapTaskIcons.Pin,
                         contentDescription = "Ghim",
-                        tint = if (task.isPinnedToWidget) AccentPrimary else TextSecondary,
+                        tint = if (task.isPinnedToWidget) colors.flash else colors.textSecondary,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -327,7 +320,7 @@ fun QuickNoteFeedCard(
                     Icon(
                         imageVector = if (task.isCompleted) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
                         contentDescription = "Trạng thái",
-                        tint = if (task.isCompleted) StatusSuccess else TextSecondary,
+                        tint = if (task.isCompleted) colors.done else colors.textSecondary,
                         modifier = Modifier.size(22.dp)
                     )
                 }
@@ -337,7 +330,7 @@ fun QuickNoteFeedCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = task.title,
-                        color = if (task.isCompleted) TextMuted else TextPrimary,
+                        color = if (task.isCompleted) colors.textMuted else colors.text,
                         textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None,
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp
@@ -347,7 +340,7 @@ fun QuickNoteFeedCard(
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = task.description,
-                            color = TextSecondary,
+                            color = colors.textSecondary,
                             fontSize = 13.sp,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
@@ -362,7 +355,7 @@ fun QuickNoteFeedCard(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(BgElevated, RoundedCornerShape(12.dp))
+                        .background(colors.elevated, RoundedCornerShape(12.dp))
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
@@ -371,13 +364,13 @@ fun QuickNoteFeedCard(
                             Icon(
                                 imageVector = if (sub.isDone) Icons.Filled.Check else Icons.Outlined.Circle,
                                 contentDescription = null,
-                                tint = if (sub.isDone) AccentPrimary else TextMuted,
+                                tint = if (sub.isDone) colors.done else colors.textMuted,
                                 modifier = Modifier.size(14.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = sub.title,
-                                color = if (sub.isDone) TextMuted else TextSecondary,
+                                color = if (sub.isDone) colors.textMuted else colors.textSecondary,
                                 fontSize = 12.sp,
                                 textDecoration = if (sub.isDone) TextDecoration.LineThrough else TextDecoration.None,
                                 maxLines = 1,
@@ -388,7 +381,7 @@ fun QuickNoteFeedCard(
                     if (task.parsedSubtasks.size > 3) {
                         Text(
                             text = "+${task.parsedSubtasks.size - 3} việc nhỏ khác",
-                            color = TextMuted,
+                            color = colors.textMuted,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -437,12 +430,12 @@ private fun AfterFaceContent(
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Box(
                     modifier = Modifier
-                        .background(StatusSuccess, RoundedCornerShape(10.dp))
+                        .background(if (isDark) colors.done.copy(alpha = 0.16f) else colors.done, RoundedCornerShape(10.dp))
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
                         text = "AFTER • HOÀN THÀNH",
-                        color = BgPrimary,
+                        color = if (isDark) colors.done else Color.White,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.ExtraBold
                     )
@@ -475,7 +468,7 @@ private fun AfterFaceContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
-                .background(CardBottomScrim)
+                .background(colors.scrim)
                 .padding(horizontal = 14.dp, vertical = 14.dp)
         ) {
             Row(
@@ -494,7 +487,7 @@ private fun AfterFaceContent(
                     Icon(
                         imageVector = Icons.Filled.CheckCircle,
                         contentDescription = "Hoàn thành",
-                        tint = StatusSuccess,
+                        tint = colors.done,
                         modifier = Modifier.size(22.dp)
                     )
                 }
@@ -504,7 +497,7 @@ private fun AfterFaceContent(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = task.title,
-                        color = TextPrimary,
+                        color = colors.text,
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
                         maxLines = 1,
@@ -514,7 +507,7 @@ private fun AfterFaceContent(
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = "\"${task.completionCaption}\"",
-                            color = StatusSuccess,
+                            color = colors.done,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
                             maxLines = 1,
@@ -528,14 +521,14 @@ private fun AfterFaceContent(
                         .size(36.dp)
                         .clip(CircleShape)
                         .background(Color(0xFF15171E).copy(alpha = 0.85f))
-                        .border(1.dp, BorderSubtle, CircleShape)
+                        .border(1.dp, colors.border, CircleShape)
                         .clickable(onClick = onTogglePin),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = SnapTaskIcons.Pin,
                         contentDescription = "Ghim",
-                        tint = if (task.isPinnedToWidget) AccentPrimary else Color.White,
+                        tint = if (task.isPinnedToWidget) colors.flash else Color.White,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -583,7 +576,7 @@ private fun BeforeFlippedFaceContent(
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Box(
                     modifier = Modifier
-                        .background(AccentPrimary, RoundedCornerShape(10.dp))
+                        .background(if (isDark) colors.flash.copy(alpha = 0.2f) else colors.flash, RoundedCornerShape(10.dp))
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
@@ -623,7 +616,7 @@ private fun BeforeFlippedFaceContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
-                .background(CardBottomScrim)
+                .background(colors.scrim)
                 .padding(horizontal = 14.dp, vertical = 14.dp)
         ) {
             Row(
@@ -642,7 +635,7 @@ private fun BeforeFlippedFaceContent(
                     Icon(
                         imageVector = if (task.isCompleted) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
                         contentDescription = "Status",
-                        tint = if (task.isCompleted) StatusSuccess else TextPrimary,
+                        tint = if (task.isCompleted) colors.done else colors.text,
                         modifier = Modifier.size(22.dp)
                     )
                 }
@@ -652,7 +645,7 @@ private fun BeforeFlippedFaceContent(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = task.title,
-                        color = TextPrimary,
+                        color = colors.text,
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
                         maxLines = 1,
@@ -660,7 +653,7 @@ private fun BeforeFlippedFaceContent(
                     )
                     Text(
                         text = "Bắt đầu lúc: ${task.createdAtTimeFormatted}",
-                        color = TextSecondary,
+                        color = colors.textSecondary,
                         fontSize = 12.sp
                     )
                 }
@@ -674,7 +667,7 @@ private fun BeforeFlippedFaceContent(
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Sync, contentDescription = "Lật lại", tint = AccentPrimary, modifier = Modifier.size(14.dp))
+                        Icon(Icons.Filled.Sync, contentDescription = "Lật lại", tint = colors.flash, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(3.dp))
                         Text("After", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
@@ -733,7 +726,7 @@ private fun StandardBeforeFaceContent(
                 if (task.priorityEnum == TaskPriority.HIGH) {
                     Box(
                         modifier = Modifier
-                            .background(StatusUrgent, RoundedCornerShape(10.dp))
+                            .background(if (isDark) colors.urgent.copy(alpha = 0.16f) else colors.urgent, RoundedCornerShape(10.dp))
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(text = "Gấp", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
@@ -742,7 +735,7 @@ private fun StandardBeforeFaceContent(
                 if (task.hasReminder) {
                     Box(
                         modifier = Modifier
-                            .background(AccentPrimary, RoundedCornerShape(10.dp))
+                            .background(if (isDark) colors.flash.copy(alpha = 0.2f) else colors.flash, RoundedCornerShape(10.dp))
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -759,14 +752,14 @@ private fun StandardBeforeFaceContent(
                     .size(36.dp)
                     .clip(CircleShape)
                     .background(Color(0xFF15171E).copy(alpha = 0.85f))
-                    .border(1.dp, BorderSubtle, CircleShape)
+                    .border(1.dp, colors.border, CircleShape)
                     .clickable(onClick = onTogglePin),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = SnapTaskIcons.Pin,
                     contentDescription = "Ghim",
-                    tint = if (task.isPinnedToWidget) AccentPrimary else Color.White,
+                    tint = if (task.isPinnedToWidget) colors.flash else Color.White,
                     modifier = Modifier.size(16.dp)
                 )
             }
@@ -777,7 +770,7 @@ private fun StandardBeforeFaceContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
-                .background(CardBottomScrim)
+                .background(colors.scrim)
                 .padding(horizontal = 14.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -793,7 +786,7 @@ private fun StandardBeforeFaceContent(
                 Icon(
                     imageVector = if (task.isCompleted) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
                     contentDescription = "Hoàn thành",
-                    tint = if (task.isCompleted) StatusSuccess else TextPrimary,
+                    tint = if (task.isCompleted) colors.done else colors.text,
                     modifier = Modifier.size(22.dp)
                 )
             }
@@ -801,7 +794,7 @@ private fun StandardBeforeFaceContent(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = task.title,
-                    color = if (task.isCompleted) TextMuted else TextPrimary,
+                    color = if (task.isCompleted) colors.textMuted else colors.text,
                     textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None,
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
@@ -811,7 +804,7 @@ private fun StandardBeforeFaceContent(
                 if (task.parsedSubtasks.isNotEmpty()) {
                     Text(
                         text = "Checklist: ${task.progressPercent}%",
-                        color = TextSecondary,
+                        color = colors.textSecondary,
                         fontSize = 11.sp
                     )
                 }

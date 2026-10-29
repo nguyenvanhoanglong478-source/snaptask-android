@@ -22,6 +22,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SheetState
@@ -41,13 +42,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.snaptask.app.domain.model.Task
-import com.snaptask.app.ui.theme.LocketAccent
-import com.snaptask.app.ui.theme.NotionBorder
-import com.snaptask.app.ui.theme.NotionCardSurface
-import com.snaptask.app.ui.theme.NotionDarkBg
-import com.snaptask.app.ui.theme.TextMuted
-import com.snaptask.app.ui.theme.TextPrimary
-import com.snaptask.app.ui.theme.TextSecondary
+import com.snaptask.app.ui.theme.snapColors
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -59,11 +54,13 @@ fun CompletionProofBottomSheet(
     onCaptureProof: () -> Unit,
     onQuickComplete: () -> Unit
 ) {
+    val colors = MaterialTheme.snapColors
+
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
-        containerColor = NotionCardSurface,
-        scrimColor = Color(0x99000000),
+        containerColor = colors.surface,
+        scrimColor = Color(0x99000000), // Modal scrim overlay
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ) {
         Column(
@@ -80,7 +77,7 @@ fun CompletionProofBottomSheet(
             ) {
                 Text(
                     text = "Hoàn thành công việc",
-                    color = TextPrimary,
+                    color = colors.text,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -88,7 +85,7 @@ fun CompletionProofBottomSheet(
                     onClick = onDismissRequest,
                     modifier = Modifier.size(32.dp)
                 ) {
-                    Icon(Icons.Filled.Close, contentDescription = "Đóng", tint = TextSecondary)
+                    Icon(Icons.Filled.Close, contentDescription = "Đóng", tint = colors.textSecondary)
                 }
             }
 
@@ -98,8 +95,8 @@ fun CompletionProofBottomSheet(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(NotionDarkBg, RoundedCornerShape(16.dp))
-                    .border(1.dp, NotionBorder, RoundedCornerShape(16.dp))
+                    .background(colors.bg, RoundedCornerShape(16.dp))
+                    .border(1.dp, colors.border, RoundedCornerShape(16.dp))
                     .padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -120,13 +117,13 @@ fun CompletionProofBottomSheet(
                     Box(
                         modifier = Modifier
                             .size(56.dp)
-                            .background(Color(0xFF2B2B2B), RoundedCornerShape(12.dp)),
+                            .background(colors.elevated, RoundedCornerShape(12.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Filled.CameraAlt,
                             contentDescription = null,
-                            tint = Color.White.copy(alpha = 0.7f),
+                            tint = colors.textMuted,
                             modifier = Modifier.size(22.dp)
                         )
                     }
@@ -137,7 +134,7 @@ fun CompletionProofBottomSheet(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = task.title,
-                        color = TextPrimary,
+                        color = colors.text,
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
                         maxLines = 1,
@@ -146,7 +143,7 @@ fun CompletionProofBottomSheet(
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "Chụp ảnh kết quả để kích hoạt hiệu ứng 3D lật thẻ Before / After kiểu Locket!",
-                        color = TextMuted,
+                        color = colors.textMuted,
                         fontSize = 12.sp,
                         lineHeight = 15.sp
                     )
@@ -160,15 +157,16 @@ fun CompletionProofBottomSheet(
                 onClick = onCaptureProof,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(16.dp),
+                    .height(48.dp),
+                shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = LocketAccent,
-                    contentColor = NotionDarkBg
+                    containerColor = colors.flash,
+                    contentColor = colors.onFlash
                 )
             ) {
                 Text(
                     text = "Chụp ảnh kết quả (After Proof)",
+                    color = colors.onFlash,
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp
                 )
@@ -182,17 +180,17 @@ fun CompletionProofBottomSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, NotionBorder),
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(1.dp, colors.border),
                 colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = TextPrimary
+                    contentColor = colors.text
                 )
             ) {
                 Text(
                     text = "Hoàn thành nhanh (Không chụp ảnh)",
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 13.sp,
-                    color = TextSecondary
+                    color = colors.textSecondary
                 )
             }
         }

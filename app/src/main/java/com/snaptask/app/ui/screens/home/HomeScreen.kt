@@ -89,23 +89,10 @@ import com.snaptask.app.ui.components.SnapTaskLogo
 import com.snaptask.app.ui.screens.home.components.CompletionProofBottomSheet
 import com.snaptask.app.ui.screens.home.components.FlipTaskCard3D
 import com.snaptask.app.ui.screens.home.components.QuickNoteBottomSheet
-import com.snaptask.app.ui.theme.AccentPrimary
-import com.snaptask.app.ui.theme.AccentSecondary
-import com.snaptask.app.ui.theme.AuroraDockGradient
-import com.snaptask.app.ui.theme.AuroraGradient
-import com.snaptask.app.ui.theme.BgElevated
-import com.snaptask.app.ui.theme.BgPrimary
-import com.snaptask.app.ui.theme.BgSurface
-import com.snaptask.app.ui.theme.BorderHighlight
-import com.snaptask.app.ui.theme.BorderSubtle
-import com.snaptask.app.ui.theme.CardBottomScrim
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.MaterialTheme
 import com.snaptask.app.ui.theme.SnapTaskIcons
-import com.snaptask.app.ui.theme.StatusAmber
-import com.snaptask.app.ui.theme.StatusSuccess
-import com.snaptask.app.ui.theme.StatusUrgent
-import com.snaptask.app.ui.theme.TextMuted
-import com.snaptask.app.ui.theme.TextPrimary
-import com.snaptask.app.ui.theme.TextSecondary
+import com.snaptask.app.ui.theme.snapColors
 import java.io.File
 
 enum class ViewMode {
@@ -219,7 +206,7 @@ fun HomeScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = BgPrimary,
+        containerColor = colors.bg,
         topBar = {
             Column(
                 modifier = Modifier
@@ -239,7 +226,7 @@ fun HomeScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
                                     text = "SnapTask",
-                                    color = TextPrimary,
+                                    color = colors.text,
                                     fontWeight = FontWeight.ExtraBold,
                                     fontSize = 22.sp,
                                     letterSpacing = (-0.5).sp
@@ -248,12 +235,12 @@ fun HomeScreen(
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(6.dp))
-                                        .background(AccentPrimary.copy(alpha = 0.2f))
+                                        .background(colors.elevated)
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
                                 ) {
                                     Text(
                                         text = "3.0",
-                                        color = AccentPrimary,
+                                        color = colors.textSecondary,
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -261,7 +248,7 @@ fun HomeScreen(
                             }
                             Text(
                                 text = "${tasks.count { !it.isCompleted }} việc cần làm • ${tasks.size} tổng",
-                                color = TextSecondary,
+                                color = colors.textSecondary,
                                 fontSize = 11.sp
                             )
                         }
@@ -276,15 +263,15 @@ fun HomeScreen(
                             modifier = Modifier
                                 .size(42.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFF15171E))
-                                .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
+                                .background(colors.surface)
+                                .border(1.dp, colors.border, RoundedCornerShape(12.dp))
                                 .clickable { isSearchActive = !isSearchActive },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = SnapTaskIcons.Search,
                                 contentDescription = "Tìm kiếm",
-                                tint = if (isSearchActive) AccentPrimary else TextPrimary,
+                                tint = if (isSearchActive) colors.flash else colors.text,
                                 modifier = Modifier.size(19.dp)
                             )
                         }
@@ -294,8 +281,8 @@ fun HomeScreen(
                             modifier = Modifier
                                 .size(42.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFF15171E))
-                                .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
+                                .background(colors.surface)
+                                .border(1.dp, colors.border, RoundedCornerShape(12.dp))
                                 .clickable {
                                     viewMode = if (viewMode == ViewMode.BENTO_GRID) ViewMode.FEED_FULL else ViewMode.BENTO_GRID
                                 },
@@ -304,7 +291,7 @@ fun HomeScreen(
                             Icon(
                                 imageVector = if (viewMode == ViewMode.BENTO_GRID) SnapTaskIcons.ListFeed else SnapTaskIcons.GridBento,
                                 contentDescription = "Chuyển chế độ xem",
-                                tint = AccentPrimary,
+                                tint = colors.flash,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -315,15 +302,15 @@ fun HomeScreen(
                                 modifier = Modifier
                                     .size(42.dp)
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(Color(0xFF15171E))
-                                    .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
+                                    .background(colors.surface)
+                                    .border(1.dp, colors.border, RoundedCornerShape(12.dp))
                                     .clickable { showSortMenu = true },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = SnapTaskIcons.Sort,
                                     contentDescription = "Sắp xếp",
-                                    tint = TextPrimary,
+                                    tint = colors.text,
                                     modifier = Modifier.size(19.dp)
                                 )
                             }
@@ -332,15 +319,15 @@ fun HomeScreen(
                                 expanded = showSortMenu,
                                 onDismissRequest = { showSortMenu = false },
                                 modifier = Modifier
-                                    .background(BgSurface)
-                                    .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
+                                    .background(colors.surface)
+                                    .border(1.dp, colors.border, RoundedCornerShape(12.dp))
                             ) {
                                 SortOption.entries.forEach { opt ->
                                     DropdownMenuItem(
                                         text = {
                                             Text(
                                                 text = opt.displayName,
-                                                color = if (sortOption == opt) AccentPrimary else TextPrimary,
+                                                color = if (sortOption == opt) colors.flash else colors.text,
                                                 fontWeight = if (sortOption == opt) FontWeight.Bold else FontWeight.Normal
                                             )
                                         },
@@ -352,6 +339,49 @@ fun HomeScreen(
                                 }
                             }
                         }
+                    }
+                }
+
+                // Progress Bar: 6dp segmented rounded bar, flash in dark / text in light, x/y xong
+                if (tasks.isNotEmpty()) {
+                    val completedTasks = remember(tasks) { tasks.count { it.isCompleted } }
+                    val totalTasks = tasks.size
+                    val progressFraction = if (totalTasks > 0) completedTasks.toFloat() / totalTasks else 0f
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Tiến độ công việc",
+                            color = colors.textSecondary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = "$completedTasks/$totalTasks xong",
+                            color = if (isDark) colors.flash else colors.text,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(5.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(colors.elevated)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(progressFraction.coerceIn(0f, 1f))
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(if (isDark) colors.flash else colors.text)
+                        )
                     }
                 }
             }
@@ -372,24 +402,24 @@ fun HomeScreen(
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
-                        placeholder = { Text("Tìm theo tên, ghi chú, thư mục...", color = TextMuted) },
+                        placeholder = { Text("Tìm theo tên, ghi chú, thư mục...", color = colors.textMuted) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 18.dp, vertical = 6.dp),
                         shape = RoundedCornerShape(14.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary,
-                            focusedContainerColor = BgSurface,
-                            unfocusedContainerColor = BgSurface,
-                            focusedBorderColor = AccentPrimary,
-                            unfocusedBorderColor = BorderSubtle
+                            focusedTextColor = colors.text,
+                            unfocusedTextColor = colors.text,
+                            focusedContainerColor = colors.surface,
+                            unfocusedContainerColor = colors.surface,
+                            focusedBorderColor = colors.flash,
+                            unfocusedBorderColor = colors.border
                         ),
                         singleLine = true,
                         trailingIcon = {
                             if (searchQuery.isNotEmpty()) {
                                 IconButton(onClick = { searchQuery = "" }) {
-                                    Icon(Icons.Filled.Close, contentDescription = "Xoá", tint = TextSecondary, modifier = Modifier.size(16.dp))
+                                    Icon(Icons.Filled.Close, contentDescription = "Xoá", tint = colors.textSecondary, modifier = Modifier.size(16.dp))
                                 }
                             }
                         }
@@ -429,18 +459,18 @@ fun HomeScreen(
                             Box(
                                 modifier = Modifier
                                     .size(60.dp)
-                                    .background(BgSurface, CircleShape)
-                                    .border(1.dp, BorderSubtle, CircleShape),
+                                    .background(colors.surface, CircleShape)
+                                    .border(1.dp, colors.border, CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Filled.CameraAlt, contentDescription = null, tint = AccentPrimary, modifier = Modifier.size(28.dp))
+                                Icon(Icons.Filled.CameraAlt, contentDescription = null, tint = colors.flash, modifier = Modifier.size(28.dp))
                             }
                             Spacer(modifier = Modifier.height(14.dp))
-                            Text(text = "Chưa có nhiệm vụ nào", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text(text = "Chưa có nhiệm vụ nào", color = colors.text, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = "Bấm nút Camera để chụp task hoặc Ghi chú nhanh bên dưới",
-                                color = TextSecondary,
+                                color = colors.textSecondary,
                                 fontSize = 12.sp,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
@@ -543,24 +573,24 @@ fun HomeScreen(
         if (showNewFolderDialog) {
             AlertDialog(
                 onDismissRequest = { showNewFolderDialog = false },
-                containerColor = BgSurface,
+                containerColor = colors.surface,
                 title = {
-                    Text("Tạo thư mục mới", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Text("Tạo thư mục mới", color = colors.text, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 },
                 text = {
                     OutlinedTextField(
                         value = newFolderNameInput,
                         onValueChange = { newFolderNameInput = it },
-                        placeholder = { Text("Tên thư mục (ví dụ: Gym, Dự án X)", color = TextMuted) },
+                        placeholder = { Text("Tên thư mục (ví dụ: Gym, Dự án X)", color = colors.textMuted) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary,
-                            focusedContainerColor = BgElevated,
-                            unfocusedContainerColor = BgElevated,
-                            focusedBorderColor = AccentPrimary,
-                            unfocusedBorderColor = BorderSubtle
+                            focusedTextColor = colors.text,
+                            unfocusedTextColor = colors.text,
+                            focusedContainerColor = colors.elevated,
+                            unfocusedContainerColor = colors.elevated,
+                            focusedBorderColor = colors.flash,
+                            unfocusedBorderColor = colors.border
                         ),
                         singleLine = true
                     )
@@ -575,7 +605,7 @@ fun HomeScreen(
                                 showNewFolderDialog = false
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary),
+                        colors = ButtonDefaults.buttonColors(containerColor = colors.flash, contentColor = colors.onFlash),
                         shape = RoundedCornerShape(10.dp)
                     ) {
                         Text("Tạo thư mục", color = Color.White, fontWeight = FontWeight.Bold)
@@ -583,7 +613,7 @@ fun HomeScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { showNewFolderDialog = false }) {
-                        Text("Huỷ", color = TextSecondary)
+                        Text("Huỷ", color = colors.textSecondary)
                     }
                 }
             )
@@ -650,11 +680,12 @@ private fun SmartFolderItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = MaterialTheme.snapColors
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(14.dp))
-            .background(if (isSelected) AccentPrimary.copy(alpha = 0.2f) else BgSurface)
-            .border(1.dp, if (isSelected) AccentPrimary else BorderSubtle, RoundedCornerShape(14.dp))
+            .background(if (isSelected) colors.flash else colors.surface)
+            .border(1.dp, if (isSelected) colors.flash else colors.border, RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 8.dp, vertical = 8.dp)
     ) {
@@ -667,12 +698,12 @@ private fun SmartFolderItem(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = if (isSelected) AccentPrimary else TextSecondary,
+                    tint = if (isSelected) colors.onFlash else colors.textSecondary,
                     modifier = Modifier.size(15.dp)
                 )
                 Text(
                     text = count.toString(),
-                    color = if (isSelected) AccentPrimary else TextSecondary,
+                    color = if (isSelected) colors.onFlash else colors.textSecondary,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -680,7 +711,7 @@ private fun SmartFolderItem(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = title,
-                color = if (isSelected) TextPrimary else TextSecondary,
+                color = if (isSelected) colors.onFlash else colors.textSecondary,
                 fontSize = 11.sp,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                 maxLines = 1,
@@ -701,6 +732,7 @@ private fun CustomFoldersRow(
     onSelectFolder: (String) -> Unit,
     onAddNewFolder: () -> Unit
 ) {
+    val colors = MaterialTheme.snapColors
     LazyRow(
         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -713,15 +745,15 @@ private fun CustomFoldersRow(
                 modifier = Modifier
                     .height(36.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(if (isSelected) AccentPrimary else BgElevated)
-                    .border(1.dp, if (isSelected) AccentPrimary else BorderSubtle, RoundedCornerShape(10.dp))
+                    .background(if (isSelected) colors.flash else colors.elevated)
+                    .border(1.dp, if (isSelected) colors.flash else colors.border, RoundedCornerShape(10.dp))
                     .clickable { onSelectFolder(folder) }
                     .padding(horizontal = 16.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "$folder ($count)",
-                    color = if (isSelected) Color.White else TextSecondary,
+                    color = if (isSelected) colors.onFlash else colors.textSecondary,
                     fontSize = 12.sp,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                 )
@@ -733,15 +765,15 @@ private fun CustomFoldersRow(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(BgElevated)
-                    .border(1.dp, BorderSubtle, RoundedCornerShape(10.dp))
+                    .background(colors.elevated)
+                    .border(1.dp, colors.border, RoundedCornerShape(10.dp))
                     .clickable(onClick = onAddNewFolder),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = SnapTaskIcons.Plus,
                     contentDescription = "Thêm thư mục",
-                    tint = AccentPrimary,
+                    tint = colors.flash,
                     modifier = Modifier.size(16.dp)
                 )
             }
@@ -758,41 +790,58 @@ private fun FloatingGlassDock(
     onOpenQuickNote: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = MaterialTheme.snapColors
+    val isDark = isSystemInDarkTheme()
+
     Box(
         modifier = modifier
-            .shadow(16.dp, RoundedCornerShape(32.dp))
-            .clip(RoundedCornerShape(32.dp))
-            .background(BgSurface.copy(alpha = 0.92f))
-            .border(1.dp, BorderHighlight, RoundedCornerShape(32.dp))
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(36.dp),
+                ambientColor = if (isDark) Color.Transparent else Color(0x1F17140A),
+                spotColor = if (isDark) Color.Transparent else Color(0x1F17140A)
+            )
+            .clip(RoundedCornerShape(36.dp))
+            .background(colors.surface)
+            .border(1.dp, colors.border, RoundedCornerShape(36.dp))
+            .padding(horizontal = 14.dp, vertical = 8.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Center Hero: Shutter Camera Capture Button (56dp circle with Aurora Gradient)
+            // Camera Shutter Button: 60dp outer with 3dp flash stroke, 42dp inner disc
             Box(
                 modifier = Modifier
-                    .size(56.dp)
+                    .size(60.dp)
                     .clip(CircleShape)
-                    .background(AuroraDockGradient)
-                    .border(2.5.dp, Color.White.copy(alpha = 0.8f), CircleShape)
+                    .background(Color.Transparent)
+                    .border(3.dp, colors.flash, CircleShape)
                     .clickable(onClick = onOpenLiveCamera),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Filled.CameraAlt,
-                    contentDescription = "Chụp Task Mới",
-                    tint = Color.White,
-                    modifier = Modifier.size(26.dp)
-                )
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(colors.flash),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.CameraAlt,
+                        contentDescription = "Chụp Task Mới",
+                        tint = colors.onFlash,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
             }
 
             // Quick Note Button
             Row(
                 modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
-                    .background(BgElevated)
+                    .background(colors.elevated)
+                    .border(1.dp, colors.border, RoundedCornerShape(20.dp))
                     .clickable(onClick = onOpenQuickNote)
                     .padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -800,13 +849,13 @@ private fun FloatingGlassDock(
                 Icon(
                     imageVector = Icons.Filled.EditNote,
                     contentDescription = "Ghi chú nhanh",
-                    tint = AccentPrimary,
+                    tint = colors.flash,
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = "Ghi chú",
-                    color = TextPrimary,
+                    color = colors.text,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -826,9 +875,11 @@ fun BentoTaskCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = MaterialTheme.snapColors
+    val isDark = isSystemInDarkTheme()
     val priorityColor = when (task.priorityEnum) {
-        TaskPriority.HIGH -> StatusUrgent
-        TaskPriority.MEDIUM -> StatusAmber
+        TaskPriority.HIGH -> colors.urgent
+        TaskPriority.MEDIUM -> colors.warning
         TaskPriority.LOW -> Color.Transparent
     }
 
@@ -836,18 +887,18 @@ fun BentoTaskCard(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = BgSurface),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
         border = androidx.compose.foundation.BorderStroke(
             1.dp,
-            if (task.isCompleted) StatusSuccess.copy(alpha = 0.35f) else BorderSubtle
+            if (task.isCompleted) colors.done.copy(alpha = 0.35f) else colors.border
         )
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
-                .background(BgElevated)
+                .background(colors.elevated)
         ) {
             val photoFile = remember(task.beforeImageUri, task.afterImageUri, task.isCompleted) {
                 if (task.hasProof && !task.afterImageUri.isNullOrBlank() && File(task.afterImageUri).exists()) {
@@ -886,13 +937,13 @@ fun BentoTaskCard(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .background(BgSurface, RoundedCornerShape(6.dp))
-                                    .border(1.dp, BorderSubtle, RoundedCornerShape(6.dp))
+                                    .background(colors.surface, RoundedCornerShape(6.dp))
+                                    .border(1.dp, colors.border, RoundedCornerShape(6.dp))
                                     .padding(horizontal = 6.dp, vertical = 2.dp)
                             ) {
                                 Text(
                                     text = task.folderName,
-                                    color = TextSecondary,
+                                    color = colors.textSecondary,
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.SemiBold
                                 )
@@ -911,15 +962,15 @@ fun BentoTaskCard(
                             modifier = Modifier
                                 .size(30.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFF15171E))
-                                .border(1.dp, BorderSubtle, CircleShape)
+                                .background(colors.elevated)
+                                .border(1.dp, colors.border, CircleShape)
                                 .clickable(onClick = onTogglePin),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = SnapTaskIcons.Pin,
                                 contentDescription = "Ghim",
-                                tint = if (task.isPinnedToWidget) AccentPrimary else TextSecondary,
+                                tint = if (task.isPinnedToWidget) colors.flash else colors.textSecondary,
                                 modifier = Modifier.size(14.dp)
                             )
                         }
@@ -927,7 +978,7 @@ fun BentoTaskCard(
 
                     Text(
                         text = task.title,
-                        color = if (task.isCompleted) TextMuted else TextPrimary,
+                        color = if (task.isCompleted) colors.textMuted else colors.text,
                         textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None,
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp,
@@ -949,7 +1000,7 @@ fun BentoTaskCard(
                             Icon(
                                 imageVector = if (task.isCompleted) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
                                 contentDescription = "Trạng thái",
-                                tint = if (task.isCompleted) StatusSuccess else TextSecondary,
+                                tint = if (task.isCompleted) colors.done else colors.textSecondary,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -957,7 +1008,7 @@ fun BentoTaskCard(
                         if (task.parsedSubtasks.isNotEmpty()) {
                             Text(
                                 text = "${task.completedSubtasksCount}/${task.parsedSubtasks.size}",
-                                color = TextMuted,
+                                color = colors.textMuted,
                                 fontSize = 10.sp
                             )
                         }
@@ -980,12 +1031,12 @@ fun BentoTaskCard(
                     ) {
                         Box(
                             modifier = Modifier
-                                .background(if (task.hasProof) StatusSuccess else Color(0xCC000000), RoundedCornerShape(7.dp))
+                                .background(if (task.hasProof) (if (isDark) colors.done.copy(alpha = 0.2f) else colors.done) else Color(0xCC000000), RoundedCornerShape(7.dp))
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = if (task.hasProof) "AFTER" else task.folderName,
-                                color = if (task.hasProof) BgPrimary else Color.White,
+                                color = if (task.hasProof) (if (isDark) colors.done else Color.White) else Color.White,
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -1004,15 +1055,15 @@ fun BentoTaskCard(
                         modifier = Modifier
                             .size(30.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFF15171E).copy(alpha = 0.85f))
-                            .border(1.dp, BorderSubtle, CircleShape)
+                            .background(colors.glass)
+                            .border(1.dp, colors.border, CircleShape)
                             .clickable(onClick = onTogglePin),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = SnapTaskIcons.Pin,
                             contentDescription = "Ghim",
-                            tint = if (task.isPinnedToWidget) AccentPrimary else Color.White,
+                            tint = if (task.isPinnedToWidget) colors.flash else Color.White,
                             modifier = Modifier.size(14.dp)
                         )
                     }
@@ -1023,7 +1074,7 @@ fun BentoTaskCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .align(Alignment.BottomCenter)
-                        .background(CardBottomScrim)
+                        .background(colors.scrim)
                         .padding(horizontal = 8.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -1036,14 +1087,14 @@ fun BentoTaskCard(
                         Icon(
                             imageVector = if (task.isCompleted) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
                             contentDescription = "Hoàn thành",
-                            tint = if (task.isCompleted) StatusSuccess else TextPrimary,
+                            tint = if (task.isCompleted) colors.done else Color.White,
                             modifier = Modifier.size(18.dp)
                         )
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = task.title,
-                        color = if (task.isCompleted) TextMuted else TextPrimary,
+                        color = if (task.isCompleted) colors.textMuted else colors.text,
                         textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None,
                         fontWeight = FontWeight.Bold,
                         fontSize = 11.sp,

@@ -63,25 +63,9 @@ import com.snaptask.app.domain.model.SubTask
 import com.snaptask.app.domain.model.Task
 import com.snaptask.app.domain.model.TaskPriority
 import com.snaptask.app.ui.screens.editor.ReminderPickerDialog
-import com.snaptask.app.ui.theme.AccentPrimary
-import com.snaptask.app.ui.theme.AuroraGradient
-import com.snaptask.app.ui.theme.BgElevated
-import com.snaptask.app.ui.theme.BgPrimary
-import com.snaptask.app.ui.theme.BgSurface
-import com.snaptask.app.ui.theme.BorderSubtle
-import com.snaptask.app.ui.theme.ChipInactiveBg
-import com.snaptask.app.ui.theme.ChipInactiveBorder
-import com.snaptask.app.ui.theme.ChipInactiveText
-import com.snaptask.app.ui.theme.LocketAccent
-import com.snaptask.app.ui.theme.NotionBorder
-import com.snaptask.app.ui.theme.NotionCardSurface
-import com.snaptask.app.ui.theme.NotionDarkBg
-import com.snaptask.app.ui.theme.StatusAmber
-import com.snaptask.app.ui.theme.StatusDanger
-import com.snaptask.app.ui.theme.StatusSuccess
-import com.snaptask.app.ui.theme.TextMuted
-import com.snaptask.app.ui.theme.TextPrimary
-import com.snaptask.app.ui.theme.TextSecondary
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.MaterialTheme
+import com.snaptask.app.ui.theme.snapColors
 import com.snaptask.app.util.DateTimeUtils
 import java.io.File
 import java.text.SimpleDateFormat
@@ -123,7 +107,7 @@ fun TaskDetailScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = BgPrimary,
+        containerColor = colors.bg,
         topBar = {
             Row(
                 modifier = Modifier
@@ -136,20 +120,20 @@ fun TaskDetailScreen(
                     onClick = onBack,
                     modifier = Modifier
                         .size(40.dp)
-                        .background(NotionCardSurface, RoundedCornerShape(12.dp))
-                        .border(1.dp, NotionBorder, RoundedCornerShape(12.dp))
+                        .background(colors.surface, RoundedCornerShape(12.dp))
+                        .border(1.dp, colors.border, RoundedCornerShape(12.dp))
                 ) {
                     Icon(
                         imageVector = Icons.Filled.ArrowBack,
                         contentDescription = "Quay lại",
-                        tint = TextPrimary,
+                        tint = colors.text,
                         modifier = Modifier.size(20.dp)
                     )
                 }
 
                 Text(
                     text = "Chi tiết công việc",
-                    color = TextPrimary,
+                    color = colors.text,
                     fontWeight = FontWeight.Bold,
                     fontSize = 17.sp
                 )
@@ -159,13 +143,13 @@ fun TaskDetailScreen(
                         onClick = { isPinned = !isPinned },
                         modifier = Modifier
                             .size(40.dp)
-                            .background(NotionCardSurface, RoundedCornerShape(12.dp))
-                            .border(1.dp, NotionBorder, RoundedCornerShape(12.dp))
+                            .background(colors.surface, RoundedCornerShape(12.dp))
+                            .border(1.dp, colors.border, RoundedCornerShape(12.dp))
                     ) {
                         Icon(
                             imageVector = if (isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
                             contentDescription = "Ghim ra widget",
-                            tint = if (isPinned) LocketAccent else TextSecondary,
+                            tint = if (isPinned) colors.flash else colors.textSecondary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -174,13 +158,13 @@ fun TaskDetailScreen(
                         onClick = { onDeleteTask(task) },
                         modifier = Modifier
                             .size(40.dp)
-                            .background(NotionCardSurface, RoundedCornerShape(12.dp))
-                            .border(1.dp, NotionBorder, RoundedCornerShape(12.dp))
+                            .background(colors.surface, RoundedCornerShape(12.dp))
+                            .border(1.dp, colors.border, RoundedCornerShape(12.dp))
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Delete,
                             contentDescription = "Xóa task",
-                            tint = StatusDanger,
+                            tint = colors.urgent,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -198,7 +182,7 @@ fun TaskDetailScreen(
             // 1. Before & After Photo Comparison
             Text(
                 text = "HÌNH ẢNH KHOẢNH KHẮC",
-                color = TextSecondary,
+                color = colors.textSecondary,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.sp
@@ -216,8 +200,8 @@ fun TaskDetailScreen(
                         .weight(1f)
                         .aspectRatio(1f),
                     shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = NotionCardSurface),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, NotionBorder)
+                    colors = CardDefaults.cardColors(containerColor = colors.surface),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         val beforeFile = File(task.beforeImageUri)
@@ -233,7 +217,7 @@ fun TaskDetailScreen(
                             )
                         } else {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Text("Chưa có ảnh", color = TextMuted, fontSize = 12.sp)
+                                Text("Chưa có ảnh", color = colors.textMuted, fontSize = 12.sp)
                             }
                         }
 
@@ -257,10 +241,10 @@ fun TaskDetailScreen(
                         .aspectRatio(1f)
                         .clickable { onOpenAfterCamera(task) },
                     shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = NotionCardSurface),
+                    colors = CardDefaults.cardColors(containerColor = colors.surface),
                     border = androidx.compose.foundation.BorderStroke(
                         1.dp,
-                        if (hasAfter) StatusSuccess else NotionBorder
+                        if (hasAfter) colors.done else colors.border
                     )
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
@@ -279,10 +263,10 @@ fun TaskDetailScreen(
                                 modifier = Modifier
                                     .align(Alignment.BottomStart)
                                     .padding(8.dp)
-                                    .background(StatusSuccess, RoundedCornerShape(8.dp))
+                                    .background(if (isDark) colors.done.copy(alpha = 0.2f) else colors.done, RoundedCornerShape(8.dp))
                                     .padding(horizontal = 8.dp, vertical = 4.dp)
                             ) {
-                                Text(text = "AFTER", color = NotionDarkBg, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                Text(text = "AFTER", color = if (isDark) colors.done else Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                             }
                         } else {
                             Column(
@@ -295,13 +279,13 @@ fun TaskDetailScreen(
                                 Icon(
                                     imageVector = Icons.Filled.CameraAlt,
                                     contentDescription = "Chụp sau",
-                                    tint = LocketAccent,
+                                    tint = colors.flash,
                                     modifier = Modifier.size(32.dp)
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
                                     text = "Chụp kết quả\n(After)",
-                                    color = TextPrimary,
+                                    color = colors.text,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     lineHeight = 14.sp
@@ -318,16 +302,16 @@ fun TaskDetailScreen(
             OutlinedTextField(
                 value = currentTitle,
                 onValueChange = { currentTitle = it },
-                label = { Text("Tiêu đề", color = TextSecondary) },
+                label = { Text("Tiêu đề", color = colors.textSecondary) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary,
-                    focusedContainerColor = NotionCardSurface,
-                    unfocusedContainerColor = NotionCardSurface,
-                    focusedBorderColor = LocketAccent,
-                    unfocusedBorderColor = NotionBorder
+                    focusedTextColor = colors.text,
+                    unfocusedTextColor = colors.text,
+                    focusedContainerColor = colors.surface,
+                    unfocusedContainerColor = colors.surface,
+                    focusedBorderColor = colors.flash,
+                    unfocusedBorderColor = colors.border
                 )
             )
 
@@ -337,8 +321,8 @@ fun TaskDetailScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = NotionCardSurface),
-                border = androidx.compose.foundation.BorderStroke(1.dp, NotionBorder)
+                colors = CardDefaults.cardColors(containerColor = colors.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
                     // Status Toggle Row
@@ -349,23 +333,23 @@ fun TaskDetailScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = "Trạng thái", color = TextSecondary, fontSize = 13.sp)
+                        Text(text = "Trạng thái", color = colors.textSecondary, fontSize = 13.sp)
                         Box(
                             modifier = Modifier
                                 .background(
-                                    if (isCompleted) StatusSuccess.copy(alpha = 0.2f) else StatusAmber.copy(alpha = 0.2f),
+                                    if (isCompleted) (if (isDark) colors.done.copy(alpha = 0.16f) else colors.done) else colors.warning.copy(alpha = 0.12f),
                                     RoundedCornerShape(8.dp)
                                 )
                                 .border(
                                     1.dp,
-                                    if (isCompleted) StatusSuccess else StatusAmber,
+                                    if (isCompleted) (if (isDark) colors.done else Color.White) else colors.warning,
                                     RoundedCornerShape(8.dp)
                                 )
                                 .padding(horizontal = 10.dp, vertical = 4.dp)
                         ) {
                             Text(
                                 text = if (isCompleted) "Đã hoàn thành" else "Đang thực hiện",
-                                color = if (isCompleted) StatusSuccess else StatusAmber,
+                                color = if (isCompleted) (if (isDark) colors.done else Color.White) else colors.warning,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -380,13 +364,13 @@ fun TaskDetailScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = "Ưu tiên", color = TextSecondary, fontSize = 13.sp)
+                        Text(text = "Ưu tiên", color = colors.textSecondary, fontSize = 13.sp)
                         Text(
                             text = task.priorityEnum.label,
                             color = when (task.priorityEnum) {
-                                TaskPriority.LOW -> StatusSuccess
-                                TaskPriority.MEDIUM -> StatusAmber
-                                TaskPriority.HIGH -> StatusDanger
+                                TaskPriority.LOW -> colors.done
+                                TaskPriority.MEDIUM -> colors.warning
+                                TaskPriority.HIGH -> colors.urgent
                             },
                             fontWeight = FontWeight.Bold,
                             fontSize = 12.sp
@@ -403,23 +387,23 @@ fun TaskDetailScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = "Nhắc nhở / Báo thức", color = TextSecondary, fontSize = 13.sp)
+                        Text(text = "Nhắc nhở / Báo thức", color = colors.textSecondary, fontSize = 13.sp)
                         Box(
                             modifier = Modifier
                                 .background(
-                                    if (reminderTime != null) LocketAccent.copy(alpha = 0.2f) else ChipInactiveBg,
+                                    if (reminderTime != null) colors.flash else colors.elevated,
                                     RoundedCornerShape(8.dp)
                                 )
                                 .border(
                                     1.dp,
-                                    if (reminderTime != null) LocketAccent else ChipInactiveBorder,
+                                    if (reminderTime != null) colors.flash else colors.border,
                                     RoundedCornerShape(8.dp)
                                 )
                                 .padding(horizontal = 10.dp, vertical = 4.dp)
                         ) {
                             Text(
                                 text = if (reminderTime != null) "${if (reminderType == "ALARM") "Báo thức" else "Nhắc"}: ${DateTimeUtils.formatDateTime(reminderTime!!)}" else "Chưa đặt",
-                                color = if (reminderTime != null) LocketAccent else TextMuted,
+                                color = if (reminderTime != null) colors.onFlash else colors.textMuted,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -434,10 +418,10 @@ fun TaskDetailScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = "Tạo lúc", color = TextSecondary, fontSize = 13.sp)
+                        Text(text = "Tạo lúc", color = colors.textSecondary, fontSize = 13.sp)
                         Text(
                             text = dateFormat.format(Date(task.createdAt)),
-                            color = TextMuted,
+                            color = colors.textMuted,
                             fontSize = 12.sp
                         )
                     }
@@ -454,14 +438,14 @@ fun TaskDetailScreen(
             ) {
                 Text(
                     text = "CHECKLIST TIẾN ĐỘ",
-                    color = TextSecondary,
+                    color = colors.textSecondary,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp
                 )
                 Text(
                     text = "${(progressFraction * 100).toInt()}% (${completedCount}/${subtasks.size})",
-                    color = LocketAccent,
+                    color = if (isDark) colors.flash else colors.text,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -474,8 +458,8 @@ fun TaskDetailScreen(
                     .fillMaxWidth()
                     .height(6.dp)
                     .clip(CircleShape),
-                color = LocketAccent,
-                trackColor = ChipInactiveBg
+                color = if (isDark) colors.flash else colors.text,
+                trackColor = colors.elevated
             )
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -484,14 +468,14 @@ fun TaskDetailScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = NotionCardSurface),
-                border = androidx.compose.foundation.BorderStroke(1.dp, NotionBorder)
+                colors = CardDefaults.cardColors(containerColor = colors.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
                     if (subtasks.isEmpty()) {
                         Text(
                             text = "Chưa có checklist con. Thêm các bước cụ thể bên dưới:",
-                            color = TextMuted,
+                            color = colors.textMuted,
                             fontSize = 12.sp,
                             modifier = Modifier.padding(vertical = 6.dp)
                         )
@@ -514,14 +498,14 @@ fun TaskDetailScreen(
                                     Icon(
                                         imageVector = if (item.isDone) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
                                         contentDescription = "Toggle Subtask",
-                                        tint = if (item.isDone) StatusSuccess else TextSecondary,
+                                        tint = if (item.isDone) colors.done else colors.textSecondary,
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = item.title,
-                                    color = if (item.isDone) TextMuted else TextPrimary,
+                                    color = if (item.isDone) colors.textMuted else colors.text,
                                     textDecoration = if (item.isDone) TextDecoration.LineThrough else TextDecoration.None,
                                     fontSize = 14.sp,
                                     modifier = Modifier.weight(1f)
@@ -537,7 +521,7 @@ fun TaskDetailScreen(
                                     Icon(
                                         imageVector = Icons.Filled.Close,
                                         contentDescription = "Xóa subtask",
-                                        tint = TextMuted,
+                                        tint = colors.textMuted,
                                         modifier = Modifier.size(16.dp)
                                     )
                                 }
@@ -555,17 +539,17 @@ fun TaskDetailScreen(
                         OutlinedTextField(
                             value = newSubtaskText,
                             onValueChange = { newSubtaskText = it },
-                            placeholder = { Text("Thêm bước việc cần làm...", color = TextMuted, fontSize = 12.sp) },
+                            placeholder = { Text("Thêm bước việc cần làm...", color = colors.textMuted, fontSize = 12.sp) },
                             modifier = Modifier.weight(1f),
                             singleLine = true,
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = TextPrimary,
-                                unfocusedTextColor = TextPrimary,
-                                focusedContainerColor = NotionDarkBg,
-                                unfocusedContainerColor = NotionDarkBg,
-                                focusedBorderColor = LocketAccent,
-                                unfocusedBorderColor = NotionBorder
+                                focusedTextColor = colors.text,
+                                unfocusedTextColor = colors.text,
+                                focusedContainerColor = colors.bg,
+                                unfocusedContainerColor = colors.bg,
+                                focusedBorderColor = colors.flash,
+                                unfocusedBorderColor = colors.border
                             )
                         )
                         Spacer(modifier = Modifier.width(8.dp))
@@ -582,9 +566,9 @@ fun TaskDetailScreen(
                             },
                             modifier = Modifier
                                 .size(44.dp)
-                                .background(LocketAccent, RoundedCornerShape(12.dp))
+                                .background(colors.flash, RoundedCornerShape(12.dp))
                         ) {
-                            Icon(Icons.Filled.Add, contentDescription = "Thêm", tint = NotionDarkBg)
+                            Icon(Icons.Filled.Add, contentDescription = "Thêm", tint = colors.onFlash)
                         }
                     }
                 }
@@ -595,7 +579,7 @@ fun TaskDetailScreen(
             // 5. Notes & Completion Caption
             Text(
                 text = "GHI CHÚ & CẢM NGHĨ HOÀN THÀNH",
-                color = TextSecondary,
+                color = colors.textSecondary,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.sp
@@ -604,18 +588,18 @@ fun TaskDetailScreen(
             OutlinedTextField(
                 value = currentCompletionCaption,
                 onValueChange = { currentCompletionCaption = it },
-                placeholder = { Text("Ghi chú tiến độ hoặc cảm nhận khi hoàn thành...", color = TextMuted, fontSize = 13.sp) },
+                placeholder = { Text("Ghi chú tiến độ hoặc cảm nhận khi hoàn thành...", color = colors.textMuted, fontSize = 13.sp) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(100.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary,
-                    focusedContainerColor = NotionCardSurface,
-                    unfocusedContainerColor = NotionCardSurface,
-                    focusedBorderColor = LocketAccent,
-                    unfocusedBorderColor = NotionBorder
+                    focusedTextColor = colors.text,
+                    unfocusedTextColor = colors.text,
+                    focusedContainerColor = colors.surface,
+                    unfocusedContainerColor = colors.surface,
+                    focusedBorderColor = colors.flash,
+                    unfocusedBorderColor = colors.border
                 )
             )
 
@@ -627,7 +611,7 @@ fun TaskDetailScreen(
                     .fillMaxWidth()
                     .height(52.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(AuroraGradient)
+                    .background(colors.flash)
                     .clickable {
                         val updatedTask = task.copy(
                             title = currentTitle.ifBlank { "Việc cần làm" },

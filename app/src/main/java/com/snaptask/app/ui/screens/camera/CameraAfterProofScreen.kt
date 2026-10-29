@@ -74,25 +74,10 @@ import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.snaptask.app.domain.model.Task
-import com.snaptask.app.ui.theme.AccentPrimary
-import com.snaptask.app.ui.theme.AccentSecondary
-import com.snaptask.app.ui.theme.AuroraGradient
-import com.snaptask.app.ui.theme.BgElevated
-import com.snaptask.app.ui.theme.BgPrimary
-import com.snaptask.app.ui.theme.BgSurface
-import com.snaptask.app.ui.theme.BorderHighlight
-import com.snaptask.app.ui.theme.BorderSubtle
-import com.snaptask.app.ui.theme.ChipInactiveBg
-import com.snaptask.app.ui.theme.LocketAccent
-import com.snaptask.app.ui.theme.NotionBorder
-import com.snaptask.app.ui.theme.NotionCardSurface
-import com.snaptask.app.ui.theme.NotionDarkBg
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.MaterialTheme
 import com.snaptask.app.ui.theme.SnapTaskIcons
-import com.snaptask.app.ui.theme.StatusSuccess
-import com.snaptask.app.ui.theme.StatusUrgent
-import com.snaptask.app.ui.theme.TextMuted
-import com.snaptask.app.ui.theme.TextPrimary
-import com.snaptask.app.ui.theme.TextSecondary
+import com.snaptask.app.ui.theme.snapColors
 import com.snaptask.app.util.ImageCompressor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -338,7 +323,7 @@ fun CameraAfterProofScreen(
         }
     }
 
-    Box(modifier = modifier.fillMaxSize().background(BgPrimary)) {
+    Box(modifier = modifier.fillMaxSize().background(colors.bg)) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -358,22 +343,22 @@ fun CameraAfterProofScreen(
                     onClick = onClose,
                     modifier = Modifier
                         .size(40.dp)
-                        .background(BgSurface, CircleShape)
-                        .border(1.dp, BorderSubtle, CircleShape)
+                        .background(colors.surface, CircleShape)
+                        .border(1.dp, colors.border, CircleShape)
                 ) {
-                    Icon(Icons.Filled.Close, contentDescription = "Đóng", tint = TextPrimary)
+                    Icon(Icons.Filled.Close, contentDescription = "Đóng", tint = colors.text)
                 }
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = "Xác nhận hoàn thành",
-                        color = TextPrimary,
+                        color = colors.text,
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp
                     )
                     Text(
                         text = task.title,
-                        color = AccentPrimary,
+                        color = colors.flash,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1
@@ -392,7 +377,7 @@ fun CameraAfterProofScreen(
                     .fillMaxWidth()
                     .aspectRatio(1f)
                     .clip(RoundedCornerShape(32.dp))
-                    .border(2.dp, if (cameraState == CameraState.CAPTURED) StatusSuccess else BorderSubtle, RoundedCornerShape(32.dp))
+                    .border(2.dp, if (cameraState == CameraState.CAPTURED) colors.done else colors.border, RoundedCornerShape(32.dp))
                     .background(Color.Black),
                 contentAlignment = Alignment.Center
             ) {
@@ -437,8 +422,8 @@ fun CameraAfterProofScreen(
                             .align(Alignment.TopCenter)
                             .padding(top = 14.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(if (isGhostOverlayEnabled) AccentPrimary else Color(0x80000000))
-                            .border(1.dp, if (isGhostOverlayEnabled) AccentPrimary else Color(0x33FFFFFF), RoundedCornerShape(12.dp))
+                            .background(if (isGhostOverlayEnabled) colors.flash else Color(0x80000000))
+                            .border(1.dp, if (isGhostOverlayEnabled) colors.flash else Color(0x33FFFFFF), RoundedCornerShape(12.dp))
                             .clickable { isGhostOverlayEnabled = !isGhostOverlayEnabled }
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
@@ -472,7 +457,7 @@ fun CameraAfterProofScreen(
                     ) {
                         Text(
                             text = "ĐÃ CHỤP AFTER",
-                            color = StatusSuccess,
+                            color = colors.done,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -503,7 +488,7 @@ fun CameraAfterProofScreen(
                         .size(46.dp)
                         .clip(CircleShape)
                         .background(Color(0xFF15171E))
-                        .border(1.dp, if (flashMode != CameraFlashMode.OFF) AccentPrimary else BorderSubtle, CircleShape)
+                        .border(1.dp, if (flashMode != CameraFlashMode.OFF) colors.flash else colors.border, CircleShape)
                         .clickable { applyFlashMode(flashMode.next()) },
                     contentAlignment = Alignment.Center
                 ) {
@@ -514,22 +499,19 @@ fun CameraAfterProofScreen(
                             CameraFlashMode.AUTO -> SnapTaskIcons.FlashAuto
                         },
                         contentDescription = "Flash: ${flashMode.name}",
-                        tint = if (flashMode != CameraFlashMode.OFF) AccentPrimary else Color.White,
+                        tint = if (flashMode != CameraFlashMode.OFF) colors.flash else Color.White,
                         modifier = Modifier.size(20.dp)
                     )
                 }
 
-                // Center: Shutter (72x72) or Retake (56x56)
+                // Center: Shutter (88x88) or Retake (56x56)
                 if (cameraState == CameraState.PREVIEWING) {
                     Box(
                         modifier = Modifier
-                            .size(72.dp)
+                            .size(88.dp)
                             .clip(CircleShape)
                             .background(Color.Transparent)
-                            .border(2.5.dp, Color.White.copy(alpha = 0.9f), CircleShape)
-                            .padding(5.dp)
-                            .clip(CircleShape)
-                            .background(AuroraGradient)
+                            .border(4.dp, colors.flash, CircleShape)
                             .clickable(enabled = !isCapturing) {
                                 takeProofPhoto()
                             },
@@ -537,15 +519,15 @@ fun CameraAfterProofScreen(
                     ) {
                         if (isCapturing) {
                             CircularProgressIndicator(
-                                color = Color.White,
-                                modifier = Modifier.size(26.dp),
+                                color = colors.flash,
+                                modifier = Modifier.size(32.dp),
                                 strokeWidth = 3.dp
                             )
                         } else {
                             Box(
                                 modifier = Modifier
-                                    .size(22.dp)
-                                    .background(Color.White, CircleShape)
+                                    .size(66.dp)
+                                    .background(colors.flash, CircleShape)
                             )
                         }
                     }
@@ -554,8 +536,8 @@ fun CameraAfterProofScreen(
                         modifier = Modifier
                             .size(56.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFF15171E))
-                            .border(1.5.dp, StatusUrgent, CircleShape)
+                            .background(colors.surface)
+                            .border(1.5.dp, colors.urgent, CircleShape)
                             .clickable {
                                 capturedPhotoPath?.let { File(it).delete() }
                                 capturedPhotoPath = null
@@ -565,7 +547,7 @@ fun CameraAfterProofScreen(
                         Icon(
                             imageVector = SnapTaskIcons.Retake,
                             contentDescription = "Chụp lại",
-                            tint = StatusUrgent,
+                            tint = colors.urgent,
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -577,7 +559,7 @@ fun CameraAfterProofScreen(
                         .size(46.dp)
                         .clip(CircleShape)
                         .background(Color(0xFF15171E))
-                        .border(1.dp, BorderSubtle, CircleShape)
+                        .border(1.dp, colors.border, CircleShape)
                         .clickable(enabled = !isCapturing && cameraState == CameraState.PREVIEWING) {
                             camera?.cameraControl?.enableTorch(false)
                             cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
@@ -591,7 +573,7 @@ fun CameraAfterProofScreen(
                     Icon(
                         imageVector = SnapTaskIcons.CameraFlip,
                         contentDescription = "Đổi camera",
-                        tint = if (cameraState == CameraState.PREVIEWING) Color.White else TextMuted,
+                        tint = if (cameraState == CameraState.PREVIEWING) Color.White else colors.textMuted,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -603,13 +585,13 @@ fun CameraAfterProofScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(BgSurface, RoundedCornerShape(20.dp))
-                    .border(1.dp, BorderSubtle, RoundedCornerShape(20.dp))
+                    .background(colors.surface, RoundedCornerShape(20.dp))
+                    .border(1.dp, colors.border, RoundedCornerShape(20.dp))
                     .padding(16.dp)
             ) {
                 Text(
                     text = "GHI CHÚ KẾT QUẢ",
-                    color = TextSecondary,
+                    color = colors.textSecondary,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp
@@ -618,17 +600,17 @@ fun CameraAfterProofScreen(
                 OutlinedTextField(
                     value = completionCaption,
                     onValueChange = { completionCaption = it },
-                    placeholder = { Text("Ví dụ: Đã dọn sạch góc học tập!", color = TextMuted, fontSize = 13.sp) },
+                    placeholder = { Text("Ví dụ: Đã dọn sạch góc học tập!", color = colors.textMuted, fontSize = 13.sp) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary,
-                        focusedContainerColor = BgElevated,
-                        unfocusedContainerColor = BgElevated,
-                        focusedBorderColor = AccentPrimary,
-                        unfocusedBorderColor = BorderSubtle
+                        focusedTextColor = colors.text,
+                        unfocusedTextColor = colors.text,
+                        focusedContainerColor = colors.elevated,
+                        unfocusedContainerColor = colors.elevated,
+                        focusedBorderColor = colors.flash,
+                        unfocusedBorderColor = colors.border
                     )
                 )
 
@@ -640,7 +622,7 @@ fun CameraAfterProofScreen(
                         .fillMaxWidth()
                         .height(52.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(if (capturedPhotoPath != null) AuroraGradient else SolidColor(BgElevated))
+                        .background(if (capturedPhotoPath != null) SolidColor(colors.flash) else SolidColor(colors.elevated))
                         .clickable(enabled = capturedPhotoPath != null) {
                             val finalPath = capturedPhotoPath ?: ""
                             onProofCaptured(finalPath, completionCaption)
@@ -651,13 +633,13 @@ fun CameraAfterProofScreen(
                         Icon(
                             imageVector = SnapTaskIcons.Check,
                             contentDescription = "Hoàn thành",
-                            tint = if (capturedPhotoPath != null) Color.White else TextMuted,
+                            tint = if (capturedPhotoPath != null) colors.onFlash else colors.textMuted,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "Lưu & Hoàn Thành",
-                            color = if (capturedPhotoPath != null) Color.White else TextMuted,
+                            color = if (capturedPhotoPath != null) colors.onFlash else colors.textMuted,
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp
                         )

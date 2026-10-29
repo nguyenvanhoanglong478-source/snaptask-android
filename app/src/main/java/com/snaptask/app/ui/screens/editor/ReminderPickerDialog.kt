@@ -28,6 +28,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -45,17 +46,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.snaptask.app.ui.theme.ChipInactiveBg
-import com.snaptask.app.ui.theme.ChipInactiveBorder
-import com.snaptask.app.ui.theme.LocketAccent
-import com.snaptask.app.ui.theme.NotionBorder
-import com.snaptask.app.ui.theme.NotionCardSurface
-import com.snaptask.app.ui.theme.NotionDarkBg
-import com.snaptask.app.ui.theme.StatusDanger
-import com.snaptask.app.ui.theme.StatusSuccess
-import com.snaptask.app.ui.theme.TextMuted
-import com.snaptask.app.ui.theme.TextPrimary
-import com.snaptask.app.ui.theme.TextSecondary
+import com.snaptask.app.ui.theme.snapColors
 import com.snaptask.app.util.DateTimeUtils
 import com.snaptask.app.util.NotificationPermissionHelper
 import java.util.Calendar
@@ -68,6 +59,7 @@ fun ReminderPickerDialog(
     onConfirm: (reminderTime: Long?, reminderType: String) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val colors = MaterialTheme.snapColors
     val context = LocalContext.current
     var selectedTime by remember { mutableStateOf(initialReminderTime) }
     var selectedType by remember { mutableStateOf(if (initialReminderType == "NONE") "NOTIFICATION" else initialReminderType) }
@@ -130,8 +122,8 @@ fun ReminderPickerDialog(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = NotionCardSurface,
-        scrimColor = Color(0x99000000),
+        containerColor = colors.surface,
+        scrimColor = Color(0x99000000), // Modal scrim overlay
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ) {
         Column(
@@ -148,12 +140,12 @@ fun ReminderPickerDialog(
             ) {
                 Text(
                     text = "Hẹn giờ nhắc nhở",
-                    color = TextPrimary,
+                    color = colors.text,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
                 IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Filled.Close, contentDescription = "Đóng", tint = TextSecondary)
+                    Icon(Icons.Filled.Close, contentDescription = "Đóng", tint = colors.textSecondary)
                 }
             }
 
@@ -164,14 +156,14 @@ fun ReminderPickerDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(StatusDanger.copy(alpha = 0.15f))
-                        .border(1.dp, StatusDanger, RoundedCornerShape(12.dp))
+                        .background(colors.urgent.copy(alpha = 0.15f))
+                        .border(1.dp, colors.urgent, RoundedCornerShape(12.dp))
                         .clickable { NotificationPermissionHelper.openNotificationSettings(context) }
                         .padding(10.dp)
                 ) {
                     Text(
                         text = "Quyền thông báo đang TẮT. Chạm vào đây để bật trong Cài đặt!",
-                        color = StatusDanger,
+                        color = colors.urgent,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -183,7 +175,7 @@ fun ReminderPickerDialog(
             // 1. Mode Selector (Notification vs Alarm)
             Text(
                 text = "HÌNH THỨC NHẮC",
-                color = TextSecondary,
+                color = colors.textSecondary,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.sp
@@ -200,8 +192,8 @@ fun ReminderPickerDialog(
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(14.dp))
-                        .background(if (isNotif) LocketAccent else ChipInactiveBg)
-                        .border(1.dp, if (isNotif) LocketAccent else ChipInactiveBorder, RoundedCornerShape(14.dp))
+                        .background(if (isNotif) colors.flash else colors.elevated)
+                        .border(1.dp, if (isNotif) colors.flash else colors.border, RoundedCornerShape(14.dp))
                         .clickable { selectedType = "NOTIFICATION" }
                         .padding(vertical = 12.dp, horizontal = 10.dp),
                     contentAlignment = Alignment.Center
@@ -210,13 +202,13 @@ fun ReminderPickerDialog(
                         Icon(
                             Icons.Filled.Notifications,
                             contentDescription = "Notif",
-                            tint = if (isNotif) NotionDarkBg else TextPrimary,
+                            tint = if (isNotif) colors.onFlash else colors.text,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "Thông báo nhẹ",
-                            color = if (isNotif) NotionDarkBg else TextPrimary,
+                            color = if (isNotif) colors.onFlash else colors.text,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -229,8 +221,8 @@ fun ReminderPickerDialog(
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(14.dp))
-                        .background(if (isAlarm) LocketAccent else ChipInactiveBg)
-                        .border(1.dp, if (isAlarm) LocketAccent else ChipInactiveBorder, RoundedCornerShape(14.dp))
+                        .background(if (isAlarm) colors.flash else colors.elevated)
+                        .border(1.dp, if (isAlarm) colors.flash else colors.border, RoundedCornerShape(14.dp))
                         .clickable { selectedType = "ALARM" }
                         .padding(vertical = 12.dp, horizontal = 10.dp),
                     contentAlignment = Alignment.Center
@@ -239,13 +231,13 @@ fun ReminderPickerDialog(
                         Icon(
                             Icons.Filled.Alarm,
                             contentDescription = "Alarm",
-                            tint = if (isAlarm) NotionDarkBg else TextPrimary,
+                            tint = if (isAlarm) colors.onFlash else colors.text,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "Báo thức lớn",
-                            color = if (isAlarm) NotionDarkBg else TextPrimary,
+                            color = if (isAlarm) colors.onFlash else colors.text,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -258,7 +250,7 @@ fun ReminderPickerDialog(
             // 2. Quick Presets
             Text(
                 text = "CHỌN NHANH THỜI GIAN",
-                color = TextSecondary,
+                color = colors.textSecondary,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.sp
@@ -266,14 +258,14 @@ fun ReminderPickerDialog(
             Spacer(modifier = Modifier.height(8.dp))
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                // Highlighted 5s Quick Test Button (Step 5)
+                // Highlighted 5s Quick Test Button
                 val is5sSelected = selectedTime != null && (selectedTime!! - System.currentTimeMillis()) in 1..8000
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(if (is5sSelected) LocketAccent else LocketAccent.copy(alpha = 0.16f))
-                        .border(1.5.dp, LocketAccent, RoundedCornerShape(12.dp))
+                        .background(if (is5sSelected) colors.flash else colors.elevated)
+                        .border(1.5.dp, if (is5sSelected) colors.flash else colors.borderHighlight, RoundedCornerShape(12.dp))
                         .clickable { setQuickSeconds(5) }
                         .padding(vertical = 11.dp),
                     contentAlignment = Alignment.Center
@@ -281,13 +273,13 @@ fun ReminderPickerDialog(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = "TEST THỬ (SAU 5 GIÂY)",
-                            color = if (is5sSelected) NotionDarkBg else LocketAccent,
+                            color = if (is5sSelected) colors.onFlash else colors.text,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.ExtraBold
                         )
                         if (is5sSelected) {
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = "Đã chọn", color = NotionDarkBg, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(text = "Đã chọn", color = colors.onFlash, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -300,26 +292,26 @@ fun ReminderPickerDialog(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(ChipInactiveBg)
-                            .border(1.dp, ChipInactiveBorder, RoundedCornerShape(12.dp))
+                            .background(colors.elevated)
+                            .border(1.dp, colors.border, RoundedCornerShape(12.dp))
                             .clickable { setQuickTime(15) }
                             .padding(vertical = 10.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("+15 phút", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Text("+15 phút", color = colors.text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     }
 
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(ChipInactiveBg)
-                            .border(1.dp, ChipInactiveBorder, RoundedCornerShape(12.dp))
+                            .background(colors.elevated)
+                            .border(1.dp, colors.border, RoundedCornerShape(12.dp))
                             .clickable { setQuickTime(60) }
                             .padding(vertical = 10.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("+1 giờ", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Text("+1 giờ", color = colors.text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
 
@@ -331,26 +323,26 @@ fun ReminderPickerDialog(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(ChipInactiveBg)
-                            .border(1.dp, ChipInactiveBorder, RoundedCornerShape(12.dp))
+                            .background(colors.elevated)
+                            .border(1.dp, colors.border, RoundedCornerShape(12.dp))
                             .clickable { setTargetTime(20, 0, nextDayIfPast = true) }
                             .padding(vertical = 10.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("Tối nay (20:00)", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Tối nay (20:00)", color = colors.text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     }
 
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(ChipInactiveBg)
-                            .border(1.dp, ChipInactiveBorder, RoundedCornerShape(12.dp))
+                            .background(colors.elevated)
+                            .border(1.dp, colors.border, RoundedCornerShape(12.dp))
                             .clickable { setTargetTime(8, 0, nextDayIfPast = true) }
                             .padding(vertical = 10.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("Sáng mai (08:00)", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Sáng mai (08:00)", color = colors.text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -362,8 +354,8 @@ fun ReminderPickerDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(14.dp))
-                    .background(NotionDarkBg)
-                    .border(1.dp, NotionBorder, RoundedCornerShape(14.dp))
+                    .background(colors.bg)
+                    .border(1.dp, colors.border, RoundedCornerShape(14.dp))
                     .clickable { openDateTimePicker() }
                     .padding(horizontal = 14.dp, vertical = 12.dp)
             ) {
@@ -373,16 +365,16 @@ fun ReminderPickerDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.CalendarMonth, contentDescription = "Lịch", tint = LocketAccent, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Filled.CalendarMonth, contentDescription = "Lịch", tint = colors.textSecondary, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = if (selectedTime != null) "Thời gian: ${DateTimeUtils.formatDateTime(selectedTime!!)}" else "Tự chọn ngày & giờ...",
-                            color = if (selectedTime != null) TextPrimary else TextMuted,
+                            color = if (selectedTime != null) colors.text else colors.textMuted,
                             fontSize = 13.sp,
                             fontWeight = if (selectedTime != null) FontWeight.Bold else FontWeight.Normal
                         )
                     }
-                    Text("Thay đổi", color = LocketAccent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("Thay đổi", color = colors.text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -400,16 +392,21 @@ fun ReminderPickerDialog(
                 enabled = selectedTime != null,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp),
-                shape = RoundedCornerShape(16.dp),
+                    .height(48.dp),
+                shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = LocketAccent,
-                    contentColor = NotionDarkBg,
-                    disabledContainerColor = ChipInactiveBg,
-                    disabledContentColor = TextMuted
+                    containerColor = colors.flash,
+                    contentColor = colors.onFlash,
+                    disabledContainerColor = colors.elevated,
+                    disabledContentColor = colors.textMuted
                 )
             ) {
-                Text("Xác nhận hẹn giờ", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(
+                    "Xác nhận hẹn giờ",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = if (selectedTime != null) colors.onFlash else colors.textMuted
+                )
             }
 
             if (selectedTime != null) {
@@ -422,11 +419,11 @@ fun ReminderPickerDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(44.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, NotionBorder),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary)
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, colors.border),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textSecondary)
                 ) {
-                    Text("Tắt báo thức / nhắc nhở", fontSize = 13.sp)
+                    Text("Tắt báo thức / nhắc nhở", fontSize = 13.sp, color = colors.textSecondary)
                 }
             }
         }
