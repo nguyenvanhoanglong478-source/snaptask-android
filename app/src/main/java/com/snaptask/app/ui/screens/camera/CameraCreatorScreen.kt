@@ -545,7 +545,7 @@ fun CameraCreatorScreen(
                 // Chip 1: Reminder Chip
                 val hasReminder = reminderTime != null
                 val reminderLabel = if (hasReminder) {
-                    "⏰ ${DateTimeUtils.formatDateTime(reminderTime)}"
+                    "⏰ ${DateTimeUtils.formatDateTime(reminderTime!!)}"
                 } else "⏰ Đặt giờ nhắc"
 
                 Box(
