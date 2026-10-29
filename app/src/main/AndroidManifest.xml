@@ -84,17 +84,22 @@
                 android:resource="@xml/notion_stack_widget_info" />
         </receiver>
 
-        <!-- Task Reminder Broadcast Receiver -->
+        <!-- Boot Receiver: Restores pending reminders after reboot or package update -->
         <receiver
-            android:name=".reminder.TaskReminderReceiver"
+            android:name=".reminder.BootReceiver"
             android:enabled="true"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
-                <action android:name="com.snaptask.app.ACTION_TASK_REMINDER" />
             </intent-filter>
         </receiver>
+
+        <!-- Task Reminder Broadcast Receiver (Explicit PendingIntent only) -->
+        <receiver
+            android:name=".reminder.TaskReminderReceiver"
+            android:enabled="true"
+            android:exported="false" />
 
         <!-- Notification Action Receiver (Quick Complete, Snooze & Stop Alarm) -->
         <receiver

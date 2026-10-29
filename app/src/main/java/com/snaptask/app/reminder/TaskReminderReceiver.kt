@@ -24,31 +24,19 @@ class TaskReminderReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        val incomingAction = intent.action ?: ""
         val pendingResult = goAsync()
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                handleReminder(context, intent, incomingAction)
+                handleReminder(context, intent)
             } finally {
                 pendingResult.finish()
             }
         }
     }
 
-    private suspend fun handleReminder(context: Context, intent: Intent, incomingAction: String) {
-        // 1. Device reboot: restore all future reminders from database without limit
-        if (incomingAction == Intent.ACTION_BOOT_COMPLETED || incomingAction == Intent.ACTION_MY_PACKAGE_REPLACED) {
-            val db = AppDatabase.getInstance(context)
-            val now = System.currentTimeMillis()
-            val pendingWithReminder = db.taskDao().getPendingTasksWithFutureReminder(now)
-            for (entity in pendingWithReminder) {
-                TaskReminderScheduler.scheduleReminder(context, entity.toDomain())
-            }
-            return
-        }
-
-        // 2. Read task reminder data directly from intent extras
+    private suspend fun handleReminder(context: Context, intent: Intent) {
+        // Read task reminder data directly from intent extras
         val taskId = intent.getLongExtra(TaskReminderScheduler.EXTRA_TASK_ID, -1L)
         if (taskId == -1L) return
 
