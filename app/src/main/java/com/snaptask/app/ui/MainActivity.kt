@@ -115,7 +115,8 @@ class MainActivity : ComponentActivity() {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     var currentScreen by rememberSaveable { mutableStateOf(ScreenState.HOME) }
                     var selectedTaskId by rememberSaveable { mutableStateOf<Long?>(null) }
-                    val tasksState = repository.getAllTasks().collectAsState(initial = null)
+                    val tasksFlow = remember { repository.getAllTasks() }
+                    val tasksState = tasksFlow.collectAsState(initial = null)
                     val tasks = tasksState.value
                     val displayTasks = tasks ?: emptyList()
                     val selectedTask = displayTasks.find { it.id == selectedTaskId }
