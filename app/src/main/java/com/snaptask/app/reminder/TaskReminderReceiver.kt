@@ -1,11 +1,14 @@
 package com.snaptask.app.reminder
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.media.AudioAttributes
+import android.media.RingtoneManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.snaptask.app.R
@@ -20,7 +23,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
 
     companion object {
         const val CHANNEL_NOTIFICATION = "snaptask_channel_notification"
-        const val CHANNEL_ALARM = "snaptask_channel_alarm_v2"
+        const val CHANNEL_ALARM = "snaptask_channel_alarm_v3"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -136,9 +139,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
             builder.setOngoing(true)
             builder.setAutoCancel(false)
             builder.setFullScreenIntent(contentPendingIntent, true)
-
-            // Real physical sound & vibration
-            AlarmSoundPlayer.playAlarm(context)
+            builder.setTimeoutAfter(60_000)
 
             builder.addAction(0, "Tắt chuông", stopAlarmPendingIntent)
             builder.addAction(0, "Hoàn thành", completePendingIntent)
@@ -152,7 +153,11 @@ class TaskReminderReceiver : BroadcastReceiver() {
             builder.addAction(0, "Báo lại sau 10p", snoozePendingIntent)
         }
 
-        notificationManager.notify(taskId.toInt(), builder.build())
+        val notification = builder.build()
+        if (isAlarmMode) {
+            notification.flags = notification.flags or Notification.FLAG_INSISTENT
+        }
+        notificationManager.notify(taskId.toInt(), notification)
     }
 
     private fun createChannels(notificationManager: NotificationManager) {
@@ -171,17 +176,25 @@ class TaskReminderReceiver : BroadcastReceiver() {
             }
             notificationManager.createNotificationChannel(notifChannel)
 
-            // Delete legacy alarm channel that caused duplicate audio
+            // Delete legacy alarm channels
             notificationManager.deleteNotificationChannel("snaptask_channel_alarm")
+            notificationManager.deleteNotificationChannel("snaptask_channel_alarm_v2")
 
-            // Alarm Channel V2: No sound (sound is played exclusively by AlarmSoundPlayer)
+            // Alarm Channel V3: System-managed loud alarm audio with USAGE_ALARM
+            val alarmSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            val audioAttributes = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+
             val alarmChannel = NotificationChannel(
                 CHANNEL_ALARM,
                 "Chuông báo thức công việc (Alarm)",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Chuông báo thức lớn nhắc nhở nhiệm vụ khẩn cấp"
-                setSound(null, null)
+                setSound(alarmSoundUri, audioAttributes)
                 enableVibration(true)
                 vibrationPattern = longArrayOf(0, 800, 400, 800, 400, 1000)
                 setShowBadge(true)
