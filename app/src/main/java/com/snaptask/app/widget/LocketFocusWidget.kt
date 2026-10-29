@@ -3,10 +3,10 @@ package com.snaptask.app.widget
 import android.content.Context
 import android.graphics.Bitmap
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.Button
+import androidx.glance.ButtonDefaults
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
@@ -15,6 +15,7 @@ import androidx.glance.ImageProvider
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.actionStartActivity
+import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.action.actionRunCallback
@@ -31,12 +32,12 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
+import androidx.glance.layout.size
 import androidx.glance.layout.width
-import androidx.glance.layout.*
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
+import com.snaptask.app.R
 import com.snaptask.app.data.local.AppDatabase
 import com.snaptask.app.data.local.TaskEntity
 import com.snaptask.app.domain.model.TaskPriority
@@ -47,13 +48,6 @@ class LocketFocusWidgetReceiver : GlanceAppWidgetReceiver() {
 }
 
 class LocketFocusWidget : GlanceAppWidget() {
-
-    private val bgDarkProvider       = ColorProvider(Color(0xFF14161F))
-    private val overlayGlassProvider = ColorProvider(Color(0xE614161F))
-    private val whiteProvider        = ColorProvider(Color(0xFFF8FAFC))
-    private val accentProvider       = ColorProvider(Color(0xFF6366F1))
-    private val redProvider          = ColorProvider(Color(0xFFF43F5E))
-    private val pillDarkProvider     = ColorProvider(Color(0xCC0B0C10))
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val database = AppDatabase.getInstance(context)
@@ -105,7 +99,7 @@ class LocketFocusWidget : GlanceAppWidget() {
         Box(
             modifier = GlanceModifier
                 .fillMaxSize()
-                .background(bgDarkProvider)
+                .background(WidgetColors.bgProvider)
                 .cornerRadius(28.dp)
                 .padding(16.dp),
             contentAlignment = Alignment.Center
@@ -114,7 +108,7 @@ class LocketFocusWidget : GlanceAppWidget() {
                 Text(
                     text = "Tất cả đã xong",
                     style = TextStyle(
-                        color = whiteProvider,
+                        color = WidgetColors.textProvider,
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp
                     )
@@ -122,7 +116,11 @@ class LocketFocusWidget : GlanceAppWidget() {
                 Spacer(modifier = GlanceModifier.height(8.dp))
                 Button(
                     text = "Chụp việc mới",
-                    onClick = actionStartActivity<MainActivity>()
+                    onClick = actionStartActivity<MainActivity>(),
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = WidgetColors.accentProvider,
+                        contentColor = WidgetColors.onAccentProvider
+                    )
                 )
             }
         }
@@ -142,7 +140,7 @@ class LocketFocusWidget : GlanceAppWidget() {
         Box(
             modifier = GlanceModifier
                 .fillMaxSize()
-                .background(bgDarkProvider)
+                .background(WidgetColors.bgProvider)
                 .cornerRadius(28.dp)
         ) {
             // 1. Photo filling 1:1 squircle
@@ -157,7 +155,7 @@ class LocketFocusWidget : GlanceAppWidget() {
                 Box(
                     modifier = GlanceModifier
                         .fillMaxSize()
-                        .background(ColorProvider(Color(0xFF262626)))
+                        .background(WidgetColors.elevatedProvider)
                 ) {}
             }
 
@@ -172,14 +170,14 @@ class LocketFocusWidget : GlanceAppWidget() {
                 ) {
                     Box(
                         modifier = GlanceModifier
-                            .background(pillDarkProvider)
+                            .background(WidgetColors.pillProvider)
                             .cornerRadius(10.dp)
                             .padding(horizontal = 7.dp, vertical = 3.dp)
                     ) {
                         Text(
                             text = if (isPinned) "[Ghim] $tag" else tag,
                             style = TextStyle(
-                                color = whiteProvider,
+                                color = WidgetColors.textProvider,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 10.sp
                             )
@@ -191,14 +189,14 @@ class LocketFocusWidget : GlanceAppWidget() {
                     if (priority == TaskPriority.HIGH.name) {
                         Box(
                             modifier = GlanceModifier
-                                .background(redProvider)
+                                .background(WidgetColors.urgentProvider)
                                 .cornerRadius(10.dp)
                                 .padding(horizontal = 6.dp, vertical = 3.dp)
                         ) {
                             Text(
                                 text = "GẤP",
                                 style = TextStyle(
-                                    color = whiteProvider,
+                                    color = WidgetColors.textProvider,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 9.sp
                                 )
@@ -210,14 +208,14 @@ class LocketFocusWidget : GlanceAppWidget() {
                     // Task Counter Pill (e.g. 1/3)
                     Box(
                         modifier = GlanceModifier
-                            .background(pillDarkProvider)
+                            .background(WidgetColors.pillProvider)
                             .cornerRadius(10.dp)
                             .padding(horizontal = 6.dp, vertical = 3.dp)
                     ) {
                         Text(
                             text = "$taskIndex/$totalTasks",
                             style = TextStyle(
-                                color = accentProvider,
+                                color = WidgetColors.accentProvider,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 10.sp
                             )
@@ -227,17 +225,17 @@ class LocketFocusWidget : GlanceAppWidget() {
 
                 Spacer(modifier = GlanceModifier.defaultWeight())
 
-                // 3. Bottom Glassmorphism Bar: Title + Checkbox + Next Button
+                // 3. Bottom Glassmorphism Bar: Title + Checkmark Button + Next Button
                 Column(
                     modifier = GlanceModifier
                         .fillMaxWidth()
-                        .background(overlayGlassProvider)
+                        .background(WidgetColors.glassProvider)
                         .padding(horizontal = 10.dp, vertical = 8.dp)
                 ) {
                     Text(
                         text = title.ifBlank { "Việc cần làm" },
                         style = TextStyle(
-                            color = whiteProvider,
+                            color = WidgetColors.textProvider,
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp
                         ),
@@ -251,19 +249,27 @@ class LocketFocusWidget : GlanceAppWidget() {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         val taskIdParam = ActionParameters.Key<Long>("taskId")
-                        Button(
-                            text = "Xong",
-                            onClick = actionRunCallback<CompleteTaskActionCallback>(
-                                actionParametersOf(taskIdParam to taskId)
-                            ),
-                            modifier = GlanceModifier.defaultWeight()
+                        Image(
+                            provider = ImageProvider(R.drawable.ic_widget_check_done),
+                            contentDescription = "Hoàn thành",
+                            modifier = GlanceModifier
+                                .size(34.dp)
+                                .clickable(
+                                    actionRunCallback<CompleteTaskActionCallback>(
+                                        actionParametersOf(taskIdParam to taskId)
+                                    )
+                                )
                         )
 
-                        Spacer(modifier = GlanceModifier.width(6.dp))
+                        Spacer(modifier = GlanceModifier.width(8.dp))
 
                         Button(
                             text = "Tiếp",
                             onClick = actionRunCallback<NextTaskActionCallback>(),
+                            colors = ButtonDefaults.buttonColors(
+                                backgroundColor = WidgetColors.elevatedProvider,
+                                contentColor = WidgetColors.textProvider
+                            ),
                             modifier = GlanceModifier.defaultWeight()
                         )
                     }

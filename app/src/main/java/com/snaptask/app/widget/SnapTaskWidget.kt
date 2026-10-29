@@ -4,10 +4,10 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.Button
+import androidx.glance.ButtonDefaults
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
@@ -16,6 +16,7 @@ import androidx.glance.ImageProvider
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.actionStartActivity
+import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
@@ -32,23 +33,18 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
+import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
+import com.snaptask.app.R
 import com.snaptask.app.data.local.AppDatabase
 import com.snaptask.app.domain.model.TaskPriority
 import com.snaptask.app.ui.MainActivity
 import java.io.File
 
 class SnapTaskWidget : GlanceAppWidget() {
-
-    private val obsidianProvider  = ColorProvider(Color(0xFF14161F))
-    private val almondProvider    = ColorProvider(Color(0xFF6366F1))
-    private val whiteProvider     = ColorProvider(Color(0xFFF8FAFC))
-    private val redProvider       = ColorProvider(Color(0xFFF43F5E))
-    private val overlayProvider   = ColorProvider(Color(0xE614161F)) // Frosted dark glass overlay
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val database = AppDatabase.getInstance(context)
@@ -104,7 +100,7 @@ class SnapTaskWidget : GlanceAppWidget() {
         Box(
             modifier = GlanceModifier
                 .fillMaxSize()
-                .background(obsidianProvider)
+                .background(WidgetColors.bgProvider)
                 .cornerRadius(24.dp)
                 .padding(16.dp),
             contentAlignment = Alignment.Center
@@ -113,7 +109,7 @@ class SnapTaskWidget : GlanceAppWidget() {
                 Text(
                     text = "Không có việc tồn đọng",
                     style = TextStyle(
-                        color = whiteProvider,
+                        color = WidgetColors.textProvider,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp
                     )
@@ -121,7 +117,11 @@ class SnapTaskWidget : GlanceAppWidget() {
                 Spacer(modifier = GlanceModifier.height(8.dp))
                 Button(
                     text = "Chụp việc mới",
-                    onClick = actionStartActivity<MainActivity>()
+                    onClick = actionStartActivity<MainActivity>(),
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = WidgetColors.accentProvider,
+                        contentColor = WidgetColors.onAccentProvider
+                    )
                 )
             }
         }
@@ -139,7 +139,7 @@ class SnapTaskWidget : GlanceAppWidget() {
         Box(
             modifier = GlanceModifier
                 .fillMaxSize()
-                .background(obsidianProvider)
+                .background(WidgetColors.bgProvider)
                 .cornerRadius(24.dp)
         ) {
             // 1. The Captured Photo (Fills 100% of widget like Locket!)
@@ -151,11 +151,10 @@ class SnapTaskWidget : GlanceAppWidget() {
                     modifier = GlanceModifier.fillMaxSize()
                 )
             } else {
-                // Gradient fallback if photo is not ready
                 Box(
                     modifier = GlanceModifier
                         .fillMaxSize()
-                        .background(ColorProvider(Color(0xFF1E212D)))
+                        .background(WidgetColors.elevatedProvider)
                 ) {}
             }
 
@@ -170,14 +169,14 @@ class SnapTaskWidget : GlanceAppWidget() {
                 ) {
                     Box(
                         modifier = GlanceModifier
-                            .background(ColorProvider(Color(0xB3151311)))
+                            .background(WidgetColors.pillProvider)
                             .cornerRadius(8.dp)
                             .padding(horizontal = 7.dp, vertical = 3.dp)
                     ) {
                         Text(
                             text = "VIỆC CẦN LÀM",
                             style = TextStyle(
-                                color = almondProvider,
+                                color = WidgetColors.accentProvider,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 10.sp
                             )
@@ -188,14 +187,14 @@ class SnapTaskWidget : GlanceAppWidget() {
                         Spacer(modifier = GlanceModifier.defaultWeight())
                         Box(
                             modifier = GlanceModifier
-                                .background(redProvider)
+                                .background(WidgetColors.urgentProvider)
                                 .cornerRadius(8.dp)
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = "GẤP",
                                 style = TextStyle(
-                                    color = whiteProvider,
+                                    color = WidgetColors.textProvider,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 9.sp
                                 )
@@ -208,31 +207,37 @@ class SnapTaskWidget : GlanceAppWidget() {
                 Spacer(modifier = GlanceModifier.defaultWeight())
 
                 // 3. Bottom Frosted Glass Card with Task Title & 1-Tap Done Button
-                Column(
+                Row(
                     modifier = GlanceModifier
                         .fillMaxWidth()
-                        .background(overlayProvider)
-                        .padding(horizontal = 10.dp, vertical = 8.dp)
+                        .background(WidgetColors.glassProvider)
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = title.ifBlank { "Nhiệm vụ không tên" },
                         style = TextStyle(
-                            color = whiteProvider,
+                            color = WidgetColors.textProvider,
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp
                         ),
-                        maxLines = 1
+                        maxLines = 1,
+                        modifier = GlanceModifier.defaultWeight()
                     )
 
-                    Spacer(modifier = GlanceModifier.height(5.dp))
+                    Spacer(modifier = GlanceModifier.width(8.dp))
 
                     val taskIdParam = ActionParameters.Key<Long>("taskId")
-                    Button(
-                        text = "Xong ngay",
-                        onClick = actionRunCallback<ToggleTaskActionCallback>(
-                            actionParametersOf(taskIdParam to taskId)
-                        ),
-                        modifier = GlanceModifier.fillMaxWidth()
+                    Image(
+                        provider = ImageProvider(R.drawable.ic_widget_check_done),
+                        contentDescription = "Hoàn thành",
+                        modifier = GlanceModifier
+                            .size(34.dp)
+                            .clickable(
+                                actionRunCallback<ToggleTaskActionCallback>(
+                                    actionParametersOf(taskIdParam to taskId)
+                                )
+                            )
                     )
                 }
             }

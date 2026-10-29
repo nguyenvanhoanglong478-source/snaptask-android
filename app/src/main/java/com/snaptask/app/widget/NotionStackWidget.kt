@@ -3,10 +3,10 @@ package com.snaptask.app.widget
 import android.content.Context
 import android.graphics.Bitmap
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.Button
+import androidx.glance.ButtonDefaults
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
@@ -15,6 +15,7 @@ import androidx.glance.ImageProvider
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.actionStartActivity
+import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.action.actionRunCallback
@@ -32,12 +33,12 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
+import androidx.glance.layout.size
 import androidx.glance.layout.width
-import androidx.glance.layout.*
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
+import com.snaptask.app.R
 import com.snaptask.app.data.local.AppDatabase
 import com.snaptask.app.data.local.TaskEntity
 import com.snaptask.app.ui.MainActivity
@@ -47,14 +48,6 @@ class NotionStackWidgetReceiver : GlanceAppWidgetReceiver() {
 }
 
 class NotionStackWidget : GlanceAppWidget() {
-
-    private val bgDarkProvider       = ColorProvider(Color(0xFF14161F))
-    private val surfaceDarkProvider  = ColorProvider(Color(0xFF1E212D))
-    private val overlayGlassProvider = ColorProvider(Color(0xE614161F))
-    private val whiteProvider        = ColorProvider(Color(0xFFF8FAFC))
-    private val secondaryProvider    = ColorProvider(Color(0xFF94A3B8))
-    private val accentProvider       = ColorProvider(Color(0xFF6366F1))
-    private val pillDarkProvider     = ColorProvider(Color(0xCC0B0C10))
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val database = AppDatabase.getInstance(context)
@@ -104,7 +97,7 @@ class NotionStackWidget : GlanceAppWidget() {
         Row(
             modifier = GlanceModifier
                 .fillMaxSize()
-                .background(bgDarkProvider)
+                .background(WidgetColors.bgProvider)
                 .cornerRadius(24.dp)
                 .padding(10.dp)
         ) {
@@ -121,7 +114,7 @@ class NotionStackWidget : GlanceAppWidget() {
                             .fillMaxWidth()
                             .defaultWeight()
                             .cornerRadius(18.dp)
-                            .background(surfaceDarkProvider)
+                            .background(WidgetColors.elevatedProvider)
                     ) {
                         if (bitmap != null) {
                             Image(
@@ -136,55 +129,59 @@ class NotionStackWidget : GlanceAppWidget() {
                         Box(
                             modifier = GlanceModifier
                                 .padding(6.dp)
-                                .background(pillDarkProvider)
+                                .background(WidgetColors.pillProvider)
                                 .cornerRadius(8.dp)
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = "$completedCount/$totalCount xong",
                                 style = TextStyle(
-                                    color = accentProvider,
+                                    color = WidgetColors.accentProvider,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 9.sp
                                 )
                             )
                         }
 
-                        // Bottom Title Bar
-                        Column(
+                        // Bottom Title Bar with Done Checkmark Image Button
+                        val taskIdParam = ActionParameters.Key<Long>("taskId")
+                        Row(
                             modifier = GlanceModifier
                                 .fillMaxWidth()
-                                .background(overlayGlassProvider)
-                                .padding(horizontal = 6.dp, vertical = 4.dp)
+                                .align(Alignment.BottomCenter)
+                                .background(WidgetColors.glassProvider)
+                                .padding(horizontal = 6.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
                                 text = topTask.title,
                                 style = TextStyle(
-                                    color = whiteProvider,
+                                    color = WidgetColors.textProvider,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 11.sp
                                 ),
-                                maxLines = 1
+                                maxLines = 1,
+                                modifier = GlanceModifier.defaultWeight()
+                            )
+                            Spacer(modifier = GlanceModifier.width(4.dp))
+                            Image(
+                                provider = ImageProvider(R.drawable.ic_widget_check_done),
+                                contentDescription = "Hoàn thành",
+                                modifier = GlanceModifier
+                                    .size(28.dp)
+                                    .clickable(
+                                        actionRunCallback<CompleteTaskActionCallback>(
+                                            actionParametersOf(taskIdParam to topTask.id)
+                                        )
+                                    )
                             )
                         }
                     }
-
-                    Spacer(modifier = GlanceModifier.height(6.dp))
-
-                    // 1-Tap Done Button for Priority Task
-                    val taskIdParam = ActionParameters.Key<Long>("taskId")
-                    Button(
-                        text = "Hoàn thành",
-                        onClick = actionRunCallback<CompleteTaskActionCallback>(
-                            actionParametersOf(taskIdParam to topTask.id)
-                        ),
-                        modifier = GlanceModifier.fillMaxWidth()
-                    )
                 } else {
                     Box(
                         modifier = GlanceModifier
                             .fillMaxSize()
-                            .background(surfaceDarkProvider)
+                            .background(WidgetColors.elevatedProvider)
                             .cornerRadius(18.dp)
                             .padding(8.dp),
                         contentAlignment = Alignment.Center
@@ -192,7 +189,7 @@ class NotionStackWidget : GlanceAppWidget() {
                         Text(
                             text = "Hết việc!",
                             style = TextStyle(
-                                color = whiteProvider,
+                                color = WidgetColors.textProvider,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp
                             )
@@ -217,7 +214,7 @@ class NotionStackWidget : GlanceAppWidget() {
                     Text(
                         text = "CHECKLIST TIẾP",
                         style = TextStyle(
-                            color = secondaryProvider,
+                            color = WidgetColors.textSecondaryProvider,
                             fontWeight = FontWeight.Bold,
                             fontSize = 10.sp
                         )
@@ -237,7 +234,7 @@ class NotionStackWidget : GlanceAppWidget() {
                         Text(
                             text = if (topTask == null) "Đã hoàn thành mọi việc!" else "Không có việc chờ tiếp theo",
                             style = TextStyle(
-                                color = secondaryProvider,
+                                color = WidgetColors.textSecondaryProvider,
                                 fontSize = 11.sp
                             )
                         )
@@ -258,7 +255,7 @@ class NotionStackWidget : GlanceAppWidget() {
                                 Text(
                                     text = "- ",
                                     style = TextStyle(
-                                        color = accentProvider,
+                                        color = WidgetColors.accentProvider,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 11.sp
                                     )
@@ -266,7 +263,7 @@ class NotionStackWidget : GlanceAppWidget() {
                                 Text(
                                     text = item.title,
                                     style = TextStyle(
-                                        color = whiteProvider,
+                                        color = WidgetColors.textProvider,
                                         fontWeight = FontWeight.Normal,
                                         fontSize = 11.sp
                                     ),
@@ -279,10 +276,14 @@ class NotionStackWidget : GlanceAppWidget() {
 
                 Spacer(modifier = GlanceModifier.height(4.dp))
 
-                // Quick Add Photo Button
+                // Quick Add Photo Button in 4x2 widget: #FFD23F background, #17140A text
                 Button(
                     text = "Chụp việc mới",
                     onClick = actionStartActivity<MainActivity>(),
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = WidgetColors.accentProvider,
+                        contentColor = WidgetColors.onAccentProvider
+                    ),
                     modifier = GlanceModifier.fillMaxWidth()
                 )
             }
