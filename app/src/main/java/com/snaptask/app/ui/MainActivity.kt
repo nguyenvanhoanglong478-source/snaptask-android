@@ -3,6 +3,7 @@ package com.snaptask.app.ui
 import android.Manifest
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -15,6 +16,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
@@ -113,7 +115,25 @@ class MainActivity : ComponentActivity() {
         val repository = app.taskRepository
 
         setContent {
-            SnapTaskTheme {
+            val prefs = remember { getSharedPreferences("snaptask_theme_prefs", Context.MODE_PRIVATE) }
+            var themeMode by rememberSaveable {
+                mutableStateOf(prefs.getString("theme_mode", "DARK") ?: "DARK")
+            }
+            val systemDark = isSystemInDarkTheme()
+            val isDark = when (themeMode) {
+                "LIGHT" -> false
+                "DARK" -> true
+                else -> systemDark
+            }
+
+            SnapTaskTheme(darkTheme = isDark) {
+                val onToggleTheme: () -> Unit = {
+                    val nextMode = if (isDark) "LIGHT" else "DARK"
+                    themeMode = nextMode
+                    prefs.edit().putString("theme_mode", nextMode).apply()
+                    val modeName = if (nextMode == "LIGHT") "Sáng (Paper)" else "Tối (Ink & Flash)"
+                    Toast.makeText(this@MainActivity, "Chế độ: $modeName", Toast.LENGTH_SHORT).show()
+                }
                 Surface(modifier = Modifier.fillMaxSize()) {
                     var currentScreen by rememberSaveable { mutableStateOf(ScreenState.HOME) }
                     var selectedTaskId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -263,7 +283,9 @@ class MainActivity : ComponentActivity() {
                                         val reminderNotice = formatReminderConfirmation(newTask)
                                         Toast.makeText(this@MainActivity, "Đã lưu ghi chú!$reminderNotice", Toast.LENGTH_LONG).show()
                                     }
-                                }
+                                },
+                                isDarkTheme = isDark,
+                                onToggleTheme = onToggleTheme
                             )
                         }
 

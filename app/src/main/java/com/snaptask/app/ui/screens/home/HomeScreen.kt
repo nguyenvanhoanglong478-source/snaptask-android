@@ -1,5 +1,8 @@
 package com.snaptask.app.ui.screens.home
 
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.expandVertically
@@ -106,6 +109,8 @@ fun HomeScreen(
     onTaskClick: (Task) -> Unit,
     onSaveQuickNote: (Task) -> Unit = {},
     onOpenBoard: () -> Unit = {},
+    isDarkTheme: Boolean = true,
+    onToggleTheme: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val colors = MaterialTheme.snapColors
@@ -216,22 +221,45 @@ fun HomeScreen(
                         )
                     }
 
-                    // Circular Search Button
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(colors.surface)
-                            .border(1.dp, colors.border, CircleShape)
-                            .clickable { isSearchActive = !isSearchActive },
-                        contentAlignment = Alignment.Center
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = SnapTaskIcons.Search,
-                            contentDescription = "Tìm kiếm",
-                            tint = if (isSearchActive) colors.flash else colors.text,
-                            modifier = Modifier.size(19.dp)
-                        )
+                        // Light / Dark Mode Toggle Button (Page 3 vs Page 4)
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(colors.surface)
+                                .border(1.dp, colors.border, CircleShape)
+                                .clickable(onClick = onToggleTheme),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (isDarkTheme) Icons.Filled.LightMode else Icons.Filled.DarkMode,
+                                contentDescription = if (isDarkTheme) "Chuyển giao diện sáng" else "Chuyển giao diện tối",
+                                tint = if (isDarkTheme) colors.flash else colors.text,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        // Circular Search Button
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(colors.surface)
+                                .border(1.dp, colors.border, CircleShape)
+                                .clickable { isSearchActive = !isSearchActive },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = SnapTaskIcons.Search,
+                                contentDescription = "Tìm kiếm",
+                                tint = if (isSearchActive) colors.flash else colors.text,
+                                modifier = Modifier.size(19.dp)
+                            )
+                        }
                     }
                 }
 

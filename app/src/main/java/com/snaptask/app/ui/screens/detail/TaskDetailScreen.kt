@@ -6,16 +6,20 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -28,49 +32,48 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CompareArrows
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material.icons.outlined.PushPin
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.snaptask.app.data.local.Converters
@@ -85,6 +88,32 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+
+private class SplitLeftClipShape(private val fraction: Float) : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
+        val path = Path().apply {
+            moveTo(0f, 0f)
+            lineTo(size.width * fraction, 0f)
+            lineTo(size.width * fraction, size.height)
+            lineTo(0f, size.height)
+            close()
+        }
+        return Outline.Generic(path)
+    }
+}
+
+private class SplitRightClipShape(private val fraction: Float) : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
+        val path = Path().apply {
+            moveTo(size.width * fraction, 0f)
+            lineTo(size.width, 0f)
+            lineTo(size.width, size.height)
+            lineTo(size.width * fraction, size.height)
+            close()
+        }
+        return Outline.Generic(path)
+    }
+}
 
 @Composable
 fun TaskDetailScreen(
@@ -114,19 +143,34 @@ fun TaskDetailScreen(
     var showMenu by remember { mutableStateOf(false) }
     var isEditing by remember { mutableStateOf(false) }
 
-    val completedCount = subtasks.count { it.isDone }
-    val progressFraction = if (subtasks.isEmpty()) {
-        if (isCompleted) 1f else 0f
-    } else {
-        completedCount.toFloat() / subtasks.size.toFloat()
-    }
-
     val beforeFile = remember(task.beforeImageUri) { File(task.beforeImageUri) }
     val hasBefore = beforeFile.exists()
     val afterFile = remember(task.afterImageUri) {
         if (!task.afterImageUri.isNullOrBlank()) File(task.afterImageUri) else null
     }
     val hasAfter = afterFile != null && afterFile.exists()
+
+    fun shareTaskDetails() {
+        val textBuilder = StringBuilder()
+        textBuilder.append("SnapTask: ${task.title}\n")
+        if (task.folderName.isNotBlank()) textBuilder.append("Thư mục: ${task.folderName}\n")
+        if (isCompleted && task.completedAt != null) {
+            val startStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(task.createdAt))
+            val endStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(task.completedAt))
+            val durationMin = maxOf(1, ((task.completedAt - task.createdAt) / 60000).toInt())
+            textBuilder.append("Thời gian: $startStr - $endStr ($durationMin phút)\n")
+        }
+        if (currentCompletionCaption.isNotBlank()) {
+            textBuilder.append("Ghi chú: “$currentCompletionCaption”\n")
+        }
+
+        val sendIntent = Intent().apply {
+            action = Intent.ACTION_SEND
+            putExtra(Intent.EXTRA_TEXT, textBuilder.toString())
+            type = "text/plain"
+        }
+        context.startActivity(Intent.createChooser(sendIntent, "Chia sẻ Before / After"))
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -258,6 +302,14 @@ fun TaskDetailScreen(
                             }
                         )
                         DropdownMenuItem(
+                            text = { Text("Chia sẻ", color = colors.text) },
+                            leadingIcon = { Icon(Icons.Filled.Share, contentDescription = null, tint = colors.textSecondary) },
+                            onClick = {
+                                showMenu = false
+                                shareTaskDetails()
+                            }
+                        )
+                        DropdownMenuItem(
                             text = { Text("Xoá việc", color = colors.urgent) },
                             leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null, tint = colors.urgent) },
                             onClick = {
@@ -324,85 +376,105 @@ fun TaskDetailScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 3. Before / After Split Photo Comparison View (Page 6)
+            // 3. Before / After Interactive Split Photo Comparison View (Page 6)
             if (hasBefore && hasAfter) {
-                // Split Before & After Unified Card
-                Card(
+                var splitFraction by remember { mutableFloatStateOf(0.5f) }
+
+                BoxWithConstraints(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(240.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = colors.surface),
-                    border = BorderStroke(1.dp, colors.border)
+                        .height(260.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .border(1.dp, colors.border, RoundedCornerShape(20.dp))
+                        .background(colors.surface)
                 ) {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        Row(modifier = Modifier.fillMaxSize()) {
-                            // Left: BEFORE Photo
-                            Box(modifier = Modifier.weight(1f).fillMaxSize()) {
-                                AsyncImage(
-                                    model = ImageRequest.Builder(context).data(beforeFile).crossfade(true).build(),
-                                    contentDescription = "Trước",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                                // TRƯỚC Pill
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.TopStart)
-                                        .padding(12.dp)
-                                        .background(Color(0xD9000000), RoundedCornerShape(8.dp))
-                                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                                ) {
-                                    Text(text = "TRƯỚC", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    val totalWidth = maxWidth
+                    val widthPx = constraints.maxWidth.toFloat()
+                    val splitOffset = totalWidth * splitFraction
+
+                    // Left Image: Before Photo clipped to splitFraction
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(SplitLeftClipShape(splitFraction))
+                    ) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context).data(beforeFile).crossfade(true).build(),
+                            contentDescription = "Trước",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+
+                    // Right Image: After Photo clipped from splitFraction to end
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(SplitRightClipShape(splitFraction))
+                    ) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context).data(afterFile).crossfade(true).build(),
+                            contentDescription = "Sau",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+
+                    // Pill TRƯỚC (Top-Left)
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(12.dp)
+                            .background(Color(0xD9121110), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(text = "TRƯỚC", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    // Pill SAU (Top-Right: Flash Yellow background, #17140A text as in Page 6)
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(12.dp)
+                            .background(colors.flash, RoundedCornerShape(8.dp))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(text = "SAU", color = colors.onFlash, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    // Vertical Divider Line
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .offset(x = splitOffset - 1.dp)
+                            .width(2.dp)
+                            .fillMaxHeight()
+                            .background(Color.White.copy(alpha = 0.9f))
+                    )
+
+                    // Interactive Draggable Split Handle Icon (< >)
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .offset(x = splitOffset - 18.dp)
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color.White)
+                            .border(1.5.dp, colors.border, CircleShape)
+                            .pointerInput(Unit) {
+                                detectHorizontalDragGestures { change, dragAmount ->
+                                    change.consume()
+                                    splitFraction = (splitFraction + dragAmount / widthPx).coerceIn(0.06f, 0.94f)
                                 }
-                            }
-
-                            // Divider line
-                            Box(
-                                modifier = Modifier
-                                    .width(2.dp)
-                                    .fillMaxSize()
-                                    .background(colors.border)
-                            )
-
-                            // Right: AFTER Photo
-                            Box(modifier = Modifier.weight(1f).fillMaxSize()) {
-                                AsyncImage(
-                                    model = ImageRequest.Builder(context).data(afterFile).crossfade(true).build(),
-                                    contentDescription = "Sau",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                                // SAU Pill (Flash Yellow background, #17140A text as in Page 6)
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.TopEnd)
-                                        .padding(12.dp)
-                                        .background(colors.flash, RoundedCornerShape(8.dp))
-                                        .padding(horizontal = 10.dp, vertical = 4.dp)
-                                ) {
-                                    Text(text = "SAU", color = colors.onFlash, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-
-                        // Center Split Handle Icon (< >)
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .size(34.dp)
-                                .clip(CircleShape)
-                                .background(colors.surface)
-                                .border(1.5.dp, colors.border, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.CompareArrows,
-                                contentDescription = "So sánh",
-                                tint = colors.text,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.CompareArrows,
+                            contentDescription = "Kéo để so sánh Trước và Sau",
+                            tint = Color(0xFF17140A),
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
             } else if (hasBefore) {
@@ -410,7 +482,7 @@ fun TaskDetailScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(220.dp)
+                        .height(240.dp)
                         .clickable { onOpenAfterCamera(task) },
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = colors.surface),
@@ -427,11 +499,12 @@ fun TaskDetailScreen(
                             modifier = Modifier
                                 .align(Alignment.TopStart)
                                 .padding(12.dp)
-                                .background(Color(0xD9000000), RoundedCornerShape(8.dp))
+                                .background(Color(0xD9121110), RoundedCornerShape(8.dp))
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Text(text = "TRƯỚC", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
+
                         // Bottom CTA pill over image
                         Box(
                             modifier = Modifier
@@ -457,7 +530,7 @@ fun TaskDetailScreen(
 
             // 4. Caption Quote Box: “Xong rồi, giờ có chỗ đặt laptop thoải mái.” (Page 6)
             val quoteText = currentCompletionCaption.ifBlank {
-                if (isCompleted) "“Xong rồi, hoàn thành xuất sắc!”" else task.description
+                if (isCompleted) "“Xong rồi, giờ có chỗ đặt laptop thoải mái.”" else task.description
             }
             if (quoteText.isNotBlank()) {
                 Box(
@@ -469,7 +542,7 @@ fun TaskDetailScreen(
                         .padding(14.dp)
                 ) {
                     Text(
-                        text = quoteText,
+                        text = if (quoteText.startsWith("“")) quoteText else "“$quoteText”",
                         color = colors.text,
                         fontSize = 14.sp,
                         fontStyle = FontStyle.Italic,
@@ -650,36 +723,42 @@ fun TaskDetailScreen(
                     )
                 }
 
-                // Right: Primary CTA [Chia sẻ Before / After] or [Chụp kết quả]
-                val ctaText = if (hasAfter) "Chia sẻ Before / After" else "Chụp ảnh kết quả (SAU)"
+                // Right: Primary Button [Chia sẻ Before / After] (Flash Yellow #FFD23F)
                 Box(
                     modifier = Modifier
-                        .weight(1.4f)
+                        .weight(1.3f)
                         .height(48.dp)
                         .clip(RoundedCornerShape(14.dp))
                         .background(colors.flash)
                         .clickable {
-                            if (hasAfter) {
-                                val sendIntent: Intent = Intent().apply {
-                                    action = Intent.ACTION_SEND
-                                    putExtra(Intent.EXTRA_TEXT, "Đã hoàn thành '${task.title}' với SnapTask! Before / After minh chứng.")
-                                    type = "text/plain"
-                                }
-                                context.startActivity(Intent.createChooser(sendIntent, "Chia sẻ thành quả"))
-                            } else {
-                                onOpenAfterCamera(task)
-                            }
+                            shareTaskDetails()
                         },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = ctaText,
+                        text = "Chia sẻ Before / After",
                         color = colors.onFlash,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(36.dp))
         }
+    }
+
+    if (showReminderPicker) {
+        ReminderPickerDialog(
+            initialReminderTime = reminderTime,
+            initialReminderType = reminderType,
+            onDismiss = { showReminderPicker = false },
+            onConfirm = { time, type ->
+                reminderTime = time
+                reminderType = type
+                showReminderPicker = false
+                onSaveTask(task.copy(reminderTime = time, reminderType = type))
+            }
+        )
     }
 }

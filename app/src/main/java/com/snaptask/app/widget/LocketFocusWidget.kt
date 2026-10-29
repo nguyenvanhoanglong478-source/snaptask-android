@@ -85,6 +85,7 @@ class LocketFocusWidget : GlanceAppWidget() {
                         tag = task.tag,
                         priority = task.priority,
                         isPinned = task.isPinnedToWidget,
+                        reminderTime = task.reminderTime,
                         bitmap = bitmap,
                         taskIndex = (offset % pendingTasks.size) + 1,
                         totalTasks = pendingTasks.size
@@ -133,10 +134,16 @@ class LocketFocusWidget : GlanceAppWidget() {
         tag: String,
         priority: String,
         isPinned: Boolean,
+        reminderTime: Long?,
         bitmap: Bitmap?,
         taskIndex: Int,
         totalTasks: Int
     ) {
+        val timeOrTag = if (reminderTime != null && reminderTime > 0) {
+            java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date(reminderTime))
+        } else if (isPinned) {
+            "★ $tag"
+        } else tag
         Box(
             modifier = GlanceModifier
                 .fillMaxSize()
@@ -175,7 +182,7 @@ class LocketFocusWidget : GlanceAppWidget() {
                             .padding(horizontal = 7.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            text = if (isPinned) "[Ghim] $tag" else tag,
+                            text = timeOrTag,
                             style = TextStyle(
                                 color = WidgetColors.textProvider,
                                 fontWeight = FontWeight.Bold,

@@ -85,6 +85,7 @@ import androidx.compose.material3.MaterialTheme
 import com.snaptask.app.ui.theme.SnapTaskIcons
 import com.snaptask.app.ui.theme.snapColors
 import com.snaptask.app.util.DateTimeUtils
+import com.snaptask.app.ui.components.ViewfinderCornerBrackets
 import com.snaptask.app.util.ImageCompressor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -448,6 +449,13 @@ fun CameraCreatorScreen(
                             previewView
                         },
                         modifier = Modifier.fillMaxSize()
+                    )
+
+                    // 4 L-shaped Corner Brackets on Viewfinder (Page 5)
+                    ViewfinderCornerBrackets(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(18.dp)
                     )
 
                     // Overlay Pill at bottom inside viewfinder: "Chụp thứ cần làm, đặt tên sau cũng được" (Page 5)

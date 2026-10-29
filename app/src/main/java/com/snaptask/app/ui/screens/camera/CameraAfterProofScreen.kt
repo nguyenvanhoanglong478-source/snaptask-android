@@ -32,18 +32,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.Cameraswitch
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.FlashAuto
-import androidx.compose.material.icons.filled.FlashOff
-import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FlipCameraAndroid
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -60,13 +55,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -74,8 +69,7 @@ import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.snaptask.app.domain.model.Task
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
+import com.snaptask.app.ui.components.ViewfinderCornerBrackets
 import com.snaptask.app.ui.theme.SnapTaskIcons
 import com.snaptask.app.ui.theme.snapColors
 import com.snaptask.app.util.ImageCompressor
@@ -187,7 +181,6 @@ fun CameraAfterProofScreen(
                 cameraProvider?.unbindAll()
             } catch (_: Exception) {}
 
-            // Restore screen brightness if modified by front camera screen flash
             val activity = findActivity(context)
             originalScreenBrightness?.let { orig ->
                 try {
@@ -216,7 +209,7 @@ fun CameraAfterProofScreen(
 
             try {
                 if (isFrontCamera && isFlashActive) {
-                    // 1. FRONT CAMERA SCREEN FLASH: Maximize screen brightness
+                    // Front screen flash
                     val window = activity?.window
                     val layoutParams = window?.attributes
                     if (layoutParams != null) {
@@ -226,18 +219,16 @@ fun CameraAfterProofScreen(
                         window.attributes = layoutParams
                     }
                     showScreenFlash = true
-                    // Wait 350ms for display to reach peak illumination & sensor AE/AF convergence
                     delay(350L)
                 } else if (!isFrontCamera && isFlashActive) {
-                    // 2. REAR CAMERA TORCH-ASSISTED FLASH: Turn on physical LED
+                    // Rear torch-assisted flash: 350ms delay
                     try {
                         camera?.cameraControl?.enableTorch(true)
                     } catch (_: Exception) {}
-                    // Wait 350ms for physical LED to reach full brightness & sensor AE/AF convergence
                     delay(350L)
                 }
 
-                // Shutter feedback: Haptic vibration + 120ms Shutter Flash
+                // Shutter feedback: Haptic + 120ms Shutter Flash
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 showShutterFlash = true
                 launch {
@@ -253,14 +244,12 @@ fun CameraAfterProofScreen(
                     ContextCompat.getMainExecutor(context),
                     object : ImageCapture.OnImageSavedCallback {
                         override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                            // Turn off Rear Torch ONLY here inside callback after sensor has captured the frame
                             try {
                                 if (flashMode != CameraFlashMode.TORCH) {
                                     camera?.cameraControl?.enableTorch(false)
                                 }
                             } catch (_: Exception) {}
 
-                            // Dismiss Front Screen Flash & restore original brightness ONLY here inside callback
                             if (showScreenFlash) {
                                 showScreenFlash = false
                                 originalBrightness?.let { orig ->
@@ -275,7 +264,6 @@ fun CameraAfterProofScreen(
                                 }
                             }
 
-                            // Compress and display the illuminated after proof photo
                             scope.launch {
                                 try {
                                     val compressed = ImageCompressor.compressPhoto(context, rawFile)
@@ -288,7 +276,6 @@ fun CameraAfterProofScreen(
                         }
 
                         override fun onError(exception: ImageCaptureException) {
-                            // Cleanup on error
                             try {
                                 if (flashMode != CameraFlashMode.TORCH) {
                                     camera?.cameraControl?.enableTorch(false)
@@ -329,10 +316,10 @@ fun CameraAfterProofScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(16.dp),
+                .padding(horizontal = 18.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Top Header
+            // 1. Top Bar: [✕] Left, Title Center, [⚡] Right (Page 5 style)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -340,19 +327,28 @@ fun CameraAfterProofScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = onClose,
+                // Close button
+                Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .background(colors.surface, CircleShape)
+                        .clip(CircleShape)
+                        .background(colors.surface)
                         .border(1.dp, colors.border, CircleShape)
+                        .clickable(onClick = onClose),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Filled.Close, contentDescription = "Đóng", tint = colors.text)
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "Đóng",
+                        tint = colors.text,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
 
+                // Center Title
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "Xác nhận hoàn thành",
+                        text = "Chụp ảnh kết quả (SAU)",
                         color = colors.text,
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp
@@ -362,28 +358,47 @@ fun CameraAfterProofScreen(
                         color = colors.flash,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        maxLines = 1
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                // Balance placeholder
-                Spacer(modifier = Modifier.size(40.dp))
+                // Flash button
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(if (flashMode != CameraFlashMode.OFF) colors.flash else colors.surface)
+                        .border(1.dp, if (flashMode != CameraFlashMode.OFF) colors.flash else colors.border, CircleShape)
+                        .clickable { applyFlashMode(flashMode.next()) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = when (flashMode) {
+                            CameraFlashMode.OFF -> SnapTaskIcons.FlashOff
+                            CameraFlashMode.ON, CameraFlashMode.TORCH -> SnapTaskIcons.FlashOn
+                            CameraFlashMode.AUTO -> SnapTaskIcons.FlashAuto
+                        },
+                        contentDescription = "Flash: ${flashMode.name}",
+                        tint = if (flashMode != CameraFlashMode.OFF) colors.onFlash else colors.text,
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // 1:1 Camera Viewfinder with Squircle 32dp and HUD controls
+            // 2. 1:1 Viewfinder with Corner Brackets & Ghost Overlay (Page 5)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
-                    .clip(RoundedCornerShape(32.dp))
-                    .border(2.dp, if (cameraState == CameraState.CAPTURED) colors.done else colors.border, RoundedCornerShape(32.dp))
+                    .clip(RoundedCornerShape(24.dp))
+                    .border(2.dp, if (cameraState == CameraState.CAPTURED) colors.done else colors.border, RoundedCornerShape(24.dp))
                     .background(Color.Black),
                 contentAlignment = Alignment.Center
             ) {
                 if (cameraState == CameraState.PREVIEWING) {
-                    // Live Camera View
                     AndroidView(
                         factory = { ctx ->
                             val previewView = PreviewView(ctx).apply {
@@ -417,22 +432,46 @@ fun CameraAfterProofScreen(
                         )
                     }
 
+                    // 4 Corner Brackets on Viewfinder
+                    ViewfinderCornerBrackets(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(18.dp)
+                    )
+
                     // HUD Top-Center: Ghost Overlay Toggle Pill
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .padding(top = 14.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(if (isGhostOverlayEnabled) colors.flash else Color(0x80000000)) // Semi-transparent black scrim for ghost toggle over preview
-                            .border(1.dp, if (isGhostOverlayEnabled) colors.flash else Color(0x33FFFFFF), RoundedCornerShape(12.dp)) // Translucent white border for ghost toggle over preview
+                            .background(if (isGhostOverlayEnabled) colors.flash else Color(0x99121110))
+                            .border(1.dp, if (isGhostOverlayEnabled) colors.flash else Color(0x4DFFFFFF), RoundedCornerShape(12.dp))
                             .clickable { isGhostOverlayEnabled = !isGhostOverlayEnabled }
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
                         Text(
                             text = if (isGhostOverlayEnabled) "Ghost: BẬT" else "Ghost: TẮT",
-                            color = Color.White,
+                            color = if (isGhostOverlayEnabled) colors.onFlash else Color.White,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    // Overlay Pill at bottom inside viewfinder (Page 5)
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 16.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color(0xB3121110))
+                            .padding(horizontal = 14.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = "Chụp kết quả thực tế để đối chiếu Before / After",
+                            color = Color(0xFFF5F1E8),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 } else {
@@ -447,13 +486,13 @@ fun CameraAfterProofScreen(
                         contentScale = ContentScale.Crop
                     )
 
-                    // Top Badge: "ĐÃ CHỤP AFTER"
+                    // Top-Left Badge: "ĐÃ CHỤP AFTER"
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopStart)
                             .padding(14.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xCC000000)) // Camera viewfinder dark backdrop
+                            .background(Color(0xD9121110))
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
                         Text(
@@ -475,41 +514,65 @@ fun CameraAfterProofScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // 2. Camera Controls: 3 Circular Buttons (Flash - Shutter/Retake - Flip) spaced by 32dp
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(32.dp, Alignment.CenterHorizontally),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Left: Flash Button (46x46 circular)
-                Box(
-                    modifier = Modifier
-                        .size(46.dp)
-                        .clip(CircleShape)
-                        .background(colors.surface)
-                        .border(1.dp, if (flashMode != CameraFlashMode.OFF) colors.flash else colors.border, CircleShape)
-                        .clickable { applyFlashMode(flashMode.next()) },
-                    contentAlignment = Alignment.Center
-                ) {
+            // 3. Caption Input Pill (Page 5 style: Pill with Pen icon)
+            OutlinedTextField(
+                value = completionCaption,
+                onValueChange = { completionCaption = it },
+                placeholder = { Text("Ghi chú kết quả, ví dụ: Đã dọn sạch!", color = colors.textMuted, fontSize = 14.sp) },
+                leadingIcon = {
                     Icon(
-                        imageVector = when (flashMode) {
-                            CameraFlashMode.OFF -> SnapTaskIcons.FlashOff
-                            CameraFlashMode.ON, CameraFlashMode.TORCH -> SnapTaskIcons.FlashOn
-                            CameraFlashMode.AUTO -> SnapTaskIcons.FlashAuto
-                        },
-                        contentDescription = "Flash: ${flashMode.name}",
-                        tint = if (flashMode != CameraFlashMode.OFF) colors.flash else Color.White,
-                        modifier = Modifier.size(20.dp)
+                        imageVector = Icons.Filled.Edit,
+                        contentDescription = null,
+                        tint = colors.textSecondary,
+                        modifier = Modifier.size(18.dp)
                     )
-                }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = colors.text,
+                    unfocusedTextColor = colors.text,
+                    focusedContainerColor = colors.elevated,
+                    unfocusedContainerColor = colors.elevated,
+                    focusedBorderColor = colors.flash,
+                    unfocusedBorderColor = colors.border
+                )
+            )
 
-                // Center: Shutter (88x88) or Retake (56x56)
-                if (cameraState == CameraState.PREVIEWING) {
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // 4. Bottom Controls: Previewing Shutter OR Captured Save Action (Page 5)
+            if (cameraState == CameraState.PREVIEWING) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Left: Dismiss Button (48dp circle)
                     Box(
                         modifier = Modifier
-                            .size(88.dp)
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(colors.elevated)
+                            .border(1.dp, colors.border, CircleShape)
+                            .clickable(onClick = onClose),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = "Hủy",
+                            tint = colors.text,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    // Center: Big Shutter Button (72dp outer / 56dp inner Flash Yellow)
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
                             .clip(CircleShape)
                             .background(Color.Transparent)
                             .border(4.dp, colors.flash, CircleShape)
@@ -521,23 +584,56 @@ fun CameraAfterProofScreen(
                         if (isCapturing) {
                             CircularProgressIndicator(
                                 color = colors.flash,
-                                modifier = Modifier.size(32.dp),
+                                modifier = Modifier.size(28.dp),
                                 strokeWidth = 3.dp
                             )
                         } else {
                             Box(
                                 modifier = Modifier
-                                    .size(66.dp)
+                                    .size(56.dp)
                                     .background(colors.flash, CircleShape)
                             )
                         }
                     }
-                } else {
+
+                    // Right: Flip Camera Button (48dp circle)
                     Box(
                         modifier = Modifier
-                            .size(56.dp)
+                            .size(48.dp)
                             .clip(CircleShape)
-                            .background(colors.surface)
+                            .background(colors.elevated)
+                            .border(1.dp, colors.border, CircleShape)
+                            .clickable(enabled = !isCapturing) {
+                                camera?.cameraControl?.enableTorch(false)
+                                cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
+                                    CameraSelector.DEFAULT_FRONT_CAMERA
+                                } else {
+                                    CameraSelector.DEFAULT_BACK_CAMERA
+                                }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.FlipCameraAndroid,
+                            contentDescription = "Đổi camera",
+                            tint = colors.text,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+            } else {
+                // Photo Captured: Retake on Left, Big Save Button in Center
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Retake Button
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(CircleShape)
+                            .background(colors.elevated)
                             .border(1.5.dp, colors.urgent, CircleShape)
                             .clickable {
                                 capturedPhotoPath?.let { File(it).delete() }
@@ -546,116 +642,44 @@ fun CameraAfterProofScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = SnapTaskIcons.Retake,
+                            imageVector = Icons.Filled.Refresh,
                             contentDescription = "Chụp lại",
                             tint = colors.urgent,
                             modifier = Modifier.size(24.dp)
                         )
                     }
-                }
 
-                // Right: Flip Camera Button (46x46 circular)
-                Box(
-                    modifier = Modifier
-                        .size(46.dp)
-                        .clip(CircleShape)
-                        .background(colors.surface)
-                        .border(1.dp, colors.border, CircleShape)
-                        .clickable(enabled = !isCapturing && cameraState == CameraState.PREVIEWING) {
-                            camera?.cameraControl?.enableTorch(false)
-                            cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
-                                CameraSelector.DEFAULT_FRONT_CAMERA
-                            } else {
-                                CameraSelector.DEFAULT_BACK_CAMERA
-                            }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = SnapTaskIcons.CameraFlip,
-                        contentDescription = "Đổi camera",
-                        tint = if (cameraState == CameraState.PREVIEWING) Color.White else colors.textMuted,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // 3. Completion Caption Block
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(colors.surface, RoundedCornerShape(20.dp))
-                    .border(1.dp, colors.border, RoundedCornerShape(20.dp))
-                    .padding(16.dp)
-            ) {
-                Text(
-                    text = "GHI CHÚ KẾT QUẢ",
-                    color = colors.textSecondary,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = completionCaption,
-                    onValueChange = { completionCaption = it },
-                    placeholder = { Text("Ví dụ: Đã dọn sạch góc học tập!", color = colors.textMuted, fontSize = 13.sp) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = colors.text,
-                        unfocusedTextColor = colors.text,
-                        focusedContainerColor = colors.elevated,
-                        unfocusedContainerColor = colors.elevated,
-                        focusedBorderColor = colors.flash,
-                        unfocusedBorderColor = colors.border
-                    )
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Save & Complete Button
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(if (capturedPhotoPath != null) SolidColor(colors.flash) else SolidColor(colors.elevated))
-                        .clickable(enabled = capturedPhotoPath != null) {
-                            val finalPath = capturedPhotoPath ?: ""
-                            onProofCaptured(finalPath, completionCaption)
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = SnapTaskIcons.Check,
-                            contentDescription = "Hoàn thành",
-                            tint = if (capturedPhotoPath != null) colors.onFlash else colors.textMuted,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Lưu & Hoàn Thành",
-                            color = if (capturedPhotoPath != null) colors.onFlash else colors.textMuted,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp
-                        )
+                    // Primary Save & Complete Button: Flash Yellow (#FFD23F)
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(52.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(colors.flash)
+                            .clickable {
+                                val finalPath = capturedPhotoPath ?: ""
+                                onProofCaptured(finalPath, completionCaption)
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = SnapTaskIcons.Check,
+                                contentDescription = null,
+                                tint = colors.onFlash,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Lưu & Hoàn Thành",
+                                color = colors.onFlash,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp
+                            )
+                        }
                     }
                 }
             }
-        }
-
-        // Full Screen White Flash Overlay for Front Camera Screen Flash
-        if (showScreenFlash) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.White)
-            )
         }
     }
 }
