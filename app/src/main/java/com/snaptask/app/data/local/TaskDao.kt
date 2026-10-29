@@ -59,6 +59,9 @@ interface TaskDao {
     @Query("UPDATE tasks SET isCompleted = CASE WHEN :newStatus = 'DONE' THEN 1 ELSE 0 END, completedAt = CASE WHEN :newStatus = 'DONE' THEN :timestamp ELSE NULL END WHERE id = :id")
     suspend fun updateTaskStatusWithTime(id: Long, newStatus: String, timestamp: Long)
 
+    @Query("UPDATE tasks SET reminderTime = :reminderTime, reminderType = :reminderType WHERE id = :id")
+    suspend fun updateTaskReminder(id: Long, reminderTime: Long?, reminderType: String)
+
     suspend fun updateTaskStatus(id: Long, newStatus: String) {
         updateTaskStatusWithTime(id, newStatus, System.currentTimeMillis())
     }

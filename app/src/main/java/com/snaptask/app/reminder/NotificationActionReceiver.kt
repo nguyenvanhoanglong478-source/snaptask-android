@@ -68,25 +68,36 @@ class NotificationActionReceiver : BroadcastReceiver() {
 
             ACTION_SNOOZE_TASK -> {
                 notificationManager.cancel(taskId.toInt())
+                val pendingResult = goAsync()
 
-                val title = intent.getStringExtra(TaskReminderScheduler.EXTRA_TASK_TITLE) ?: "Việc cần làm"
-                val desc = intent.getStringExtra(TaskReminderScheduler.EXTRA_TASK_DESC) ?: ""
-                val image = intent.getStringExtra(TaskReminderScheduler.EXTRA_TASK_IMAGE) ?: ""
-                val type = intent.getStringExtra(TaskReminderScheduler.EXTRA_REMINDER_TYPE) ?: "NOTIFICATION"
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        val db = AppDatabase.getInstance(context)
+                        val snoozeTime = System.currentTimeMillis() + 10 * 60 * 1000L // +10 minutes
+                        val taskEntity = db.taskDao().getTaskById(taskId)
+                        val type = taskEntity?.reminderType ?: intent.getStringExtra(TaskReminderScheduler.EXTRA_REMINDER_TYPE) ?: "NOTIFICATION"
 
-                val snoozeTime = System.currentTimeMillis() + 10 * 60 * 1000L // +10 minutes
+                        db.taskDao().updateTaskReminder(taskId, snoozeTime, type)
 
-                val snoozedTask = Task(
-                    id = taskId,
-                    title = title,
-                    description = desc,
-                    beforeImageUri = image,
-                    reminderTime = snoozeTime,
-                    reminderType = type
-                )
+                        val updatedTask = (taskEntity?.copy(reminderTime = snoozeTime, reminderType = type)?.toDomain())
+                            ?: Task(
+                                id = taskId,
+                                title = intent.getStringExtra(TaskReminderScheduler.EXTRA_TASK_TITLE) ?: "Việc cần làm",
+                                description = intent.getStringExtra(TaskReminderScheduler.EXTRA_TASK_DESC) ?: "",
+                                beforeImageUri = intent.getStringExtra(TaskReminderScheduler.EXTRA_TASK_IMAGE) ?: "",
+                                reminderTime = snoozeTime,
+                                reminderType = type
+                            )
 
-                TaskReminderScheduler.scheduleReminder(context, snoozedTask)
-                Toast.makeText(context, "Sẽ nhắc lại sau 10 phút!", Toast.LENGTH_SHORT).show()
+                        TaskReminderScheduler.scheduleReminder(context, updatedTask)
+
+                        Handler(Looper.getMainLooper()).post {
+                            Toast.makeText(context, "Sẽ nhắc lại sau 10 phút!", Toast.LENGTH_SHORT).show()
+                        }
+                    } finally {
+                        pendingResult.finish()
+                    }
+                }
             }
         }
     }

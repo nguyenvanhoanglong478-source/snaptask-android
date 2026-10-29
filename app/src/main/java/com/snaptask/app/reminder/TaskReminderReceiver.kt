@@ -6,8 +6,6 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.media.AudioAttributes
-import android.media.RingtoneManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.snaptask.app.R
@@ -22,7 +20,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
 
     companion object {
         const val CHANNEL_NOTIFICATION = "snaptask_channel_notification"
-        const val CHANNEL_ALARM = "snaptask_channel_alarm"
+        const val CHANNEL_ALARM = "snaptask_channel_alarm_v2"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -185,21 +183,17 @@ class TaskReminderReceiver : BroadcastReceiver() {
             }
             notificationManager.createNotificationChannel(notifChannel)
 
-            // Alarm Channel
-            val alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            val audioAttributes = AudioAttributes.Builder()
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .setUsage(AudioAttributes.USAGE_ALARM)
-                .build()
+            // Delete legacy alarm channel that caused duplicate audio
+            notificationManager.deleteNotificationChannel("snaptask_channel_alarm")
 
+            // Alarm Channel V2: No sound (sound is played exclusively by AlarmSoundPlayer)
             val alarmChannel = NotificationChannel(
                 CHANNEL_ALARM,
                 "Chuông báo thức công việc (Alarm)",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Chuông báo thức lớn nhắc nhở nhiệm vụ khẩn cấp"
-                setSound(alarmSound, audioAttributes)
+                setSound(null, null)
                 enableVibration(true)
                 vibrationPattern = longArrayOf(0, 800, 400, 800, 400, 1000)
                 setShowBadge(true)
