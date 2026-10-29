@@ -10,7 +10,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
-import java.io.InputStream
 import kotlin.math.max
 
 object ImageCompressor {
@@ -26,61 +25,82 @@ object ImageCompressor {
 
     /**
      * Compresses and optimizes a raw photo file for low-end Android devices.
-     * Generates a 720p/1080p WebP main image and a lightweight thumbnail for the Home Widget.
+     * Guarantees max edge <= 1280px in ARGB_8888 and a 360px thumbnail.
      */
     suspend fun compressPhoto(context: Context, rawFile: File): CompressedResult = withContext(Dispatchers.IO) {
-        val snapsDir = FileUtils.getSnapsDirectory(context)
-        val thumbsDir = FileUtils.getThumbnailsDirectory(context)
+        try {
+            val snapsDir = FileUtils.getSnapsDirectory(context)
+            val thumbsDir = FileUtils.getThumbnailsDirectory(context)
 
-        val timestamp = System.currentTimeMillis()
-        val targetFullFile = File(snapsDir, "snap_$timestamp.webp")
-        val targetThumbFile = File(thumbsDir, "thumb_$timestamp.webp")
+            val timestamp = System.currentTimeMillis()
+            val targetFullFile = File(snapsDir, "snap_$timestamp.webp")
+            val targetThumbFile = File(thumbsDir, "thumb_$timestamp.webp")
 
-        // 1. Read EXIF orientation
-        val orientation = readExifOrientation(rawFile.absolutePath)
+            // 1. Read EXIF orientation
+            val orientation = readExifOrientation(rawFile.absolutePath)
 
-        // 2. Decode full image with inSampleSize to save RAM
-        val sampledBitmap = decodeSampledBitmap(rawFile.absolutePath, MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION)
-        val rotatedBitmap = rotateBitmapIfRequired(sampledBitmap, orientation)
+            // 2. Decode full image with inSampleSize to save RAM (ARGB_8888)
+            val sampledBitmap = decodeSampledBitmap(rawFile.absolutePath, MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION)
+                ?: throw IllegalArgumentException("Không thể giải mã file ảnh từ máy ảnh: ${rawFile.name}")
 
-        // 3. Compress full image to WebP
-        saveBitmapAsWebp(rotatedBitmap, targetFullFile, WEBP_QUALITY)
+            val rotatedBitmap = rotateBitmapIfRequired(sampledBitmap, orientation)
 
-        // 4. Create miniature thumbnail for Widget & Grid view
-        val thumbBitmap = Bitmap.createScaledBitmap(
-            rotatedBitmap,
-            THUMBNAIL_DIMENSION,
-            (THUMBNAIL_DIMENSION * rotatedBitmap.height) / rotatedBitmap.width,
-            true
-        )
-        saveBitmapAsWebp(thumbBitmap, targetThumbFile, 70)
+            // 3. Clamp long edge to exactly 1280px if long edge > 1280 (preserving aspect ratio)
+            val maxEdge = max(rotatedBitmap.width, rotatedBitmap.height)
+            val finalFullBitmap = if (maxEdge > MAX_IMAGE_DIMENSION) {
+                val scale = MAX_IMAGE_DIMENSION.toFloat() / maxEdge
+                val targetWidth = (rotatedBitmap.width * scale).toInt()
+                val targetHeight = (rotatedBitmap.height * scale).toInt()
+                Bitmap.createScaledBitmap(rotatedBitmap, targetWidth, targetHeight, true)
+            } else {
+                rotatedBitmap
+            }
 
-        // Clean up Bitmaps to free native memory immediately
-        if (rotatedBitmap != sampledBitmap) {
+            // 4. Compress clamped full image to WebP
+            saveBitmapAsWebp(finalFullBitmap, targetFullFile, WEBP_QUALITY)
+
+            // 5. Create miniature 360px thumbnail for Widget & Grid view
+            val thumbBitmap = Bitmap.createScaledBitmap(
+                finalFullBitmap,
+                THUMBNAIL_DIMENSION,
+                (THUMBNAIL_DIMENSION * finalFullBitmap.height) / finalFullBitmap.width,
+                true
+            )
+            saveBitmapAsWebp(thumbBitmap, targetThumbFile, 70)
+
+            // Clean up Bitmaps to free native memory immediately
+            if (finalFullBitmap != rotatedBitmap) {
+                finalFullBitmap.recycle()
+            }
+            if (rotatedBitmap != sampledBitmap) {
+                rotatedBitmap.recycle()
+            }
             sampledBitmap.recycle()
+            thumbBitmap.recycle()
+
+            CompressedResult(
+                fullImagePath = targetFullFile.absolutePath,
+                thumbnailPath = targetThumbFile.absolutePath
+            )
+        } finally {
+            // Raw camera file is always cleaned up even on corrupt/null decode
+            rawFile.delete()
         }
-        rotatedBitmap.recycle()
-        thumbBitmap.recycle()
-
-        // Delete raw camera file
-        rawFile.delete()
-
-        CompressedResult(
-            fullImagePath = targetFullFile.absolutePath,
-            thumbnailPath = targetThumbFile.absolutePath
-        )
     }
 
-    private fun decodeSampledBitmap(filePath: String, reqWidth: Int, reqHeight: Int): Bitmap {
+    private fun decodeSampledBitmap(filePath: String, reqWidth: Int, reqHeight: Int): Bitmap? {
         val options = BitmapFactory.Options().apply {
             inJustDecodeBounds = true
         }
         BitmapFactory.decodeFile(filePath, options)
+        if (options.outWidth <= 0 || options.outHeight <= 0) {
+            return null
+        }
 
         // Calculate inSampleSize (power of 2)
         options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight)
         options.inJustDecodeBounds = false
-        options.inPreferredConfig = Bitmap.Config.RGB_565 // 16-bit color consumes 50% less RAM than ARGB_8888
+        options.inPreferredConfig = Bitmap.Config.ARGB_8888
 
         return BitmapFactory.decodeFile(filePath, options)
     }
