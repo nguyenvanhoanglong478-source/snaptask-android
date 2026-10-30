@@ -13,14 +13,6 @@ object FileUtils {
         return dir
     }
 
-    fun getThumbnailsDirectory(context: Context): File {
-        val dir = File(context.filesDir, "thumbnails")
-        if (!dir.exists()) {
-            dir.mkdirs()
-        }
-        return dir
-    }
-
     fun deleteFile(path: String?) {
         if (path.isNullOrBlank()) return
         try {
@@ -40,6 +32,10 @@ object FileUtils {
                 if (System.currentTimeMillis() - file.lastModified() > 86400000) { // 24 hours
                     file.delete()
                 }
+            }
+            val legacyThumbs = File(context.filesDir, "thumbnails")
+            if (legacyThumbs.exists()) {
+                legacyThumbs.deleteRecursively()
             }
         } catch (_: Exception) {
         }

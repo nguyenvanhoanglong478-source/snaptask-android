@@ -20,23 +20,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Alarm
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.EditNote
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.outlined.Circle
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.PushPin
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -52,7 +39,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -62,7 +48,7 @@ import com.snaptask.app.domain.model.SubTask
 import com.snaptask.app.domain.model.Task
 import com.snaptask.app.domain.model.TaskPriority
 import com.snaptask.app.ui.screens.editor.ReminderPickerDialog
-import androidx.compose.material3.MaterialTheme
+import com.snaptask.app.ui.theme.SnapTaskIcons
 import com.snaptask.app.ui.theme.snapColors
 import com.snaptask.app.util.DateTimeUtils
 
@@ -129,7 +115,7 @@ fun QuickNoteBottomSheet(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.EditNote,
+                            imageVector = SnapTaskIcons.EditPen,
                             contentDescription = null,
                             tint = colors.onFlash,
                             modifier = Modifier.size(18.dp)
@@ -152,7 +138,7 @@ fun QuickNoteBottomSheet(
                         .border(1.dp, colors.border, CircleShape)
                 ) {
                     Icon(
-                        Icons.Filled.Close,
+                        SnapTaskIcons.Close,
                         contentDescription = "Đóng",
                         tint = colors.textSecondary,
                         modifier = Modifier.size(16.dp)
@@ -237,7 +223,7 @@ fun QuickNoteBottomSheet(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = if (subtask.isDone) Icons.Filled.Check else Icons.Outlined.Circle,
+                        imageVector = if (subtask.isDone) SnapTaskIcons.Check else SnapTaskIcons.CircleOutline,
                         contentDescription = null,
                         tint = if (subtask.isDone) colors.done else colors.textMuted,
                         modifier = Modifier
@@ -262,7 +248,7 @@ fun QuickNoteBottomSheet(
                         modifier = Modifier.size(24.dp)
                     ) {
                         Icon(
-                            Icons.Outlined.Delete,
+                            SnapTaskIcons.Trash,
                             contentDescription = "Xoá",
                             tint = colors.textMuted,
                             modifier = Modifier.size(16.dp)
@@ -307,7 +293,7 @@ fun QuickNoteBottomSheet(
                         .size(44.dp)
                         .background(colors.flash, RoundedCornerShape(10.dp))
                 ) {
-                    Icon(Icons.Filled.Add, contentDescription = "Thêm", tint = colors.onFlash)
+                    Icon(SnapTaskIcons.Plus, contentDescription = "Thêm", tint = colors.onFlash)
                 }
             }
 
@@ -334,7 +320,7 @@ fun QuickNoteBottomSheet(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                Icons.Filled.Folder,
+                                SnapTaskIcons.Folder,
                                 contentDescription = null,
                                 tint = if (isSelected) colors.onFlash else colors.textSecondary,
                                 modifier = Modifier.size(14.dp)
@@ -416,7 +402,7 @@ fun QuickNoteBottomSheet(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            imageVector = if (reminderType == "ALARM") Icons.Filled.Alarm else Icons.Filled.Notifications,
+                            imageVector = if (reminderType == "ALARM") SnapTaskIcons.AlarmClock else SnapTaskIcons.Bell,
                             contentDescription = null,
                             tint = if (reminderTime != null) colors.onFlash else colors.textSecondary,
                             modifier = Modifier.size(16.dp)
@@ -434,7 +420,7 @@ fun QuickNoteBottomSheet(
                 // Pin To Widget Switch
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = if (isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+                        imageVector = SnapTaskIcons.Pin,
                         contentDescription = null,
                         tint = if (isPinned) colors.text else colors.textMuted,
                         modifier = Modifier.size(16.dp)

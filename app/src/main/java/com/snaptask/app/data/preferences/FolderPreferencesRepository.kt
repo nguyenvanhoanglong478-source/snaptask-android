@@ -50,10 +50,7 @@ data class FolderConfig(
     val smartUrgentEnabled: Boolean,
     val smartProofEnabled: Boolean,
     val repeatByTaskId: Map<Long, RepeatCadence>
-) {
-    val defaultFolder: CustomFolder?
-        get() = folders.firstOrNull { it.isDefault } ?: folders.firstOrNull()
-}
+)
 
 // Persists custom folders, smart folder switches, and repeat cadence without altering Room schema v3.
 class FolderPreferencesRepository(context: Context) {

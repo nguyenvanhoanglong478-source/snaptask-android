@@ -99,8 +99,5 @@ object TaskReminderScheduler {
         // Dismiss active notifications for this task
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
         notificationManager?.cancel(taskId.toInt())
-
-        // Stop any active alarm audio/vibration
-        AlarmSoundPlayer.stop()
     }
 }

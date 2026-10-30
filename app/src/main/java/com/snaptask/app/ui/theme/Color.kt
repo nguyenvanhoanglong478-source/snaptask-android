@@ -4,7 +4,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
 data class SnapTaskColors(
@@ -30,9 +29,7 @@ data class SnapTaskColors(
     val hm2: Color,
     val hm3: Color,
     val hm4: Color,
-    val hmBorder: Color,
-    val scrim: Brush,
-    val glass: Color
+    val hmBorder: Color
 )
 
 // WCAG AA verified tokens for Snap Pop dark theme (#0F0F0E base, #D4FF3A Electric Lime accent).
@@ -59,15 +56,7 @@ val DarkSnapTaskColors = SnapTaskColors(
     hm2 = Color(0xFF6C851E),
     hm3 = Color(0xFFA2CB2B),
     hm4 = Color(0xFFD4FF3A),
-    hmBorder = Color(0x12FFFFFF),
-    scrim = Brush.verticalGradient(
-        colors = listOf(
-            Color.Transparent,
-            Color(0x660F0F0E),
-            Color(0xE60F0F0E)
-        )
-    ),
-    glass = Color(0xEB1A1A18)
+    hmBorder = Color(0x12FFFFFF)
 )
 
 // WCAG AA verified tokens for Snap Pop light theme (#F3F2EC warm paper, dark ink heatmap ramp).
@@ -94,15 +83,7 @@ val LightSnapTaskColors = SnapTaskColors(
     hm2 = Color(0xFFAEE02B),
     hm3 = Color(0xFF73A600),
     hm4 = Color(0xFF3D5E00),
-    hmBorder = Color(0x24141413),
-    scrim = Brush.verticalGradient(
-        colors = listOf(
-            Color.Transparent,
-            Color(0x66141413),
-            Color(0xE6141413)
-        )
-    ),
-    glass = Color(0xF0FFFFFF)
+    hmBorder = Color(0x24141413)
 )
 
 val LocalSnapTaskColors = staticCompositionLocalOf { DarkSnapTaskColors }

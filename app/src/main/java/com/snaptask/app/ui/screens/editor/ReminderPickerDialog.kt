@@ -18,11 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Alarm
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -46,6 +41,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.snaptask.app.ui.theme.SnapTaskIcons
 import com.snaptask.app.ui.theme.snapColors
 import com.snaptask.app.util.DateTimeUtils
 import com.snaptask.app.util.NotificationPermissionHelper
@@ -94,7 +90,6 @@ fun ReminderPickerDialog(
         DatePickerDialog(
             context,
             { _, year, month, dayOfMonth ->
-                val timeCal = Calendar.getInstance()
                 TimePickerDialog(
                     context,
                     { _, hourOfDay, minute ->
@@ -145,7 +140,7 @@ fun ReminderPickerDialog(
                     fontWeight = FontWeight.Bold
                 )
                 IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Filled.Close, contentDescription = "Đóng", tint = colors.textSecondary)
+                    Icon(SnapTaskIcons.Close, contentDescription = "Đóng", tint = colors.textSecondary)
                 }
             }
 
@@ -198,7 +193,7 @@ fun ReminderPickerDialog(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            Icons.Filled.Notifications,
+                            SnapTaskIcons.Bell,
                             contentDescription = "Notif",
                             tint = if (isNotif) colors.onFlash else colors.text,
                             modifier = Modifier.size(18.dp)
@@ -227,7 +222,7 @@ fun ReminderPickerDialog(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            Icons.Filled.Alarm,
+                            SnapTaskIcons.AlarmClock,
                             contentDescription = "Alarm",
                             tint = if (isAlarm) colors.onFlash else colors.text,
                             modifier = Modifier.size(18.dp)
@@ -361,7 +356,7 @@ fun ReminderPickerDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.CalendarMonth, contentDescription = "Lịch", tint = colors.textSecondary, modifier = Modifier.size(18.dp))
+                        Icon(SnapTaskIcons.Calendar, contentDescription = "Lịch", tint = colors.textSecondary, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = if (selectedTime != null) "Thời gian: ${DateTimeUtils.formatDateTime(selectedTime!!)}" else "Tự chọn ngày & giờ...",

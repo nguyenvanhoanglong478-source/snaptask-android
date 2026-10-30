@@ -347,24 +347,6 @@ object SnapTaskIcons {
         lineTo(18f, 9.5f)
     }
 
-    val Search = createIcon("Search") {
-        addCircle(10.8f, 10.8f, 6.6f)
-        moveTo(15.6f, 15.6f)
-        lineTo(20.2f, 20.2f)
-    }
-
-    val GridBento = createIcon("GridBento") {
-        addRoundedRect(4f, 4f, 5.5f, 5.5f, 1.4f)
-        addRoundedRect(14.5f, 4f, 5.5f, 5.5f, 1.4f)
-        addRoundedRect(4f, 14.5f, 5.5f, 5.5f, 1.4f)
-        addRoundedRect(14.5f, 14.5f, 5.5f, 5.5f, 1.4f)
-    }
-
-    val ListFeed = createIcon("ListFeed") {
-        addRoundedRect(4f, 5f, 16f, 5f, 1.5f)
-        addRoundedRect(4f, 14f, 16f, 5f, 1.5f)
-    }
-
     val Pin = createIcon("Pin") {
         moveTo(9f, 4f); lineTo(15f, 4f)
         moveTo(12f, 4f); lineTo(12f, 11f)
@@ -420,6 +402,39 @@ object SnapTaskIcons {
         moveTo(19.5f, 4.5f); lineTo(17.2f, 6.5f)
     }
 
+    val Bell = createIcon("Bell") {
+        moveTo(6f, 10f)
+        arcTo(6f, 6f, 0f, false, true, 18f, 10f)
+        lineTo(18f, 14.5f)
+        lineTo(20f, 17f)
+        lineTo(4f, 17f)
+        lineTo(6f, 14.5f)
+        close()
+        moveTo(10f, 17.5f)
+        arcTo(2.2f, 2.2f, 0f, false, false, 14f, 17.5f)
+    }
+
+    val Camera = createIcon("Camera") {
+        moveTo(3.5f, 9f)
+        arcTo(2f, 2f, 0f, false, true, 5.5f, 7f)
+        lineTo(8f, 7f)
+        lineTo(9.6f, 4.8f)
+        lineTo(14.4f, 4.8f)
+        lineTo(16f, 7f)
+        lineTo(18.5f, 7f)
+        arcTo(2f, 2f, 0f, false, true, 20.5f, 9f)
+        lineTo(20.5f, 17.5f)
+        arcTo(2f, 2f, 0f, false, true, 18.5f, 19.5f)
+        lineTo(5.5f, 19.5f)
+        arcTo(2f, 2f, 0f, false, true, 3.5f, 17.5f)
+        close()
+        addCircle(12f, 13.2f, 3.6f)
+    }
+
+    val CircleOutline = createIcon("CircleOutline") {
+        addCircle(12f, 12f, 8.5f)
+    }
+
     val FlagPriority = createIcon("FlagPriority") {
         moveTo(5.5f, 20.5f)
         lineTo(5.5f, 4f)
@@ -449,12 +464,6 @@ object SnapTaskIcons {
     val Plus = createIcon("Plus", strokeWidth = 2.2f) {
         moveTo(12f, 5f); lineTo(12f, 19f)
         moveTo(5f, 12f); lineTo(19f, 12f)
-    }
-
-    val Sort = createIcon("Sort") {
-        moveTo(4f, 6.5f); lineTo(20f, 6.5f)
-        moveTo(4f, 12f); lineTo(15f, 12f)
-        moveTo(4f, 17.5f); lineTo(10f, 17.5f)
     }
 
     fun folderIconByKey(key: String): ImageVector = when (key) {

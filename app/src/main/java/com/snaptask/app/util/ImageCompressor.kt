@@ -15,26 +15,18 @@ import kotlin.math.max
 object ImageCompressor {
 
     private const val MAX_IMAGE_DIMENSION = 1280
-    private const val THUMBNAIL_DIMENSION = 360
     private const val WEBP_QUALITY = 78
-
-    data class CompressedResult(
-        val fullImagePath: String,
-        val thumbnailPath: String
-    )
 
     /**
      * Compresses and optimizes a raw photo file for low-end Android devices.
-     * Guarantees max edge <= 1280px in ARGB_8888 and a 360px thumbnail.
+     * Guarantees max edge <= 1280px in ARGB_8888.
      */
-    suspend fun compressPhoto(context: Context, rawFile: File): CompressedResult = withContext(Dispatchers.IO) {
+    suspend fun compressPhoto(context: Context, rawFile: File): String = withContext(Dispatchers.IO) {
         try {
             val snapsDir = FileUtils.getSnapsDirectory(context)
-            val thumbsDir = FileUtils.getThumbnailsDirectory(context)
 
             val timestamp = System.currentTimeMillis()
             val targetFullFile = File(snapsDir, "snap_$timestamp.webp")
-            val targetThumbFile = File(thumbsDir, "thumb_$timestamp.webp")
 
             // 1. Read EXIF orientation
             val orientation = readExifOrientation(rawFile.absolutePath)
@@ -60,31 +52,18 @@ object ImageCompressor {
             // 5. Compress full image to WebP
             saveBitmapAsWebp(finalFullBitmap, targetFullFile, WEBP_QUALITY)
 
-            // 6. Create miniature 360px thumbnail for Widget & Grid view
-            val thumbBitmap = Bitmap.createScaledBitmap(
-                finalFullBitmap,
-                THUMBNAIL_DIMENSION,
-                (THUMBNAIL_DIMENSION * finalFullBitmap.height) / finalFullBitmap.width,
-                true
-            )
-            saveBitmapAsWebp(thumbBitmap, targetThumbFile, 70)
-
             // Clean up Bitmaps to free native memory immediately without double-recycling
             val bitmapsToRecycle = LinkedHashSet<Bitmap>()
             bitmapsToRecycle.add(sampledBitmap)
             bitmapsToRecycle.add(scaledBitmap)
             bitmapsToRecycle.add(finalFullBitmap)
-            bitmapsToRecycle.add(thumbBitmap)
             for (bmp in bitmapsToRecycle) {
                 if (!bmp.isRecycled) {
                     bmp.recycle()
                 }
             }
 
-            CompressedResult(
-                fullImagePath = targetFullFile.absolutePath,
-                thumbnailPath = targetThumbFile.absolutePath
-            )
+            targetFullFile.absolutePath
         } finally {
             // Raw camera file is always cleaned up even on corrupt/null decode
             rawFile.delete()

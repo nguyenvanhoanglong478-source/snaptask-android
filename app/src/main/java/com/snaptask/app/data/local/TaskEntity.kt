@@ -26,12 +26,6 @@ data class TaskEntity(
     val reminderTime: Long? = null,
     val reminderType: String = "NONE"
 ) {
-    // Backwards Compatibility Accessors
-    val thumbnailPath: String get() = beforeImageUri
-    val imagePath: String get() = beforeImageUri
-    val status: String get() = if (isCompleted) "DONE" else "TODO"
-    val priorityInt: Int get() = when (priority) { "HIGH" -> 2; "MEDIUM" -> 1; else -> 0 }
-
     fun toDomain(): Task {
         return Task(
             id = id,

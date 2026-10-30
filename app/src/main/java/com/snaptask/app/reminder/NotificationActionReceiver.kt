@@ -31,9 +31,6 @@ class NotificationActionReceiver : BroadcastReceiver() {
 
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        // Always silence any ringing alarm sound/vibration immediately
-        AlarmSoundPlayer.stop()
-
         when (intent.action) {
             ACTION_STOP_ALARM -> {
                 notificationManager.cancel(taskId.toInt())

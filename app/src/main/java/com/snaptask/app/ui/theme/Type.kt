@@ -18,11 +18,6 @@ val BeVietnamPro = FontFamily(
     Font(R.font.be_vietnam_pro_bold, FontWeight.Black)
 )
 
-val Bricolage = FontFamily(
-    Font(R.font.bricolage_grotesque_semibold, FontWeight.SemiBold),
-    Font(R.font.bricolage_grotesque_extrabold, FontWeight.ExtraBold)
-)
-
 val SnapTaskTypography = Typography(
     headlineLarge = TextStyle(
         fontFamily = BeVietnamPro,

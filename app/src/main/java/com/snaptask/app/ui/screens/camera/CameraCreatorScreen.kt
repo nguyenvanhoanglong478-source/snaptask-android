@@ -356,8 +356,7 @@ fun CameraCreatorScreen(
 
                             scope.launch {
                                 try {
-                                    val compressed = ImageCompressor.compressPhoto(context, rawFile)
-                                    capturedPhotoPath = compressed.fullImagePath
+                                    capturedPhotoPath = ImageCompressor.compressPhoto(context, rawFile)
                                 } catch (_: Exception) {
                                 } finally {
                                     isCapturing = false

@@ -43,7 +43,6 @@ import com.snaptask.app.SnapTaskApplication
 import com.snaptask.app.data.preferences.FolderPreferencesRepository
 import com.snaptask.app.data.preferences.RepeatCadence
 import com.snaptask.app.domain.model.Task
-import com.snaptask.app.reminder.AlarmSoundPlayer
 import com.snaptask.app.reminder.TaskReminderScheduler
 import com.snaptask.app.ui.components.DockTab
 import com.snaptask.app.ui.screens.board.BoardScreen
@@ -81,15 +80,9 @@ class MainActivity : ComponentActivity() {
 
     private val pendingTaskIdState = mutableStateOf<Long?>(null)
 
-    override fun onResume() {
-        super.onResume()
-        AlarmSoundPlayer.stop()
-    }
-
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         setIntent(intent)
-        AlarmSoundPlayer.stop()
         extractTaskId(intent)
     }
 
@@ -259,7 +252,6 @@ class MainActivity : ComponentActivity() {
                     }
 
                     LaunchedEffect(Unit) {
-                        AlarmSoundPlayer.stop()
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                             if (!NotificationPermissionHelper.areNotificationsEnabled(this@MainActivity)) {
                                 notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -413,7 +405,7 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onToggleTaskStatus = { task ->
                                     scope.launch {
-                                        repository.toggleTaskStatus(task.id, task.status)
+                                        repository.toggleTaskStatus(task.id)
                                         updateWidgets()
                                     }
                                 },
@@ -458,7 +450,7 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onToggleTask = { task ->
                                     scope.launch {
-                                        repository.toggleTaskStatus(task.id, task.status)
+                                        repository.toggleTaskStatus(task.id)
                                         updateWidgets()
                                     }
                                 },
@@ -531,7 +523,7 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onToggleTaskStatus = { task ->
                                     scope.launch {
-                                        repository.toggleTaskStatus(task.id, task.status)
+                                        repository.toggleTaskStatus(task.id)
                                         updateWidgets()
                                     }
                                 },

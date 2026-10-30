@@ -14,9 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -42,6 +39,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.snaptask.app.domain.model.Task
+import com.snaptask.app.ui.theme.SnapTaskIcons
 import com.snaptask.app.ui.theme.snapColors
 import java.io.File
 
@@ -85,7 +83,7 @@ fun CompletionProofBottomSheet(
                     onClick = onDismissRequest,
                     modifier = Modifier.size(32.dp)
                 ) {
-                    Icon(Icons.Filled.Close, contentDescription = "Đóng", tint = colors.textSecondary)
+                    Icon(SnapTaskIcons.Close, contentDescription = "Đóng", tint = colors.textSecondary)
                 }
             }
 
@@ -121,7 +119,7 @@ fun CompletionProofBottomSheet(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.CameraAlt,
+                            imageVector = SnapTaskIcons.Camera,
                             contentDescription = null,
                             tint = colors.textMuted,
                             modifier = Modifier.size(22.dp)
