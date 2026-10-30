@@ -19,10 +19,10 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun ViewfinderCornerBrackets(
     modifier: Modifier = Modifier.fillMaxSize(),
-    color: Color = Color.White.copy(alpha = 0.92f),
-    strokeWidth: Dp = 3.dp,
-    length: Dp = 26.dp,
-    cornerRadius: Dp = 6.dp
+    color: Color = Color(0xFFF5F1E8),
+    strokeWidth: Dp = 5.dp,
+    length: Dp = 49.dp,
+    cornerRadius: Dp = 20.dp
 ) {
     Canvas(modifier = modifier) {
         val stroke = strokeWidth.toPx()
