@@ -2,7 +2,7 @@ package com.snaptask.app.ui.screens.detail
 
 import android.content.Intent
 import android.widget.Toast
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,9 +19,11 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -30,9 +32,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CompareArrows
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
@@ -47,7 +47,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -59,21 +58,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.tooling.preview.Preview as ComposePreview
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.snaptask.app.data.local.Converters
@@ -81,10 +84,12 @@ import com.snaptask.app.domain.model.SubTask
 import com.snaptask.app.domain.model.Task
 import com.snaptask.app.domain.model.TaskPriority
 import com.snaptask.app.ui.screens.editor.ReminderPickerDialog
+import com.snaptask.app.ui.theme.SnapTaskTheme
 import com.snaptask.app.ui.theme.snapColors
 import com.snaptask.app.util.DateTimeUtils
 import java.io.File
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
@@ -113,6 +118,18 @@ private class SplitRightClipShape(private val fraction: Float) : Shape {
         }
         return Outline.Generic(path)
     }
+}
+
+private fun formatDueDate(reminderTime: Long?): String {
+    if (reminderTime == null) return "Hôm nay"
+    val cal = Calendar.getInstance()
+    val curYear = cal.get(Calendar.YEAR)
+    cal.timeInMillis = reminderTime
+    val remYear = cal.get(Calendar.YEAR)
+
+    val pattern = if (curYear == remYear) "dd/MM · HH:mm" else "dd/MM/yyyy · HH:mm"
+    val formatted = SimpleDateFormat(pattern, Locale.getDefault()).format(Date(reminderTime))
+    return "Hạn $formatted"
 }
 
 @Composable
@@ -172,10 +189,19 @@ fun TaskDetailScreen(
         context.startActivity(Intent.createChooser(sendIntent, "Chia sẻ Before / After"))
     }
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        containerColor = colors.bg,
-        topBar = {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(colors.bg)
+    ) {
+        // Main Scrollable Content
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .statusBarsPadding()
+                .padding(bottom = 110.dp) // Cushion so bottom docked bar doesn't overlap
+        ) {
             // 1. Top Bar: [<] on Left, Status Pill in Center, [...] on Right (Page 6)
             Row(
                 modifier = Modifier
@@ -320,392 +346,508 @@ fun TaskDetailScreen(
                     }
                 }
             }
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(scrollState)
-                .padding(horizontal = 18.dp, vertical = 8.dp)
-        ) {
-            // 2. Title & Timestamp Meta (Page 6)
-            if (isEditing) {
-                OutlinedTextField(
-                    value = currentTitle,
-                    onValueChange = { currentTitle = it },
-                    label = { Text("Tiêu đề công việc", color = colors.textSecondary) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = colors.text,
-                        unfocusedTextColor = colors.text,
-                        focusedContainerColor = colors.elevated,
-                        unfocusedContainerColor = colors.elevated,
-                        focusedBorderColor = colors.flash,
-                        unfocusedBorderColor = colors.border
+
+            // Body container
+            Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 4.dp)) {
+                // 2. Title & Timestamp Meta
+                if (isEditing) {
+                    OutlinedTextField(
+                        value = currentTitle,
+                        onValueChange = { currentTitle = it },
+                        label = { Text("Tiêu đề công việc", color = colors.textSecondary) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = colors.text,
+                            unfocusedTextColor = colors.text,
+                            focusedContainerColor = colors.elevated,
+                            unfocusedContainerColor = colors.elevated,
+                            focusedBorderColor = colors.flash,
+                            unfocusedBorderColor = colors.border
+                        )
                     )
-                )
-            } else {
-                Text(
-                    text = currentTitle,
-                    color = colors.text,
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    lineHeight = 34.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            val timeMeta = if (isCompleted && task.completedAt != null) {
-                val startStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(task.createdAt))
-                val endStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(task.completedAt))
-                val durationMin = maxOf(1, ((task.completedAt - task.createdAt) / 60000).toInt())
-                "Bắt đầu $startStr · Xong $endStr · mất $durationMin phút"
-            } else if (task.reminderTime != null) {
-                "Hạn ${DateTimeUtils.formatDateTime(task.reminderTime)} · ${task.folderName}"
-            } else "Hôm nay · ${task.folderName}"
-
-            Text(
-                text = timeMeta,
-                color = colors.textSecondary,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 3. Before / After Interactive Split Photo Comparison View (Page 6)
-            if (hasBefore && hasAfter) {
-                var splitFraction by remember { mutableFloatStateOf(0.5f) }
-
-                BoxWithConstraints(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(260.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                        .border(1.dp, colors.border, RoundedCornerShape(20.dp))
-                        .background(colors.surface)
-                ) {
-                    val totalWidth = maxWidth
-                    val widthPx = constraints.maxWidth.toFloat()
-                    val splitOffset = totalWidth * splitFraction
-
-                    // Left Image: Before Photo clipped to splitFraction
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(SplitLeftClipShape(splitFraction))
-                    ) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(context).data(beforeFile).crossfade(true).build(),
-                            contentDescription = "Trước",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-                    }
-
-                    // Right Image: After Photo clipped from splitFraction to end
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(SplitRightClipShape(splitFraction))
-                    ) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(context).data(afterFile).crossfade(true).build(),
-                            contentDescription = "Sau",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-                    }
-
-                    // Pill TRƯỚC (Top-Left)
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(12.dp)
-                            .background(Color(0xD9121110), RoundedCornerShape(8.dp))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(text = "TRƯỚC", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
-
-                    // Pill SAU (Top-Right: Flash Yellow background, #17140A text as in Page 6)
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(12.dp)
-                            .background(colors.flash, RoundedCornerShape(8.dp))
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
-                    ) {
-                        Text(text = "SAU", color = colors.onFlash, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
-
-                    // Vertical Divider Line
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .offset(x = splitOffset - 1.dp)
-                            .width(2.dp)
-                            .fillMaxHeight()
-                            .background(Color.White.copy(alpha = 0.9f))
+                } else {
+                    Text(
+                        text = currentTitle,
+                        color = colors.text,
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        lineHeight = 34.sp
                     )
-
-                    // Interactive Draggable Split Handle Icon (< >)
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.CenterStart)
-                            .offset(x = splitOffset - 18.dp)
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(Color.White)
-                            .border(1.5.dp, colors.border, CircleShape)
-                            .pointerInput(Unit) {
-                                detectHorizontalDragGestures { change, dragAmount ->
-                                    change.consume()
-                                    splitFraction = (splitFraction + dragAmount / widthPx).coerceIn(0.06f, 0.94f)
-                                }
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.CompareArrows,
-                            contentDescription = "Kéo để so sánh Trước và Sau",
-                            tint = Color(0xFF17140A),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
                 }
-            } else if (hasBefore) {
-                // Only Before Photo Present -> Prompt for After photo
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(240.dp)
-                        .clickable { onOpenAfterCamera(task) },
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = colors.surface),
-                    border = BorderStroke(1.dp, colors.border)
-                ) {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(context).data(beforeFile).crossfade(true).build(),
-                            contentDescription = "Trước",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                val timeMeta = if (isCompleted && task.completedAt != null) {
+                    val startStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(task.createdAt))
+                    val endStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(task.completedAt))
+                    val durationMin = maxOf(1, ((task.completedAt - task.createdAt) / 60000).toInt())
+                    "Bắt đầu $startStr · Xong $endStr · mất $durationMin phút"
+                } else if (task.reminderTime != null) {
+                    "${formatDueDate(task.reminderTime)} · ${task.folderName}"
+                } else "Hôm nay · ${task.folderName}"
+
+                Text(
+                    text = timeMeta,
+                    color = colors.textSecondary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 3. Before / After Interactive Split Photo Comparison View (Page 6)
+                // C1: Khung Before/After: aspectRatio(350f / 300f), bo 24.
+                if (hasBefore && hasAfter) {
+                    var splitFraction by remember { mutableFloatStateOf(0.5f) }
+
+                    BoxWithConstraints(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(350f / 300f)
+                            .clip(RoundedCornerShape(24.dp))
+                            .border(1.dp, colors.border, RoundedCornerShape(24.dp))
+                            .background(colors.surface)
+                    ) {
+                        val totalWidth = maxWidth
+                        val widthPx = constraints.maxWidth.toFloat()
+                        val splitOffset = totalWidth * splitFraction
+
+                        // Left Image: Before Photo clipped to splitFraction
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(SplitLeftClipShape(splitFraction))
+                        ) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context).data(beforeFile).crossfade(true).build(),
+                                contentDescription = "Trước",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+
+                        // Right Image: After Photo clipped from splitFraction to end
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(SplitRightClipShape(splitFraction))
+                        ) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context).data(afterFile).crossfade(true).build(),
+                                contentDescription = "Sau",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+
+                        // C2 & C3: Vạch chia và tay nắm vẽ TRƯỚC hai chip
+                        // Vạch chia rộng 3dp màu #F5F1E8
                         Box(
                             modifier = Modifier
                                 .align(Alignment.TopStart)
-                                .padding(12.dp)
-                                .background(Color(0xD9121110), RoundedCornerShape(8.dp))
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text(text = "TRƯỚC", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-
-                        // Bottom CTA pill over image
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(bottom = 14.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(colors.flash)
-                                .clickable { onOpenAfterCamera(task) }
-                                .padding(horizontal = 14.dp, vertical = 8.dp)
-                        ) {
-                            Text(
-                                text = "Chụp ảnh kết quả (SAU)",
-                                color = colors.onFlash,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // 4. Caption Quote Box: “Xong rồi, giờ có chỗ đặt laptop thoải mái.” (Page 6)
-            val quoteText = currentCompletionCaption.ifBlank {
-                if (isCompleted) "“Xong rồi, giờ có chỗ đặt laptop thoải mái.”" else task.description
-            }
-            if (quoteText.isNotBlank()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(colors.elevated)
-                        .border(1.dp, colors.border, RoundedCornerShape(14.dp))
-                        .padding(14.dp)
-                ) {
-                    Text(
-                        text = if (quoteText.startsWith("“")) quoteText else "“$quoteText”",
-                        color = colors.text,
-                        fontSize = 14.sp,
-                        fontStyle = FontStyle.Italic,
-                        lineHeight = 20.sp
-                    )
-                }
-                Spacer(modifier = Modifier.height(14.dp))
-            }
-
-            // 5. Metadata Tags Row: [Cao] [Nhà] [Hạn 29/10 · 18:00] (Page 6)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Priority Pill
-                val priorityBg = when (task.priorityEnum) {
-                    TaskPriority.HIGH -> colors.urgent.copy(alpha = 0.2f)
-                    TaskPriority.MEDIUM -> colors.warning.copy(alpha = 0.2f)
-                    TaskPriority.LOW -> colors.elevated
-                }
-                val priorityText = when (task.priorityEnum) {
-                    TaskPriority.HIGH -> colors.urgent
-                    TaskPriority.MEDIUM -> colors.warning
-                    TaskPriority.LOW -> colors.textSecondary
-                }
-                Box(
-                    modifier = Modifier
-                        .background(priorityBg, RoundedCornerShape(8.dp))
-                        .padding(horizontal = 9.dp, vertical = 4.dp)
-                ) {
-                    Text(text = task.priorityEnum.label, color = priorityText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-
-                // Folder Pill
-                Box(
-                    modifier = Modifier
-                        .background(colors.elevated, RoundedCornerShape(8.dp))
-                        .padding(horizontal = 9.dp, vertical = 4.dp)
-                ) {
-                    Text(text = task.folderName, color = colors.text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-
-                // Due Date Pill
-                val dueStr = if (task.reminderTime != null) {
-                    "Hạn ${DateTimeUtils.formatDateTime(task.reminderTime)}"
-                } else "Hôm nay"
-                Box(
-                    modifier = Modifier
-                        .background(colors.elevated, RoundedCornerShape(8.dp))
-                        .padding(horizontal = 9.dp, vertical = 4.dp)
-                ) {
-                    Text(text = dueStr, color = colors.textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(18.dp))
-
-            // 6. Subtasks Checklist (Page 6)
-            if (subtasks.isNotEmpty() || isEditing) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    subtasks.forEachIndexed { index, st ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    val updated = subtasks.toMutableList()
-                                    updated[index] = st.copy(isDone = !st.isDone)
-                                    subtasks = updated
-                                    onSaveTask(task.copy(subTasksJson = converters.fromSubTaskList(updated)))
-                                }
-                                .padding(vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .clip(CircleShape)
-                                    .background(if (st.isDone) colors.done else colors.elevated)
-                                    .border(1.dp, if (st.isDone) colors.done else colors.border, CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (st.isDone) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Check,
-                                        contentDescription = null,
-                                        tint = Color(0xFF17140A),
-                                        modifier = Modifier.size(15.dp)
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = st.title,
-                                color = if (st.isDone) colors.textMuted else colors.text,
-                                textDecoration = if (st.isDone) TextDecoration.LineThrough else TextDecoration.None,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-
-                    // Add Subtask Row if editing or has checklist
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        OutlinedTextField(
-                            value = newSubtaskText,
-                            onValueChange = { newSubtaskText = it },
-                            placeholder = { Text("Thêm bước nhỏ...", color = colors.textMuted, fontSize = 13.sp) },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = colors.text,
-                                unfocusedTextColor = colors.text,
-                                focusedContainerColor = colors.elevated,
-                                unfocusedContainerColor = colors.elevated,
-                                focusedBorderColor = colors.flash,
-                                unfocusedBorderColor = colors.border
-                            )
+                                .offset(x = splitOffset - 1.5.dp)
+                                .width(3.dp)
+                                .fillMaxHeight()
+                                .background(Color(0xFFF5F1E8))
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+
+                        // Tay nắm: hình tròn đặc 36dp màu #F5F1E8, KHÔNG viền đen, bên trong hai chevron "<" ">" 20dp màu #17140A
                         Box(
                             modifier = Modifier
-                                .size(44.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(colors.flash)
-                                .clickable {
-                                    if (newSubtaskText.isNotBlank()) {
-                                        val updated = subtasks + SubTask(UUID.randomUUID().toString(), newSubtaskText.trim(), false)
-                                        subtasks = updated
-                                        newSubtaskText = ""
-                                        onSaveTask(task.copy(subTasksJson = converters.fromSubTaskList(updated)))
+                                .align(Alignment.CenterStart)
+                                .offset(x = splitOffset - 18.dp)
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFF5F1E8))
+                                .pointerInput(Unit) {
+                                    detectHorizontalDragGestures { change, dragAmount ->
+                                        change.consume()
+                                        splitFraction = (splitFraction + dragAmount / widthPx).coerceIn(0.06f, 0.94f)
                                     }
                                 },
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Filled.Add, contentDescription = "Thêm", tint = colors.onFlash, modifier = Modifier.size(20.dp))
+                            // Hai chevron "<" ">" 20dp vẽ bằng Canvas vector
+                            Canvas(modifier = Modifier.size(20.dp)) {
+                                val stroke = 2.2.dp.toPx()
+                                val chevColor = Color(0xFF17140A)
+
+                                // Left chevron <
+                                val pathLeft = Path().apply {
+                                    moveTo(size.width * 0.42f, size.height * 0.22f)
+                                    lineTo(size.width * 0.18f, size.height * 0.50f)
+                                    lineTo(size.width * 0.42f, size.height * 0.78f)
+                                }
+                                drawPath(pathLeft, chevColor, style = Stroke(width = stroke, cap = StrokeCap.Round, join = StrokeJoin.Round))
+
+                                // Right chevron >
+                                val pathRight = Path().apply {
+                                    moveTo(size.width * 0.58f, size.height * 0.22f)
+                                    lineTo(size.width * 0.82f, size.height * 0.50f)
+                                    lineTo(size.width * 0.58f, size.height * 0.78f)
+                                }
+                                drawPath(pathRight, chevColor, style = Stroke(width = stroke, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                            }
+                        }
+
+                        // C2 & C4: Hai chip "TRƯỚC" và "SAU" vẽ SAU CÙNG để luôn nằm trên vạch chia
+                        // Chip "TRƯỚC": nền rgba(18,17,16,0.72), chữ #F5F1E8 12sp SemiBold, cao 24, bo 8, cách mép 12
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(12.dp)
+                                .height(24.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xB8121110))
+                                .padding(horizontal = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "TRƯỚC",
+                                color = Color(0xFFF5F1E8),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+
+                        // Chip "SAU": nền flash, chữ onFlash 12sp Bold, cao 24, bo 8, cách mép 12
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(12.dp)
+                                .height(24.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(colors.flash)
+                                .padding(horizontal = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "SAU",
+                                color = colors.onFlash,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                } else if (hasBefore) {
+                    // Only Before Photo Present -> Prompt for After photo
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(350f / 300f)
+                            .clickable { onOpenAfterCamera(task) },
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(containerColor = colors.surface),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
+                    ) {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context).data(beforeFile).crossfade(true).build(),
+                                contentDescription = "Trước",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopStart)
+                                    .padding(12.dp)
+                                    .height(24.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0xB8121110))
+                                    .padding(horizontal = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "TRƯỚC",
+                                    color = Color(0xFFF5F1E8),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+
+                            // Bottom CTA pill over image
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .padding(bottom = 14.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(colors.flash)
+                                    .clickable { onOpenAfterCamera(task) }
+                                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                            ) {
+                                Text(
+                                    text = "Chụp ảnh kết quả (SAU)",
+                                    color = colors.onFlash,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // C5. Thẻ chú thích: bỏ FontStyle.Italic (chữ thẳng 15/22 Regular), giữ dấu nháy kép
+                val rawQuote = currentCompletionCaption.ifBlank {
+                    if (isCompleted) "Xong rồi, giờ có chỗ đặt laptop thoải mái." else task.description
+                }
+                if (rawQuote.isNotBlank()) {
+                    val formattedQuote = if (rawQuote.startsWith("“") || rawQuote.startsWith("\"")) {
+                        rawQuote
+                    } else "“$rawQuote”"
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(colors.elevated)
+                            .border(1.dp, colors.border, RoundedCornerShape(14.dp))
+                            .padding(14.dp)
+                    ) {
+                        Text(
+                            text = formattedQuote,
+                            color = colors.text,
+                            fontSize = 15.sp,
+                            lineHeight = 22.sp,
+                            fontWeight = FontWeight.Normal
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(14.dp))
+                }
+
+                // C6. Hàng meta: chip cao 28, bo 8, padding ngang 12, chữ 12sp SemiBold
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Priority Pill: "Vừa" = viền 1dp màu warning + chữ warning, nền trong suốt; "Cao" = nền urgent alpha 0.16 chữ urgent
+                    when (task.priorityEnum) {
+                        TaskPriority.HIGH -> {
+                            Box(
+                                modifier = Modifier
+                                    .height(28.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(colors.urgent.copy(alpha = 0.16f))
+                                    .padding(horizontal = 12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = task.priorityEnum.label,
+                                    color = colors.urgent,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                        TaskPriority.MEDIUM -> {
+                            Box(
+                                modifier = Modifier
+                                    .height(28.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color.Transparent)
+                                    .border(1.dp, colors.warning, RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = task.priorityEnum.label,
+                                    color = colors.warning,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                        TaskPriority.LOW -> {
+                            Box(
+                                modifier = Modifier
+                                    .height(28.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(colors.elevated)
+                                    .border(1.dp, colors.border, RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = task.priorityEnum.label,
+                                    color = colors.textSecondary,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+
+                    // Folder Pill: cao 28, bo 8, padding ngang 12
+                    Box(
+                        modifier = Modifier
+                            .height(28.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(colors.elevated)
+                            .border(1.dp, colors.border, RoundedCornerShape(8.dp))
+                            .padding(horizontal = 12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = task.folderName,
+                            color = colors.text,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    // Due Date Pill: "Hạn dd/MM · HH:mm" (bỏ năm nếu là năm hiện tại)
+                    Box(
+                        modifier = Modifier
+                            .height(28.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(colors.elevated)
+                            .border(1.dp, colors.border, RoundedCornerShape(8.dp))
+                            .padding(horizontal = 12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = formatDueDate(task.reminderTime),
+                            color = colors.textSecondary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                // Checklist danh sách công việc con
+                if (subtasks.isNotEmpty() || isEditing) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        subtasks.forEachIndexed { index, st ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        val updated = subtasks.toMutableList()
+                                        updated[index] = st.copy(isDone = !st.isDone)
+                                        subtasks = updated
+                                        onSaveTask(task.copy(subTasksJson = converters.fromSubTaskList(updated)))
+                                    }
+                                    .padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .clip(CircleShape)
+                                        .background(if (st.isDone) colors.done else colors.elevated)
+                                        .border(1.dp, if (st.isDone) colors.done else colors.border, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (st.isDone) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Check,
+                                            contentDescription = null,
+                                            tint = Color(0xFF17140A),
+                                            modifier = Modifier.size(15.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = st.title,
+                                    color = if (st.isDone) colors.textMuted else colors.text,
+                                    textDecoration = if (st.isDone) TextDecoration.LineThrough else TextDecoration.None,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+
+                        // Add Subtask Row if editing or has checklist
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            OutlinedTextField(
+                                value = newSubtaskText,
+                                onValueChange = { newSubtaskText = it },
+                                placeholder = { Text("Thêm bước nhỏ...", color = colors.textMuted, fontSize = 13.sp) },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = colors.text,
+                                    unfocusedTextColor = colors.text,
+                                    focusedContainerColor = colors.elevated,
+                                    unfocusedContainerColor = colors.elevated,
+                                    focusedBorderColor = colors.flash,
+                                    unfocusedBorderColor = colors.border
+                                )
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(colors.flash)
+                                    .clickable {
+                                        if (newSubtaskText.isNotBlank()) {
+                                            val updated = subtasks + SubTask(UUID.randomUUID().toString(), newSubtaskText.trim(), false)
+                                            subtasks = updated
+                                            newSubtaskText = ""
+                                            onSaveTask(task.copy(subTasksJson = converters.fromSubTaskList(updated)))
+                                        }
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Filled.Add, contentDescription = "Thêm", tint = colors.onFlash, modifier = Modifier.size(20.dp))
+                            }
                         }
                     }
                 }
             }
+        }
 
-            Spacer(modifier = Modifier.height(28.dp))
+        // C7. Thanh hai nút neo đáy với dải mờ cao 120dp
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+        ) {
+            // Dải mờ 120dp từ trong suốt sang colors.bg
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp)
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color.Transparent, colors.bg)
+                        )
+                    )
+            )
 
-            // 7. Bottom Action Bar: [Chỉnh sửa] & [Chia sẻ Before / After] (Page 6)
+            // Thanh hai nút: padding ngang 20, đáy 24, khoảng cách 10
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 24.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Left: Secondary Button [Chỉnh sửa]
+                // "Chỉnh sửa": nền TRONG SUỐT + viền 1dp border, weight 1, cao 52, bo 16
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .height(48.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(colors.elevated)
-                        .border(1.dp, colors.border, RoundedCornerShape(14.dp))
+                        .height(52.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color.Transparent)
+                        .border(1.dp, colors.border, RoundedCornerShape(16.dp))
                         .clickable {
                             isEditing = !isEditing
                             if (!isEditing) {
@@ -723,12 +865,12 @@ fun TaskDetailScreen(
                     )
                 }
 
-                // Right: Primary Button [Chia sẻ Before / After] (Flash Yellow #FFD23F)
+                // "Chia sẻ Before / After": nền flash, chữ onFlash 15sp Bold, weight 1.4, cao 52, bo 16
                 Box(
                     modifier = Modifier
-                        .weight(1.3f)
-                        .height(48.dp)
-                        .clip(RoundedCornerShape(14.dp))
+                        .weight(1.4f)
+                        .height(52.dp)
+                        .clip(RoundedCornerShape(16.dp))
                         .background(colors.flash)
                         .clickable {
                             shareTaskDetails()
@@ -738,13 +880,11 @@ fun TaskDetailScreen(
                     Text(
                         text = "Chia sẻ Before / After",
                         color = colors.onFlash,
-                        fontSize = 14.sp,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(36.dp))
         }
     }
 
@@ -759,6 +899,33 @@ fun TaskDetailScreen(
                 showReminderPicker = false
                 onSaveTask(task.copy(reminderTime = time, reminderType = type))
             }
+        )
+    }
+}
+
+@ComposePreview(widthDp = 390, heightDp = 844)
+@Composable
+fun PreviewTaskDetailScreen() {
+    SnapTaskTheme(darkTheme = true) {
+        TaskDetailScreen(
+            task = Task(
+                id = 1,
+                title = "Dọn bàn làm việc",
+                description = "Xong rồi, giờ có chỗ đặt laptop thoải mái.",
+                completionCaption = "Xong rồi, giờ có chỗ đặt laptop thoải mái.",
+                beforeImageUri = "",
+                afterImageUri = "",
+                isCompleted = true,
+                folderName = "Nhà",
+                priority = "MEDIUM",
+                createdAt = System.currentTimeMillis() - 35 * 60 * 1000,
+                completedAt = System.currentTimeMillis(),
+                reminderTime = System.currentTimeMillis() + 3600 * 1000
+            ),
+            onBack = {},
+            onSaveTask = {},
+            onDeleteTask = {},
+            onOpenAfterCamera = {}
         )
     }
 }
