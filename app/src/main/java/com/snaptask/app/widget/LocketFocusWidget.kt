@@ -2,46 +2,13 @@ package com.snaptask.app.widget
 
 import android.content.Context
 import android.graphics.Bitmap
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.glance.Button
-import androidx.glance.ButtonDefaults
 import androidx.glance.GlanceId
-import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
-import androidx.glance.Image
-import androidx.glance.ImageProvider
-import androidx.glance.action.ActionParameters
-import androidx.glance.action.actionParametersOf
-import androidx.glance.action.actionStartActivity
-import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
-import androidx.glance.appwidget.action.actionRunCallback
-import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
-import androidx.glance.background
-import androidx.glance.layout.Alignment
-import androidx.glance.layout.Box
-import androidx.glance.layout.Column
-import androidx.glance.layout.ContentScale
-import androidx.glance.layout.Row
-import androidx.glance.layout.Spacer
-import androidx.glance.layout.fillMaxSize
-import androidx.glance.layout.fillMaxWidth
-import androidx.glance.layout.height
-import androidx.glance.layout.padding
-import androidx.glance.layout.size
-import androidx.glance.layout.width
-import androidx.glance.text.FontWeight
-import androidx.glance.text.Text
-import androidx.glance.text.TextStyle
-import com.snaptask.app.R
 import com.snaptask.app.data.local.AppDatabase
 import com.snaptask.app.data.local.TaskEntity
-import com.snaptask.app.domain.model.TaskPriority
-import com.snaptask.app.ui.MainActivity
 
 class LocketFocusWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = LocketFocusWidget()
@@ -77,205 +44,15 @@ class LocketFocusWidget : GlanceAppWidget() {
         provideContent {
             GlanceTheme {
                 if (task == null) {
-                    EmptyContent()
+                    EmptyWidgetContent2x2()
                 } else {
-                    FocusContent(
+                    FocusContent2x2(
                         taskId = task.id,
                         title = task.title,
-                        tag = task.tag,
-                        priority = task.priority,
-                        isPinned = task.isPinnedToWidget,
                         reminderTime = task.reminderTime,
                         bitmap = bitmap,
                         taskIndex = (offset % pendingTasks.size) + 1,
                         totalTasks = pendingTasks.size
-                    )
-                }
-            }
-        }
-    }
-
-    @Composable
-    private fun EmptyContent() {
-        Box(
-            modifier = GlanceModifier
-                .fillMaxSize()
-                .background(WidgetColors.bgProvider)
-                .cornerRadius(28.dp)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "Tất cả đã xong",
-                    style = TextStyle(
-                        color = WidgetColors.textProvider,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
-                    )
-                )
-                Spacer(modifier = GlanceModifier.height(8.dp))
-                Button(
-                    text = "Chụp việc mới",
-                    onClick = actionStartActivity<MainActivity>(),
-                    colors = ButtonDefaults.buttonColors(
-                        backgroundColor = WidgetColors.accentProvider,
-                        contentColor = WidgetColors.onAccentProvider
-                    )
-                )
-            }
-        }
-    }
-
-    @Composable
-    private fun FocusContent(
-        taskId: Long,
-        title: String,
-        tag: String,
-        priority: String,
-        isPinned: Boolean,
-        reminderTime: Long?,
-        bitmap: Bitmap?,
-        taskIndex: Int,
-        totalTasks: Int
-    ) {
-        val timeOrTag = if (reminderTime != null && reminderTime > 0) {
-            java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date(reminderTime))
-        } else if (isPinned) {
-            "★ $tag"
-        } else tag
-        Box(
-            modifier = GlanceModifier
-                .fillMaxSize()
-                .background(WidgetColors.bgProvider)
-                .cornerRadius(28.dp)
-        ) {
-            // 1. Photo filling 1:1 squircle
-            if (bitmap != null) {
-                Image(
-                    provider = ImageProvider(bitmap),
-                    contentDescription = title,
-                    contentScale = ContentScale.Crop,
-                    modifier = GlanceModifier.fillMaxSize()
-                )
-            } else {
-                Box(
-                    modifier = GlanceModifier
-                        .fillMaxSize()
-                        .background(WidgetColors.elevatedProvider)
-                ) {}
-            }
-
-            // 2. Overlaid Elements
-            Column(modifier = GlanceModifier.fillMaxSize()) {
-                // Top Pills: Tag + Counter / Priority
-                Row(
-                    modifier = GlanceModifier
-                        .fillMaxWidth()
-                        .padding(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = GlanceModifier
-                            .background(WidgetColors.pillProvider)
-                            .cornerRadius(10.dp)
-                            .padding(horizontal = 7.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = timeOrTag,
-                            style = TextStyle(
-                                color = WidgetColors.textProvider,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 10.sp
-                            )
-                        )
-                    }
-
-                    Spacer(modifier = GlanceModifier.defaultWeight())
-
-                    if (priority == TaskPriority.HIGH.name) {
-                        Box(
-                            modifier = GlanceModifier
-                                .background(WidgetColors.urgentProvider)
-                                .cornerRadius(10.dp)
-                                .padding(horizontal = 6.dp, vertical = 3.dp)
-                        ) {
-                            Text(
-                                text = "GẤP",
-                                style = TextStyle(
-                                    color = WidgetColors.textProvider,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 9.sp
-                                )
-                            )
-                        }
-                        Spacer(modifier = GlanceModifier.width(4.dp))
-                    }
-
-                    // Task Counter Pill (e.g. 1/3)
-                    Box(
-                        modifier = GlanceModifier
-                            .background(WidgetColors.pillProvider)
-                            .cornerRadius(10.dp)
-                            .padding(horizontal = 6.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = "$taskIndex/$totalTasks",
-                            style = TextStyle(
-                                color = WidgetColors.accentProvider,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 10.sp
-                            )
-                        )
-                    }
-                }
-
-                Spacer(modifier = GlanceModifier.defaultWeight())
-
-                // 3. Bottom Glassmorphism Bar (Page 7): Title & "Còn X việc nữa" on Left, Checkmark Button on Right
-                Row(
-                    modifier = GlanceModifier
-                        .fillMaxWidth()
-                        .background(WidgetColors.glassProvider)
-                        .padding(horizontal = 10.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = GlanceModifier.defaultWeight()) {
-                        Text(
-                            text = title.ifBlank { "Việc cần làm" },
-                            style = TextStyle(
-                                color = WidgetColors.textProvider,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp
-                            ),
-                            maxLines = 2
-                        )
-                        Spacer(modifier = GlanceModifier.height(2.dp))
-                        val remaining = maxOf(0, totalTasks - taskIndex)
-                        Text(
-                            text = if (remaining > 0) "Còn $remaining việc nữa" else "Hết việc cần làm",
-                            style = TextStyle(
-                                color = WidgetColors.textSecondaryProvider,
-                                fontWeight = FontWeight.Normal,
-                                fontSize = 10.sp
-                            ),
-                            maxLines = 1
-                        )
-                    }
-
-                    Spacer(modifier = GlanceModifier.width(6.dp))
-
-                    val taskIdParam = ActionParameters.Key<Long>("taskId")
-                    Image(
-                        provider = ImageProvider(R.drawable.ic_widget_check_done),
-                        contentDescription = "Hoàn thành",
-                        modifier = GlanceModifier
-                            .size(36.dp)
-                            .clickable(
-                                actionRunCallback<CompleteTaskActionCallback>(
-                                    actionParametersOf(taskIdParam to taskId)
-                                )
-                            )
                     )
                 }
             }

@@ -11,8 +11,6 @@ object WidgetColors {
     val accent = Color(0xFFFFD23F) // flash
     val onAccent = Color(0xFF17140A) // onFlash
     val urgent = Color(0xFFFF7A6B)
-    val glass = Color(0xE6121110) // rgba(18,17,16,0.9)
-    val pill = Color(0xCC121110)  // rgba(18,17,16,0.8)
 
     val bgProvider = ColorProvider(bg)
     val elevatedProvider = ColorProvider(elevated)
@@ -21,6 +19,4 @@ object WidgetColors {
     val accentProvider = ColorProvider(accent)
     val onAccentProvider = ColorProvider(onAccent)
     val urgentProvider = ColorProvider(urgent)
-    val glassProvider = ColorProvider(glass)
-    val pillProvider = ColorProvider(pill)
 }

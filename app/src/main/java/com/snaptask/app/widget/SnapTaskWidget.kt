@@ -2,242 +2,52 @@ package com.snaptask.app.widget
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.glance.Button
-import androidx.glance.ButtonDefaults
 import androidx.glance.GlanceId
-import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
-import androidx.glance.Image
-import androidx.glance.ImageProvider
-import androidx.glance.action.ActionParameters
-import androidx.glance.action.actionParametersOf
-import androidx.glance.action.actionStartActivity
-import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
-import androidx.glance.appwidget.action.ActionCallback
-import androidx.glance.appwidget.action.actionRunCallback
-import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
-import androidx.glance.background
-import androidx.glance.layout.Alignment
-import androidx.glance.layout.Box
-import androidx.glance.layout.Column
-import androidx.glance.layout.ContentScale
-import androidx.glance.layout.Row
-import androidx.glance.layout.Spacer
-import androidx.glance.layout.fillMaxSize
-import androidx.glance.layout.fillMaxWidth
-import androidx.glance.layout.height
-import androidx.glance.layout.padding
-import androidx.glance.layout.size
-import androidx.glance.layout.width
-import androidx.glance.text.FontWeight
-import androidx.glance.text.Text
-import androidx.glance.text.TextStyle
-import com.snaptask.app.R
 import com.snaptask.app.data.local.AppDatabase
-import com.snaptask.app.domain.model.TaskPriority
-import com.snaptask.app.ui.MainActivity
-import java.io.File
+import com.snaptask.app.data.local.TaskEntity
 
 class SnapTaskWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val database = AppDatabase.getInstance(context)
-        val topTaskEntity = database.taskDao().getTopPendingTask()
+        val pendingTasks = database.taskDao().getPendingTasksForWidget()
+
+        val prefs = context.getSharedPreferences("snaptask_widget_prefs", Context.MODE_PRIVATE)
+        val offset = prefs.getInt("locket_offset", 0)
+
+        val task: TaskEntity? = if (pendingTasks.isNotEmpty()) {
+            val validIndex = offset.coerceIn(0, pendingTasks.size - 1)
+            pendingTasks[validIndex]
+        } else {
+            null
+        }
+
+        val bitmap: Bitmap? = task?.let {
+            val mainUri = if (it.isCompleted && !it.afterImageUri.isNullOrBlank()) it.afterImageUri else it.beforeImageUri
+            val pipUri = if (it.isCompleted && !it.afterImageUri.isNullOrBlank()) it.beforeImageUri else null
+            WidgetBitmapHelper.createWidgetCompositeBitmap(
+                mainImageUri = mainUri,
+                miniPipImageUri = pipUri,
+                isCompleted = it.isCompleted,
+                outputSize = 420
+            )
+        }
 
         provideContent {
             GlanceTheme {
-                if (topTaskEntity == null) {
-                    EmptyWidgetContent(context)
+                if (task == null) {
+                    EmptyWidgetContent2x2()
                 } else {
-                    val bitmap = loadOptimizedBitmap(topTaskEntity.thumbnailPath, topTaskEntity.imagePath)
-                    FocusTaskWidgetContent(
-                        context = context,
-                        taskId = topTaskEntity.id,
-                        title = topTaskEntity.title,
+                    FocusContent2x2(
+                        taskId = task.id,
+                        title = task.title,
+                        reminderTime = task.reminderTime,
                         bitmap = bitmap,
-                        priority = topTaskEntity.priorityInt
-                    )
-                }
-            }
-        }
-    }
-
-    private fun loadOptimizedBitmap(thumbPath: String, imagePath: String): Bitmap? {
-        val targetPath = when {
-            thumbPath.isNotBlank() && File(thumbPath).exists() -> thumbPath
-            imagePath.isNotBlank() && File(imagePath).exists() -> imagePath
-            else -> return null
-        }
-        return try {
-            val options = BitmapFactory.Options().apply {
-                inJustDecodeBounds = true
-            }
-            BitmapFactory.decodeFile(targetPath, options)
-
-            // Scale down to max 380x380 for widget IPC performance
-            var sample = 1
-            while (options.outWidth / sample > 400 || options.outHeight / sample > 400) {
-                sample *= 2
-            }
-            options.inSampleSize = sample
-            options.inJustDecodeBounds = false
-            options.inPreferredConfig = Bitmap.Config.RGB_565
-
-            BitmapFactory.decodeFile(targetPath, options)
-        } catch (_: Throwable) {
-            null
-        }
-    }
-
-    @Composable
-    private fun EmptyWidgetContent(context: Context) {
-        Box(
-            modifier = GlanceModifier
-                .fillMaxSize()
-                .background(WidgetColors.bgProvider)
-                .cornerRadius(24.dp)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "Không có việc tồn đọng",
-                    style = TextStyle(
-                        color = WidgetColors.textProvider,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
-                    )
-                )
-                Spacer(modifier = GlanceModifier.height(8.dp))
-                Button(
-                    text = "Chụp việc mới",
-                    onClick = actionStartActivity<MainActivity>(),
-                    colors = ButtonDefaults.buttonColors(
-                        backgroundColor = WidgetColors.accentProvider,
-                        contentColor = WidgetColors.onAccentProvider
-                    )
-                )
-            }
-        }
-    }
-
-    @Composable
-    private fun FocusTaskWidgetContent(
-        context: Context,
-        taskId: Long,
-        title: String,
-        bitmap: Bitmap?,
-        priority: Int
-    ) {
-        // True Locket Experience: Photo fills the entire widget with rounded corners
-        Box(
-            modifier = GlanceModifier
-                .fillMaxSize()
-                .background(WidgetColors.bgProvider)
-                .cornerRadius(24.dp)
-        ) {
-            // 1. The Captured Photo (Fills 100% of widget like Locket!)
-            if (bitmap != null) {
-                Image(
-                    provider = ImageProvider(bitmap),
-                    contentDescription = title,
-                    contentScale = ContentScale.Crop,
-                    modifier = GlanceModifier.fillMaxSize()
-                )
-            } else {
-                Box(
-                    modifier = GlanceModifier
-                        .fillMaxSize()
-                        .background(WidgetColors.elevatedProvider)
-                ) {}
-            }
-
-            // 2. Overlay Structure: Top Badge + Push to Bottom + Bottom Frosted Card
-            Column(modifier = GlanceModifier.fillMaxSize()) {
-                // Top Bar Pill
-                Row(
-                    modifier = GlanceModifier
-                        .fillMaxWidth()
-                        .padding(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = GlanceModifier
-                            .background(WidgetColors.pillProvider)
-                            .cornerRadius(8.dp)
-                            .padding(horizontal = 7.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = "VIỆC CẦN LÀM",
-                            style = TextStyle(
-                                color = WidgetColors.accentProvider,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 10.sp
-                            )
-                        )
-                    }
-
-                    if (priority == TaskPriority.HIGH.level) {
-                        Spacer(modifier = GlanceModifier.defaultWeight())
-                        Box(
-                            modifier = GlanceModifier
-                                .background(WidgetColors.urgentProvider)
-                                .cornerRadius(8.dp)
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "GẤP",
-                                style = TextStyle(
-                                    color = WidgetColors.textProvider,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 9.sp
-                                )
-                            )
-                        }
-                    }
-                }
-
-                // Spacer pushing the bottom card down
-                Spacer(modifier = GlanceModifier.defaultWeight())
-
-                // 3. Bottom Frosted Glass Card with Task Title & 1-Tap Done Button
-                Row(
-                    modifier = GlanceModifier
-                        .fillMaxWidth()
-                        .background(WidgetColors.glassProvider)
-                        .padding(horizontal = 10.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = title.ifBlank { "Nhiệm vụ không tên" },
-                        style = TextStyle(
-                            color = WidgetColors.textProvider,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
-                        ),
-                        maxLines = 1,
-                        modifier = GlanceModifier.defaultWeight()
-                    )
-
-                    Spacer(modifier = GlanceModifier.width(8.dp))
-
-                    val taskIdParam = ActionParameters.Key<Long>("taskId")
-                    Image(
-                        provider = ImageProvider(R.drawable.ic_widget_check_done),
-                        contentDescription = "Hoàn thành",
-                        modifier = GlanceModifier
-                            .size(34.dp)
-                            .clickable(
-                                actionRunCallback<ToggleTaskActionCallback>(
-                                    actionParametersOf(taskIdParam to taskId)
-                                )
-                            )
+                        taskIndex = (offset % pendingTasks.size) + 1,
+                        totalTasks = pendingTasks.size
                     )
                 }
             }

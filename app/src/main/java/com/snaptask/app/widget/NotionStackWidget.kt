@@ -3,6 +3,7 @@ package com.snaptask.app.widget
 import android.content.Context
 import android.graphics.Bitmap
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.Button
@@ -12,12 +13,14 @@ import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
+import androidx.glance.LocalSize
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
@@ -38,6 +41,7 @@ import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import androidx.glance.unit.ColorProvider
 import com.snaptask.app.R
 import com.snaptask.app.data.local.AppDatabase
 import com.snaptask.app.data.local.TaskEntity
@@ -48,6 +52,8 @@ class NotionStackWidgetReceiver : GlanceAppWidgetReceiver() {
 }
 
 class NotionStackWidget : GlanceAppWidget() {
+
+    override val sizeMode: SizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val database = AppDatabase.getInstance(context)
@@ -94,83 +100,70 @@ class NotionStackWidget : GlanceAppWidget() {
         completedCount: Int,
         totalCount: Int
     ) {
+        val widgetSize = LocalSize.current
+        val availableWidth = (widgetSize.width - 30.dp).coerceAtLeast(100.dp)
+        val leftColumnWidth = availableWidth * 0.42f
+        val rightColumnWidth = availableWidth * 0.58f
+
         Row(
             modifier = GlanceModifier
                 .fillMaxSize()
                 .background(WidgetColors.bgProvider)
                 .cornerRadius(24.dp)
-                .padding(10.dp)
+                .padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // LEFT COLUMN (~45%): 1:1 Photo + Top Task Action + Daily Progress
-            Column(
+            // CỘT TRÁI (~42%): Ảnh bo 18, scrim gradient, tiêu đề 14sp Bold ở đáy + nút tick tròn 32dp
+            Box(
                 modifier = GlanceModifier
-                    .defaultWeight()
-                    .fillMaxHeight(),
-                verticalAlignment = Alignment.CenterVertically
+                    .width(leftColumnWidth)
+                    .fillMaxHeight()
+                    .cornerRadius(18.dp)
+                    .background(WidgetColors.elevatedProvider)
             ) {
                 if (topTask != null) {
-                    Box(
-                        modifier = GlanceModifier
-                            .fillMaxWidth()
-                            .defaultWeight()
-                            .cornerRadius(18.dp)
-                            .background(WidgetColors.elevatedProvider)
-                    ) {
-                        if (bitmap != null) {
-                            Image(
-                                provider = ImageProvider(bitmap),
-                                contentDescription = topTask.title,
-                                contentScale = ContentScale.Crop,
-                                modifier = GlanceModifier.fillMaxSize()
-                            )
-                        }
+                    if (bitmap != null) {
+                        Image(
+                            provider = ImageProvider(bitmap),
+                            contentDescription = topTask.title,
+                            contentScale = ContentScale.Crop,
+                            modifier = GlanceModifier.fillMaxSize()
+                        )
+                    }
 
-                        Column(modifier = GlanceModifier.fillMaxSize()) {
-                            // Top Pill on photo: Progress Done/Total
-                            Box(
-                                modifier = GlanceModifier
-                                    .padding(6.dp)
-                                    .background(WidgetColors.pillProvider)
-                                    .cornerRadius(8.dp)
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = "$completedCount/$totalCount xong",
-                                    style = TextStyle(
-                                        color = WidgetColors.accentProvider,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 9.sp
-                                    )
-                                )
-                            }
+                    // Scrim gradient thật: widget_scrim.xml
+                    Column(modifier = GlanceModifier.fillMaxSize()) {
+                        Spacer(modifier = GlanceModifier.defaultWeight())
 
-                            Spacer(modifier = GlanceModifier.defaultWeight())
-
-                            // Bottom Title Bar with Done Checkmark Image Button
-                            val taskIdParam = ActionParameters.Key<Long>("taskId")
+                        Box(
+                            modifier = GlanceModifier
+                                .fillMaxWidth()
+                                .background(ImageProvider(R.drawable.widget_scrim))
+                                .padding(top = 28.dp, start = 8.dp, end = 8.dp, bottom = 8.dp)
+                        ) {
                             Row(
-                                modifier = GlanceModifier
-                                    .fillMaxWidth()
-                                    .background(WidgetColors.glassProvider)
-                                    .padding(horizontal = 6.dp, vertical = 4.dp),
+                                modifier = GlanceModifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = topTask.title,
+                                    text = topTask.title.ifBlank { "Việc cần làm" },
                                     style = TextStyle(
-                                        color = WidgetColors.textProvider,
+                                        color = ColorProvider(Color(0xFFF5F1E8)),
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 11.sp
+                                        fontSize = 14.sp
                                     ),
                                     maxLines = 1,
                                     modifier = GlanceModifier.defaultWeight()
                                 )
-                                Spacer(modifier = GlanceModifier.width(4.dp))
+
+                                Spacer(modifier = GlanceModifier.width(6.dp))
+
+                                val taskIdParam = ActionParameters.Key<Long>("taskId")
                                 Image(
                                     provider = ImageProvider(R.drawable.ic_widget_check_done),
                                     contentDescription = "Hoàn thành",
                                     modifier = GlanceModifier
-                                        .size(28.dp)
+                                        .size(32.dp)
                                         .clickable(
                                             actionRunCallback<CompleteTaskActionCallback>(
                                                 actionParametersOf(taskIdParam to topTask.id)
@@ -182,11 +175,7 @@ class NotionStackWidget : GlanceAppWidget() {
                     }
                 } else {
                     Box(
-                        modifier = GlanceModifier
-                            .fillMaxSize()
-                            .background(WidgetColors.elevatedProvider)
-                            .cornerRadius(18.dp)
-                            .padding(8.dp),
+                        modifier = GlanceModifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -203,13 +192,13 @@ class NotionStackWidget : GlanceAppWidget() {
 
             Spacer(modifier = GlanceModifier.width(10.dp))
 
-            // RIGHT COLUMN (~55%): Notion-style Checklist + Camera Shortcut
+            // CỘT PHẢI (~58%): Header TIẾP THEO + danh sách việc + Nút "+ Chụp việc mới"
             Column(
                 modifier = GlanceModifier
-                    .defaultWeight()
+                    .width(rightColumnWidth)
                     .fillMaxHeight()
             ) {
-                // Header (Page 7): "TIẾP THEO" on Left, "3/7" on Right
+                // Header: "TIẾP THEO" on Left, "đã xong/tổng" on Right in Flash Yellow
                 Row(
                     modifier = GlanceModifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -235,7 +224,7 @@ class NotionStackWidget : GlanceAppWidget() {
 
                 Spacer(modifier = GlanceModifier.height(4.dp))
 
-                // Checklist Items (Up to 3)
+                // Checklist Items (Tối đa 3 hàng)
                 if (nextTasks.isEmpty()) {
                     Box(
                         modifier = GlanceModifier
@@ -244,10 +233,10 @@ class NotionStackWidget : GlanceAppWidget() {
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = if (topTask == null) "Đã hoàn thành mọi việc!" else "Không có việc chờ tiếp theo",
+                            text = "Không có việc chờ tiếp theo",
                             style = TextStyle(
-                                color = WidgetColors.textSecondaryProvider,
-                                fontSize = 11.sp
+                                color = ColorProvider(Color(0xFF8F897B)),
+                                fontSize = 13.sp
                             )
                         )
                     }
@@ -258,26 +247,31 @@ class NotionStackWidget : GlanceAppWidget() {
                             .defaultWeight()
                     ) {
                         nextTasks.forEach { item ->
+                            val taskIdParam = ActionParameters.Key<Long>("taskId")
                             Row(
                                 modifier = GlanceModifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 2.dp),
+                                    .padding(vertical = 3.dp)
+                                    .clickable(
+                                        actionRunCallback<CompleteTaskActionCallback>(
+                                            actionParametersOf(taskIdParam to item.id)
+                                        )
+                                    ),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = "◯ ",
-                                    style = TextStyle(
-                                        color = WidgetColors.accentProvider,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 11.sp
-                                    )
+                                // Ô vuông 20dp bo 7 viền 1.5dp #8F897B
+                                Image(
+                                    provider = ImageProvider(R.drawable.widget_checkbox_empty),
+                                    contentDescription = "Chọn hoàn thành",
+                                    modifier = GlanceModifier.size(20.dp)
                                 )
+                                Spacer(modifier = GlanceModifier.width(8.dp))
                                 Text(
                                     text = item.title,
                                     style = TextStyle(
-                                        color = WidgetColors.textProvider,
+                                        color = ColorProvider(Color(0xFFF5F1E8)),
                                         fontWeight = FontWeight.Normal,
-                                        fontSize = 11.sp
+                                        fontSize = 13.sp
                                     ),
                                     maxLines = 1
                                 )
@@ -288,7 +282,7 @@ class NotionStackWidget : GlanceAppWidget() {
 
                 Spacer(modifier = GlanceModifier.height(4.dp))
 
-                // Quick Add Photo Button in 4x2 widget: #FFD23F background, #17140A text
+                // Nút "+ Chụp việc mới": nền flash, chữ onFlash 13sp Bold, cao 36, bo 12
                 Button(
                     text = "+ Chụp việc mới",
                     onClick = actionStartActivity<MainActivity>(),
@@ -296,7 +290,10 @@ class NotionStackWidget : GlanceAppWidget() {
                         backgroundColor = WidgetColors.accentProvider,
                         contentColor = WidgetColors.onAccentProvider
                     ),
-                    modifier = GlanceModifier.fillMaxWidth()
+                    modifier = GlanceModifier
+                        .fillMaxWidth()
+                        .height(36.dp)
+                        .cornerRadius(12.dp)
                 )
             }
         }
