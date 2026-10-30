@@ -854,7 +854,7 @@ fun CameraCreatorScreen(
 
     if (showQuickNoteSheet) {
         QuickNoteBottomSheet(
-            onDismiss = { showQuickNoteSheet = false },
+            onDismissRequest = { showQuickNoteSheet = false },
             onSave = { quickTask ->
                 onSaveTask(quickTask)
                 showQuickNoteSheet = false
