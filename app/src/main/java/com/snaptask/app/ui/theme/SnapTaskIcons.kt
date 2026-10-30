@@ -356,32 +356,46 @@ object SnapTaskIcons {
     }
 
     val FlashOn = createIcon("FlashOn") {
-        moveTo(13.2f, 2.2f)
-        lineTo(5f, 13.5f)
-        lineTo(11.8f, 13.5f)
-        lineTo(10.8f, 21.8f)
-        lineTo(19f, 10.5f)
-        lineTo(12.2f, 10.5f)
+        moveTo(8.8f, 3.0f)
+        lineTo(15.6f, 3.0f)
+        lineTo(13.4f, 9.2f)
+        lineTo(18.0f, 9.2f)
+        lineTo(9.2f, 21.0f)
+        lineTo(10.0f, 13.8f)
+        lineTo(6.4f, 13.8f)
         close()
     }
 
     val FlashOff = createIcon("FlashOff") {
-        moveTo(13.2f, 2.2f); lineTo(9.6f, 7.4f)
-        moveTo(7.8f, 10f); lineTo(5f, 13.5f); lineTo(11.8f, 13.5f); lineTo(11.2f, 17.5f)
-        moveTo(13.6f, 14f); lineTo(19f, 10.5f); lineTo(12.2f, 10.5f); lineTo(12.7f, 6.8f)
-        moveTo(3.5f, 3.5f); lineTo(20.5f, 20.5f)
+        moveTo(8.56f, 4.06f)
+        lineTo(8.8f, 3.0f)
+        lineTo(15.6f, 3.0f)
+        lineTo(13.6f, 9.0f)
+        lineTo(18.0f, 9.0f)
+        lineTo(16.1f, 11.6f)
+        moveTo(6.96f, 11.46f)
+        lineTo(6.4f, 14.0f)
+        lineTo(9.5f, 14.0f)
+        lineTo(8.8f, 21.0f)
+        lineTo(12.14f, 16.64f)
+        moveTo(3.8f, 3.8f)
+        lineTo(20.2f, 20.2f)
     }
 
     val FlashAuto = createIcon("FlashAuto") {
-        moveTo(11f, 2.5f)
-        lineTo(4.8f, 12.5f)
-        lineTo(9.8f, 12.5f)
-        lineTo(8.8f, 21f)
-        lineTo(15f, 11f)
-        lineTo(10f, 11f)
+        moveTo(7.4f, 3.0f)
+        lineTo(13.8f, 3.0f)
+        lineTo(11.6f, 9.2f)
+        lineTo(15.8f, 9.2f)
+        lineTo(7.8f, 20.8f)
+        lineTo(8.6f, 13.6f)
+        lineTo(5.0f, 13.6f)
         close()
-        moveTo(16.8f, 7.5f); lineTo(18.8f, 2.5f); lineTo(20.8f, 7.5f)
-        moveTo(17.3f, 6f); lineTo(20.3f, 6f)
+        moveTo(16.2f, 20.8f)
+        lineTo(18.6f, 14.5f)
+        lineTo(21.0f, 20.8f)
+        moveTo(16.9f, 18.9f)
+        lineTo(20.3f, 18.9f)
     }
 
     val CameraFlip = createIcon("CameraFlip") {
