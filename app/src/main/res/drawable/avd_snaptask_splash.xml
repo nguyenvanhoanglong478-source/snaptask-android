@@ -16,10 +16,10 @@
                 <path
                     android:name="outer_ring"
                     android:strokeColor="#FFD23F"
-                    android:strokeWidth="7"
+                    android:strokeWidth="4.7"
                     android:strokeLineCap="round"
                     android:fillColor="#00000000"
-                    android:pathData="M54,24.5 A29.5,29.5 0 1,1 53.99,24.5"
+                    android:pathData="M54,34.3 A19.7,19.7 0 1,1 53.99,34.3"
                     android:trimPathEnd="0" />
             </group>
 
@@ -31,15 +31,15 @@
                 <path
                     android:name="inner_disk"
                     android:fillColor="#FFD23F"
-                    android:pathData="M54,35 A19,19 0 1,1 53.99,35 Z" />
+                    android:pathData="M54,41.3 A12.7,12.7 0 1,1 53.99,41.3 Z" />
 
                 <path
                     android:name="tick_mark"
                     android:strokeColor="#17140A"
-                    android:strokeWidth="6.5"
+                    android:strokeWidth="4.3"
                     android:strokeLineCap="round"
                     android:strokeLineJoin="round"
-                    android:pathData="M45,55 L51.5,61.5 L63.5,47"
+                    android:pathData="M48,54.7 L52.3,59 L60.3,49.3"
                     android:trimPathEnd="0" />
             </group>
         </vector>

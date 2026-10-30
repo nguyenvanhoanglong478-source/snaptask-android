@@ -5,24 +5,24 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Outer Ring: circle cx=54 cy=54 r=29.5, no fill, stroke #FFD23F, strokeWidth 7 -->
+    <!-- Outer Ring: scaled to 61% of central 72x72 safe zone -->
     <path
         android:strokeColor="#FFD23F"
-        android:strokeWidth="7"
+        android:strokeWidth="4.7"
         android:strokeLineCap="round"
-        android:pathData="M54,24.5 A29.5,29.5 0 1,1 53.99,24.5" />
+        android:pathData="M54,34.3 A19.7,19.7 0 1,1 53.99,34.3" />
 
-    <!-- Inner Disk: circle cx=54 cy=54 r=19, fill #FFD23F -->
+    <!-- Inner Disk: scaled to 35% of central 72x72 safe zone -->
     <path
         android:fillColor="#FFD23F"
-        android:pathData="M54,35 A19,19 0 1,1 53.99,35 Z" />
+        android:pathData="M54,41.3 A12.7,12.7 0 1,1 53.99,41.3 Z" />
 
-    <!-- Negative Space Tick Mark: stroke #17140A, strokeWidth 6.5, round cap/join -->
+    <!-- Negative Space Tick Mark -->
     <path
         android:strokeColor="#17140A"
-        android:strokeWidth="6.5"
+        android:strokeWidth="4.3"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M45,55 L51.5,61.5 L63.5,47" />
+        android:pathData="M48,54.7 L52.3,59 L60.3,49.3" />
 
 </vector>

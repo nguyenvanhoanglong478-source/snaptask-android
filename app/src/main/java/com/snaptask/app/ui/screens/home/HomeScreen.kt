@@ -210,7 +210,7 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.clickable { selectedCustomFolder = null }
                     ) {
-                        SnapTaskLogo(size = 28.dp)
+                        SnapTaskLogo(size = 32.dp)
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
                             text = "SnapTask",
