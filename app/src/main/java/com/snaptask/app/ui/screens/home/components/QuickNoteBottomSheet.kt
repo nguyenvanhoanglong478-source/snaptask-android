@@ -125,13 +125,13 @@ fun QuickNoteBottomSheet(
                     Box(
                         modifier = Modifier
                             .size(32.dp)
-                            .background(colors.flash.copy(alpha = 0.2f), RoundedCornerShape(8.dp)),
+                            .background(colors.flash, RoundedCornerShape(8.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Filled.EditNote,
                             contentDescription = null,
-                            tint = colors.flash,
+                            tint = colors.onFlash,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -307,7 +307,7 @@ fun QuickNoteBottomSheet(
                         .size(44.dp)
                         .background(colors.flash, RoundedCornerShape(10.dp))
                 ) {
-                    Icon(Icons.Filled.Add, contentDescription = "Thêm", tint = Color.White)
+                    Icon(Icons.Filled.Add, contentDescription = "Thêm", tint = colors.onFlash)
                 }
             }
 
@@ -436,7 +436,7 @@ fun QuickNoteBottomSheet(
                     Icon(
                         imageVector = if (isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
                         contentDescription = null,
-                        tint = if (isPinned) colors.flash else colors.textMuted,
+                        tint = if (isPinned) colors.text else colors.textMuted,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))

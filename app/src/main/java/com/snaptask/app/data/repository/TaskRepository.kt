@@ -11,7 +11,7 @@ interface TaskRepository {
     suspend fun getTaskById(id: Long): Task?
     suspend fun getTopPendingTask(): Task?
     suspend fun getPendingTasksForWidget(): List<Task>
-    suspend fun getProgressStats(): Pair<Int, Int> // Completed, Total
+    suspend fun getProgressStats(): Pair<Int, Int>
     suspend fun createTask(task: Task): Long
     suspend fun updateTask(task: Task)
     suspend fun toggleTaskCompleted(id: Long, currentIsCompleted: Boolean)
@@ -20,5 +20,6 @@ interface TaskRepository {
     suspend fun completeTaskWithProof(taskId: Long, afterImageUri: String?, completionCaption: String?, completedAt: Long = System.currentTimeMillis())
     suspend fun togglePinToWidget(id: Long, currentIsPinned: Boolean)
     suspend fun togglePinTask(id: Long, isPinned: Boolean)
+    suspend fun renameFolderTasks(oldName: String, newName: String)
     suspend fun deleteTask(task: Task)
 }

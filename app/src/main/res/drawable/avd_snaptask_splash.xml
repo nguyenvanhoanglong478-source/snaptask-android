@@ -8,14 +8,13 @@
             android:viewportWidth="108"
             android:viewportHeight="108">
 
-            <!-- 1. Outer Ring Group -->
             <group
                 android:name="ring_group"
                 android:pivotX="54"
                 android:pivotY="54">
                 <path
                     android:name="outer_ring"
-                    android:strokeColor="#FFD23F"
+                    android:strokeColor="#D4FF3A"
                     android:strokeWidth="4.7"
                     android:strokeLineCap="round"
                     android:fillColor="#00000000"
@@ -23,19 +22,18 @@
                     android:trimPathEnd="0" />
             </group>
 
-            <!-- 2. Inner Disk & Tick Mark Group -->
             <group
                 android:name="disk_group"
                 android:pivotX="54"
                 android:pivotY="54">
                 <path
                     android:name="inner_disk"
-                    android:fillColor="#FFD23F"
+                    android:fillColor="#D4FF3A"
                     android:pathData="M54,41.3 A12.7,12.7 0 1,1 53.99,41.3 Z" />
 
                 <path
                     android:name="tick_mark"
-                    android:strokeColor="#17140A"
+                    android:strokeColor="#10120A"
                     android:strokeWidth="4.3"
                     android:strokeLineCap="round"
                     android:strokeLineJoin="round"
@@ -45,7 +43,6 @@
         </vector>
     </aapt:attr>
 
-    <!-- Animation Target: Outer Ring (trimPathEnd 0 -> 1) -->
     <target android:name="outer_ring">
         <aapt:attr name="android:animation">
             <objectAnimator
@@ -58,7 +55,6 @@
         </aapt:attr>
     </target>
 
-    <!-- Animation Target: Inner Disk Group (Scale 0 -> 1 with Overshoot) -->
     <target android:name="disk_group">
         <aapt:attr name="android:animation">
             <set android:ordering="together">
@@ -82,7 +78,6 @@
         </aapt:attr>
     </target>
 
-    <!-- Animation Target: Tick Mark (trimPathEnd 0 -> 1) -->
     <target android:name="tick_mark">
         <aapt:attr name="android:animation">
             <objectAnimator

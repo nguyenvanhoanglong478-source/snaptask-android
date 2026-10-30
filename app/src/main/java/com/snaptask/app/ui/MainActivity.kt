@@ -20,30 +20,42 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.core.animation.doOnEnd
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.glance.appwidget.updateAll
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.lifecycleScope
 import com.snaptask.app.SnapTaskApplication
+import com.snaptask.app.data.preferences.FolderPreferencesRepository
+import com.snaptask.app.data.preferences.RepeatCadence
 import com.snaptask.app.domain.model.Task
 import com.snaptask.app.reminder.AlarmSoundPlayer
 import com.snaptask.app.reminder.TaskReminderScheduler
+import com.snaptask.app.ui.components.DockTab
 import com.snaptask.app.ui.screens.board.BoardScreen
+import com.snaptask.app.ui.screens.calendar.CalendarScreen
 import com.snaptask.app.ui.screens.camera.CameraAfterProofScreen
 import com.snaptask.app.ui.screens.camera.CameraCreatorScreen
 import com.snaptask.app.ui.screens.detail.TaskDetailScreen
+import com.snaptask.app.ui.screens.folders.FolderManagerScreen
+import com.snaptask.app.ui.screens.heatmap.HeatmapScreen
 import com.snaptask.app.ui.screens.home.HomeScreen
+import com.snaptask.app.ui.screens.recap.WeeklyRecapScreen
+import com.snaptask.app.ui.screens.share.ShareCardScreen
 import com.snaptask.app.ui.theme.SnapTaskTheme
 import com.snaptask.app.util.NotificationPermissionHelper
 import com.snaptask.app.widget.LocketFocusWidget
@@ -53,11 +65,16 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 enum class ScreenState {
-    HOME,
     CAMERA_CREATOR,
-    CAMERA_AFTER_PROOF,
+    HOME,
+    CALENDAR,
+    HEATMAP,
+    FOLDERS,
+    BOARD,
     DETAIL,
-    BOARD
+    CAMERA_AFTER_PROOF,
+    WEEKLY_RECAP,
+    SHARE_CARD
 }
 
 class MainActivity : ComponentActivity() {
@@ -78,7 +95,8 @@ class MainActivity : ComponentActivity() {
 
     private fun extractTaskId(intent: Intent?) {
         val i = intent ?: return
-        val taskId = i.getLongExtra(TaskReminderScheduler.EXTRA_TASK_ID, -1L).takeIf { it != -1L } ?: return
+        val taskId = i.getLongExtra(TaskReminderScheduler.EXTRA_TASK_ID, -1L)
+            .takeIf { it != -1L } ?: return
         pendingTaskIdState.value = taskId
         i.removeExtra(TaskReminderScheduler.EXTRA_TASK_ID)
     }
@@ -93,18 +111,18 @@ class MainActivity : ComponentActivity() {
         var keepSplashScreen = true
         splashScreen.setKeepOnScreenCondition { keepSplashScreen }
         lifecycleScope.launch {
-            delay(550)
+            delay(500)
             keepSplashScreen = false
         }
 
         splashScreen.setOnExitAnimationListener { splashScreenView ->
             val iconView = splashScreenView.iconView
-            val scaleX = ObjectAnimator.ofFloat(iconView, View.SCALE_X, 1f, 1.3f)
-            val scaleY = ObjectAnimator.ofFloat(iconView, View.SCALE_Y, 1f, 1.3f)
+            val scaleX = ObjectAnimator.ofFloat(iconView, View.SCALE_X, 1f, 1.25f)
+            val scaleY = ObjectAnimator.ofFloat(iconView, View.SCALE_Y, 1f, 1.25f)
             val alpha = ObjectAnimator.ofFloat(splashScreenView.view, View.ALPHA, 1f, 0f)
             AnimatorSet().apply {
                 playTogether(scaleX, scaleY, alpha)
-                duration = 250
+                duration = 240
                 interpolator = AccelerateDecelerateInterpolator()
                 doOnEnd { splashScreenView.remove() }
                 start()
@@ -113,6 +131,7 @@ class MainActivity : ComponentActivity() {
 
         val app = application as SnapTaskApplication
         val repository = app.taskRepository
+        val folderPrefs = app.folderPreferences
 
         setContent {
             val prefs = remember { getSharedPreferences("snaptask_theme_prefs", Context.MODE_PRIVATE) }
@@ -131,32 +150,84 @@ class MainActivity : ComponentActivity() {
                     val nextMode = if (isDark) "LIGHT" else "DARK"
                     themeMode = nextMode
                     prefs.edit().putString("theme_mode", nextMode).apply()
-                    val modeName = if (nextMode == "LIGHT") "Sáng (Paper)" else "Tối (Ink & Flash)"
-                    Toast.makeText(this@MainActivity, "Chế độ: $modeName", Toast.LENGTH_SHORT).show()
+                    val modeName = if (nextMode == "LIGHT") "Sáng (Snap Pop)" else "Tối (Snap Pop)"
+                    Toast.makeText(this@MainActivity, "Giao diện: $modeName", Toast.LENGTH_SHORT).show()
                 }
+
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    var currentScreen by rememberSaveable { mutableStateOf(ScreenState.HOME) }
+                    var currentScreen by rememberSaveable { mutableStateOf(ScreenState.CAMERA_CREATOR) }
+                    var detailOriginScreen by rememberSaveable { mutableStateOf(ScreenState.HOME) }
                     var selectedTaskId by rememberSaveable { mutableStateOf<Long?>(null) }
+                    var calendarFocusMillis by rememberSaveable {
+                        mutableLongStateOf(System.currentTimeMillis())
+                    }
+
                     val tasksFlow = remember { repository.getAllTasks() }
                     val tasksState = tasksFlow.collectAsState(initial = null)
                     val tasks = tasksState.value
+                    val isLoadingTasks = tasks == null
                     val displayTasks = tasks ?: emptyList()
                     val selectedTask = displayTasks.find { it.id == selectedTaskId }
-                    val scope = rememberCoroutineScope()
 
-                    // BackHandler: Return to HOME from other screens, default behavior on HOME
-                    BackHandler(enabled = currentScreen != ScreenState.HOME) {
-                        currentScreen = ScreenState.HOME
-                        selectedTaskId = null
+                    val folderConfig by folderPrefs.configFlow.collectAsState()
+                    val scope = rememberCoroutineScope()
+                    val lifecycleOwner = LocalLifecycleOwner.current
+
+                    var hasCameraPermission by remember {
+                        mutableStateOf(
+                            ContextCompat.checkSelfPermission(
+                                this@MainActivity,
+                                Manifest.permission.CAMERA
+                            ) == PackageManager.PERMISSION_GRANTED
+                        )
                     }
 
-                    // Deep link from notification: navigate to DETAIL of the task once tasks are loaded
+                    DisposableEffect(lifecycleOwner) {
+                        val observer = LifecycleEventObserver { _, event ->
+                            if (event == Lifecycle.Event.ON_RESUME) {
+                                hasCameraPermission = ContextCompat.checkSelfPermission(
+                                    this@MainActivity,
+                                    Manifest.permission.CAMERA
+                                ) == PackageManager.PERMISSION_GRANTED
+                            }
+                        }
+                        lifecycleOwner.lifecycle.addObserver(observer)
+                        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+                    }
+
+                    LaunchedEffect(tasks?.size) {
+                        val loaded = tasks ?: return@LaunchedEffect
+                        if (loaded.isNotEmpty()) {
+                            folderPrefs.syncDiscoveredFolders(loaded.map { it.folderName })
+                        }
+                    }
+
+                    BackHandler(enabled = currentScreen != ScreenState.HOME) {
+                        when (currentScreen) {
+                            ScreenState.SHARE_CARD -> currentScreen = ScreenState.DETAIL
+                            ScreenState.DETAIL -> {
+                                currentScreen = detailOriginScreen
+                                selectedTaskId = null
+                            }
+                            ScreenState.CAMERA_AFTER_PROOF -> {
+                                currentScreen = detailOriginScreen
+                                selectedTaskId = null
+                            }
+                            ScreenState.HEATMAP -> currentScreen = ScreenState.CALENDAR
+                            else -> {
+                                currentScreen = ScreenState.HOME
+                                selectedTaskId = null
+                            }
+                        }
+                    }
+
                     LaunchedEffect(tasks, pendingTaskIdState.value) {
                         val targetId = pendingTaskIdState.value ?: return@LaunchedEffect
                         val loadedTasks = tasks ?: return@LaunchedEffect
                         val found = loadedTasks.find { it.id == targetId }
                         if (found != null) {
                             selectedTaskId = targetId
+                            detailOriginScreen = ScreenState.HOME
                             currentScreen = ScreenState.DETAIL
                         } else {
                             currentScreen = ScreenState.HOME
@@ -170,20 +241,23 @@ class MainActivity : ComponentActivity() {
                                 SnapTaskWidget().updateAll(this@MainActivity)
                                 LocketFocusWidget().updateAll(this@MainActivity)
                                 NotionStackWidget().updateAll(this@MainActivity)
-                            } catch (_: Exception) {}
+                            } catch (_: Exception) {
+                            }
                         }
                     }
 
-                    // Notification permission launcher for Android 13+ (API 33+)
                     val notifPermissionLauncher = rememberLauncherForActivityResult(
                         contract = ActivityResultContracts.RequestPermission()
                     ) { isGranted ->
                         if (!isGranted) {
-                            Toast.makeText(this@MainActivity, "Thông báo đang tắt. Bạn có thể bật lại trong Cài đặt.", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                this@MainActivity,
+                                "Thông báo đang tắt. Bạn có thể bật lại trong Cài đặt.",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     }
 
-                    // Prompt for notification permission on app launch if not enabled
                     LaunchedEffect(Unit) {
                         AlarmSoundPlayer.stop()
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -194,56 +268,132 @@ class MainActivity : ComponentActivity() {
                     }
 
                     fun formatReminderConfirmation(task: Task): String {
-                        if (!task.hasReminder || task.reminderTime == null) return ""
-                        val diffMs = task.reminderTime!! - System.currentTimeMillis()
+                        val rem = task.reminderTime ?: return ""
+                        if (!task.hasReminder) return ""
+                        val diffMs = rem - System.currentTimeMillis()
                         val diffSec = diffMs / 1000
                         val diffMin = diffSec / 60
                         return when {
                             diffSec in 0..10 -> "\nĐã đặt nhắc nhở sau ${diffSec.coerceAtLeast(1)} giây"
-                            diffMin < 60 -> "\nĐã đặt nhắc nhở sau ${diffMin} phút nữa"
+                            diffMin < 60 -> "\nĐã đặt nhắc nhở sau $diffMin phút nữa"
                             else -> {
                                 val hours = diffMin / 60
                                 val remMin = diffMin % 60
                                 if (remMin > 0) "\nĐã đặt nhắc nhở sau ${hours}h ${remMin}m nữa"
-                                else "\nĐã đặt nhắc nhở sau ${hours} giờ nữa"
+                                else "\nĐã đặt nhắc nhở sau $hours giờ nữa"
                             }
                         }
                     }
 
-                    // Camera permission launcher
                     var pendingCameraTarget by remember { mutableStateOf(ScreenState.CAMERA_CREATOR) }
                     val permissionLauncher = rememberLauncherForActivityResult(
                         contract = ActivityResultContracts.RequestPermission()
                     ) { isGranted ->
+                        hasCameraPermission = isGranted
                         if (isGranted) {
                             currentScreen = pendingCameraTarget
                         } else {
-                            Toast.makeText(this, "Cần cấp quyền máy ảnh để chụp ghi chú", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                this@MainActivity,
+                                "Cần cấp quyền máy ảnh để chụp ảnh việc cần làm",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     }
 
-                    fun openCameraWithCheck(target: ScreenState = ScreenState.CAMERA_CREATOR) {
-                        pendingCameraTarget = target
-                        val hasCameraPermission = ContextCompat.checkSelfPermission(
-                            this,
+                    fun openAfterProofWithCheck(task: Task, origin: ScreenState) {
+                        selectedTaskId = task.id
+                        detailOriginScreen = origin
+                        pendingCameraTarget = ScreenState.CAMERA_AFTER_PROOF
+                        val granted = ContextCompat.checkSelfPermission(
+                            this@MainActivity,
                             Manifest.permission.CAMERA
                         ) == PackageManager.PERMISSION_GRANTED
-
-                        if (hasCameraPermission) {
-                            currentScreen = target
+                        hasCameraPermission = granted
+                        if (granted) {
+                            currentScreen = ScreenState.CAMERA_AFTER_PROOF
                         } else {
                             permissionLauncher.launch(Manifest.permission.CAMERA)
                         }
                     }
 
+                    fun openTaskDetail(task: Task, origin: ScreenState) {
+                        selectedTaskId = task.id
+                        detailOriginScreen = origin
+                        currentScreen = ScreenState.DETAIL
+                    }
+
+                    fun handleDockSelect(tab: DockTab) {
+                        selectedTaskId = null
+                        currentScreen = when (tab) {
+                            DockTab.TODAY -> ScreenState.HOME
+                            DockTab.CALENDAR -> ScreenState.CALENDAR
+                            DockTab.BOARD -> ScreenState.BOARD
+                            DockTab.FOLDERS -> ScreenState.FOLDERS
+                        }
+                    }
+
                     when (currentScreen) {
+                        ScreenState.CAMERA_CREATOR -> {
+                            CameraCreatorScreen(
+                                tasks = displayTasks,
+                                folders = folderConfig.folders,
+                                hasCameraPermission = hasCameraPermission,
+                                onRequestCameraPermission = {
+                                    pendingCameraTarget = ScreenState.CAMERA_CREATOR
+                                    permissionLauncher.launch(Manifest.permission.CAMERA)
+                                },
+                                onSaveTask = { newTask, cadence ->
+                                    scope.launch {
+                                        val createdId = repository.createTask(newTask)
+                                        if (cadence != RepeatCadence.NONE) {
+                                            folderPrefs.setTaskRepeat(createdId, cadence)
+                                        }
+                                        updateWidgets()
+                                        currentScreen = ScreenState.HOME
+                                        val reminderNotice = formatReminderConfirmation(newTask)
+                                        Toast.makeText(
+                                            this@MainActivity,
+                                            "Đã lưu việc cần làm!$reminderNotice",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                                },
+                                onSaveQuickNote = { noteTask ->
+                                    scope.launch {
+                                        repository.createTask(noteTask)
+                                        updateWidgets()
+                                        currentScreen = ScreenState.HOME
+                                        val reminderNotice = formatReminderConfirmation(noteTask)
+                                        Toast.makeText(
+                                            this@MainActivity,
+                                            "Đã lưu ghi chú!$reminderNotice",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                                },
+                                onGoHome = {
+                                    currentScreen = ScreenState.HOME
+                                },
+                                onOpenFolders = {
+                                    currentScreen = ScreenState.FOLDERS
+                                }
+                            )
+                        }
+
                         ScreenState.HOME -> {
                             HomeScreen(
                                 tasks = displayTasks,
-                                onOpenLiveCamera = { openCameraWithCheck(ScreenState.CAMERA_CREATOR) },
+                                isLoading = isLoadingTasks,
+                                folders = folderConfig.folders,
+                                smartUrgentEnabled = folderConfig.smartUrgentEnabled,
+                                smartProofEnabled = folderConfig.smartProofEnabled,
+                                repeatByTaskId = folderConfig.repeatByTaskId,
+                                isDarkTheme = isDark,
+                                onToggleTheme = onToggleTheme,
+                                onOpenCamera = { currentScreen = ScreenState.CAMERA_CREATOR },
                                 onOpenProofCamera = { task ->
-                                    selectedTaskId = task.id
-                                    openCameraWithCheck(ScreenState.CAMERA_AFTER_PROOF)
+                                    openAfterProofWithCheck(task, origin = ScreenState.HOME)
                                 },
                                 onQuickComplete = { task ->
                                     scope.launch {
@@ -254,7 +404,11 @@ class MainActivity : ComponentActivity() {
                                             completedAt = System.currentTimeMillis()
                                         )
                                         updateWidgets()
-                                        Toast.makeText(this@MainActivity, "Đã hoàn thành!", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(
+                                            this@MainActivity,
+                                            "Đã hoàn thành!",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                     }
                                 },
                                 onToggleTaskStatus = { task ->
@@ -263,45 +417,137 @@ class MainActivity : ComponentActivity() {
                                         updateWidgets()
                                     }
                                 },
-                                onTogglePin = { task ->
-                                    scope.launch {
-                                        repository.togglePinTask(task.id, !task.isPinnedToWidget)
-                                        updateWidgets()
-                                    }
-                                },
                                 onTaskClick = { task ->
-                                    selectedTaskId = task.id
-                                    currentScreen = ScreenState.DETAIL
-                                },
-                                onOpenBoard = {
-                                    currentScreen = ScreenState.BOARD
+                                    openTaskDetail(task, origin = ScreenState.HOME)
                                 },
                                 onSaveQuickNote = { newTask ->
                                     scope.launch {
                                         repository.createTask(newTask)
                                         updateWidgets()
                                         val reminderNotice = formatReminderConfirmation(newTask)
-                                        Toast.makeText(this@MainActivity, "Đã lưu ghi chú!$reminderNotice", Toast.LENGTH_LONG).show()
+                                        Toast.makeText(
+                                            this@MainActivity,
+                                            "Đã lưu ghi chú!$reminderNotice",
+                                            Toast.LENGTH_LONG
+                                        ).show()
                                     }
                                 },
-                                isDarkTheme = isDark,
-                                onToggleTheme = onToggleTheme
+                                onOpenCalendar = { focusDate ->
+                                    calendarFocusMillis = focusDate
+                                    currentScreen = ScreenState.CALENDAR
+                                },
+                                onOpenRecap = {
+                                    currentScreen = ScreenState.WEEKLY_RECAP
+                                },
+                                onOpenFolders = {
+                                    currentScreen = ScreenState.FOLDERS
+                                },
+                                onSelectDockTab = ::handleDockSelect
                             )
                         }
 
-                        ScreenState.CAMERA_CREATOR -> {
-                            CameraCreatorScreen(
-                                onSaveTask = { newTask ->
+                        ScreenState.CALENDAR -> {
+                            CalendarScreen(
+                                tasks = displayTasks,
+                                isLoading = isLoadingTasks,
+                                initialSelectedDateMillis = calendarFocusMillis,
+                                onOpenHeatmap = { currentScreen = ScreenState.HEATMAP },
+                                onOpenCamera = { currentScreen = ScreenState.CAMERA_CREATOR },
+                                onTaskClick = { task ->
+                                    openTaskDetail(task, origin = ScreenState.CALENDAR)
+                                },
+                                onToggleTask = { task ->
                                     scope.launch {
-                                        repository.createTask(newTask)
+                                        repository.toggleTaskStatus(task.id, task.status)
                                         updateWidgets()
-                                        currentScreen = ScreenState.HOME
-                                        val reminderNotice = formatReminderConfirmation(newTask)
-                                        Toast.makeText(this@MainActivity, "Đã lưu việc cần làm!$reminderNotice", Toast.LENGTH_LONG).show()
                                     }
                                 },
-                                onClose = {
-                                    currentScreen = ScreenState.HOME
+                                onSelectDockTab = ::handleDockSelect
+                            )
+                        }
+
+                        ScreenState.HEATMAP -> {
+                            HeatmapScreen(
+                                tasks = displayTasks,
+                                isLoading = isLoadingTasks,
+                                folders = folderConfig.folders,
+                                onOpenCalendar = { focusDate ->
+                                    calendarFocusMillis = focusDate
+                                    currentScreen = ScreenState.CALENDAR
+                                },
+                                onOpenCamera = { currentScreen = ScreenState.CAMERA_CREATOR },
+                                onSelectDockTab = ::handleDockSelect
+                            )
+                        }
+
+                        ScreenState.FOLDERS -> {
+                            FolderManagerScreen(
+                                tasks = displayTasks,
+                                folders = folderConfig.folders,
+                                smartUrgentEnabled = folderConfig.smartUrgentEnabled,
+                                smartProofEnabled = folderConfig.smartProofEnabled,
+                                onToggleSmartUrgent = { folderPrefs.setSmartUrgentEnabled(it) },
+                                onToggleSmartProof = { folderPrefs.setSmartProofEnabled(it) },
+                                onMoveFolder = { idx, delta -> folderPrefs.moveFolder(idx, delta) },
+                                onSaveFolder = { editingId, name, iconKey, colorHex, makeDefault ->
+                                    val (oldName, newName) = folderPrefs.saveFolder(
+                                        editingId = editingId,
+                                        rawName = name,
+                                        iconKey = iconKey,
+                                        colorHex = colorHex,
+                                        makeDefault = makeDefault
+                                    )
+                                    if (oldName != null) {
+                                        scope.launch {
+                                            repository.renameFolderTasks(oldName, newName)
+                                            updateWidgets()
+                                        }
+                                    }
+                                },
+                                onDeleteFolder = { id ->
+                                    val removedName = folderPrefs.deleteFolder(id)
+                                    if (removedName != null) {
+                                        scope.launch {
+                                            repository.renameFolderTasks(
+                                                removedName,
+                                                FolderPreferencesRepository.UNASSIGNED_FOLDER_NAME
+                                            )
+                                            updateWidgets()
+                                        }
+                                    }
+                                },
+                                onOpenCamera = { currentScreen = ScreenState.CAMERA_CREATOR },
+                                onSelectDockTab = ::handleDockSelect
+                            )
+                        }
+
+                        ScreenState.BOARD -> {
+                            BoardScreen(
+                                tasks = displayTasks,
+                                isLoading = isLoadingTasks,
+                                folders = folderConfig.folders,
+                                onTaskClick = { task ->
+                                    openTaskDetail(task, origin = ScreenState.BOARD)
+                                },
+                                onToggleTaskStatus = { task ->
+                                    scope.launch {
+                                        repository.toggleTaskStatus(task.id, task.status)
+                                        updateWidgets()
+                                    }
+                                },
+                                onOpenCamera = { currentScreen = ScreenState.CAMERA_CREATOR },
+                                onOpenFolders = { currentScreen = ScreenState.FOLDERS },
+                                onSelectDockTab = ::handleDockSelect
+                            )
+                        }
+
+                        ScreenState.WEEKLY_RECAP -> {
+                            WeeklyRecapScreen(
+                                tasks = displayTasks,
+                                onBack = { currentScreen = ScreenState.HOME },
+                                onOpenHeatmap = { currentScreen = ScreenState.HEATMAP },
+                                onTaskClick = { task ->
+                                    openTaskDetail(task, origin = ScreenState.WEEKLY_RECAP)
                                 }
                             )
                         }
@@ -321,13 +567,16 @@ class MainActivity : ComponentActivity() {
                                                 completedAt = System.currentTimeMillis()
                                             )
                                             updateWidgets()
-                                            selectedTaskId = null
-                                            currentScreen = ScreenState.HOME
-                                            Toast.makeText(this@MainActivity, "Đã hoàn thành Before / After!", Toast.LENGTH_SHORT).show()
+                                            currentScreen = ScreenState.DETAIL
+                                            Toast.makeText(
+                                                this@MainActivity,
+                                                "Đã lưu ảnh kết quả Trước / Sau!",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
                                         }
                                     },
                                     onClose = {
-                                        currentScreen = ScreenState.HOME
+                                        currentScreen = detailOriginScreen
                                         selectedTaskId = null
                                     }
                                 )
@@ -345,8 +594,9 @@ class MainActivity : ComponentActivity() {
                             } else if (selectedTask != null) {
                                 TaskDetailScreen(
                                     task = selectedTask,
+                                    folders = folderConfig.folders,
                                     onBack = {
-                                        currentScreen = ScreenState.HOME
+                                        currentScreen = detailOriginScreen
                                         selectedTaskId = null
                                     },
                                     onSaveTask = { updated ->
@@ -354,7 +604,11 @@ class MainActivity : ComponentActivity() {
                                             repository.updateTask(updated)
                                             updateWidgets()
                                             val reminderNotice = formatReminderConfirmation(updated)
-                                            Toast.makeText(this@MainActivity, "Đã cập nhật việc cần làm!$reminderNotice", Toast.LENGTH_LONG).show()
+                                            Toast.makeText(
+                                                this@MainActivity,
+                                                "Đã cập nhật việc cần làm!$reminderNotice",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
                                         }
                                     },
                                     onDeleteTask = { toDelete ->
@@ -362,13 +616,26 @@ class MainActivity : ComponentActivity() {
                                             repository.deleteTask(toDelete)
                                             updateWidgets()
                                             selectedTaskId = null
-                                            currentScreen = ScreenState.HOME
-                                            Toast.makeText(this@MainActivity, "Đã xóa việc cần làm!", Toast.LENGTH_SHORT).show()
+                                            currentScreen = detailOriginScreen
+                                            Toast.makeText(
+                                                this@MainActivity,
+                                                "Đã xóa việc cần làm!",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
                                         }
                                     },
-                                    onOpenAfterCamera = {
-                                        selectedTaskId = selectedTask.id
-                                        openCameraWithCheck(ScreenState.CAMERA_AFTER_PROOF)
+                                    onOpenAfterCamera = { targetTask ->
+                                        openAfterProofWithCheck(targetTask, origin = ScreenState.DETAIL)
+                                    },
+                                    onOpenFolders = {
+                                        currentScreen = ScreenState.FOLDERS
+                                    },
+                                    onOpenShareCard = { latestSnapshot ->
+                                        scope.launch {
+                                            repository.updateTask(latestSnapshot)
+                                            selectedTaskId = latestSnapshot.id
+                                            currentScreen = ScreenState.SHARE_CARD
+                                        }
                                     }
                                 )
                             } else {
@@ -379,24 +646,20 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
-                        ScreenState.BOARD -> {
-                            BoardScreen(
-                                tasks = displayTasks,
-                                onToggleTaskStatus = { task ->
-                                    scope.launch {
-                                        repository.toggleTaskStatus(task.id, task.status)
-                                        updateWidgets()
-                                    }
-                                },
-                                onTaskClick = { task ->
-                                    selectedTaskId = task.id
-                                    currentScreen = ScreenState.DETAIL
-                                },
-                                onBack = {
+                        ScreenState.SHARE_CARD -> {
+                            if (tasks == null) {
+                                Box(modifier = Modifier.fillMaxSize())
+                            } else if (selectedTask != null) {
+                                ShareCardScreen(
+                                    task = selectedTask,
+                                    onClose = { currentScreen = ScreenState.DETAIL }
+                                )
+                            } else {
+                                LaunchedEffect(Unit) {
                                     currentScreen = ScreenState.HOME
                                     selectedTaskId = null
                                 }
-                            )
+                            }
                         }
                     }
                 }

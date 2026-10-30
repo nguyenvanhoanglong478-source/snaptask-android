@@ -102,6 +102,12 @@ class TaskRepositoryImpl(
         taskDao.togglePinned(id, isPinned)
     }
 
+    override suspend fun renameFolderTasks(oldName: String, newName: String) = withContext(Dispatchers.IO) {
+        if (oldName.isNotBlank() && oldName != newName) {
+            taskDao.renameFolderTasks(oldName, newName)
+        }
+    }
+
     override suspend fun deleteTask(task: Task) = withContext(Dispatchers.IO) {
         FileUtils.deleteFile(task.beforeImageUri)
         FileUtils.deleteFile(task.afterImageUri)

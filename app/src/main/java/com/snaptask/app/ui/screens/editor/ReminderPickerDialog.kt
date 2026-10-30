@@ -172,13 +172,11 @@ fun ReminderPickerDialog(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 1. Mode Selector (Notification vs Alarm)
             Text(
                 text = "HÌNH THỨC NHẮC",
                 color = colors.textSecondary,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -247,13 +245,11 @@ fun ReminderPickerDialog(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // 2. Quick Presets
             Text(
                 text = "CHỌN NHANH THỜI GIAN",
                 color = colors.textSecondary,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(8.dp))
 

@@ -6,6 +6,7 @@ import coil.ImageLoader
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import com.snaptask.app.data.local.AppDatabase
+import com.snaptask.app.data.preferences.FolderPreferencesRepository
 import com.snaptask.app.data.repository.TaskRepository
 import com.snaptask.app.data.repository.TaskRepositoryImpl
 import com.snaptask.app.util.FileUtils
@@ -21,11 +22,15 @@ class SnapTaskApplication : Application() {
     lateinit var taskRepository: TaskRepository
         private set
 
+    lateinit var folderPreferences: FolderPreferencesRepository
+        private set
+
     override fun onCreate() {
         super.onCreate()
 
         database = AppDatabase.getInstance(this)
         taskRepository = TaskRepositoryImpl(this, database.taskDao())
+        folderPreferences = FolderPreferencesRepository(this)
 
         // Low-End RAM Tuning for Coil Image Loader:
         // Set maximum memory cache to 15% of total available RAM

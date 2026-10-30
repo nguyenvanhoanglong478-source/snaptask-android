@@ -21,18 +21,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.snaptask.app.ui.theme.snapColors
 
-/**
- * SnapTask Brand Logo: Ink rounded container 32dp (corner 7.7dp)
- * with outer ring diameter = 61% of box width, inner disk = 35% of box width.
- */
 @Composable
 fun SnapTaskLogo(
     modifier: Modifier = Modifier,
     size: Dp = 32.dp,
-    backgroundColor: Color = Color(0xFF17140A),
+    backgroundColor: Color = Color(0xFF10120A),
     ringColor: Color = MaterialTheme.snapColors.flash,
     diskColor: Color = MaterialTheme.snapColors.flash,
-    tickColor: Color = Color(0xFF17140A)
+    tickColor: Color = Color(0xFF10120A)
 ) {
     val cornerRadius = size * (7.7f / 32f)
 
@@ -48,7 +44,6 @@ fun SnapTaskLogo(
             val scale = w / 108f
             val center = Offset(w / 2f, this.size.height / 2f)
 
-            // 1. Outer Ring: diameter 61% of container (radius to stroke center 29.5/108, stroke 7/108)
             drawCircle(
                 color = ringColor,
                 radius = 29.5f * scale,
@@ -56,14 +51,12 @@ fun SnapTaskLogo(
                 style = Stroke(width = 7f * scale)
             )
 
-            // 2. Inner Disk: diameter 35% of container (radius 19/108)
             drawCircle(
                 color = diskColor,
                 radius = 19f * scale,
                 center = center
             )
 
-            // 3. Cutout Negative Tick Mark: stroke 6.5/108
             val tickPath = Path().apply {
                 moveTo(45f * scale, 55f * scale)
                 lineTo(51.5f * scale, 61.5f * scale)
@@ -86,7 +79,7 @@ fun SnapTaskLogo(
 fun SnapTaskLogoBadge(
     modifier: Modifier = Modifier,
     size: Dp = 32.dp,
-    backgroundColor: Color = Color(0xFF17140A)
+    backgroundColor: Color = Color(0xFF10120A)
 ) {
     SnapTaskLogo(
         modifier = modifier,

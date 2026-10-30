@@ -46,6 +46,9 @@ import com.snaptask.app.R
 import com.snaptask.app.data.local.AppDatabase
 import com.snaptask.app.data.local.TaskEntity
 import com.snaptask.app.ui.MainActivity
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class NotionStackWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = NotionStackWidget()
@@ -109,17 +112,17 @@ class NotionStackWidget : GlanceAppWidget() {
             modifier = GlanceModifier
                 .fillMaxSize()
                 .background(WidgetColors.bgProvider)
-                .cornerRadius(24.dp)
+                .cornerRadius(26.dp)
                 .padding(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // CỘT TRÁI (~42%): Ảnh bo 18, scrim gradient, tiêu đề 14sp Bold ở đáy + nút tick tròn 32dp
             Box(
                 modifier = GlanceModifier
                     .width(leftColumnWidth)
                     .fillMaxHeight()
-                    .cornerRadius(18.dp)
+                    .cornerRadius(20.dp)
                     .background(WidgetColors.elevatedProvider)
+                    .clickable(actionStartActivity<MainActivity>())
             ) {
                 if (topTask != null) {
                     if (bitmap != null) {
@@ -131,15 +134,39 @@ class NotionStackWidget : GlanceAppWidget() {
                         )
                     }
 
-                    // Scrim gradient thật: widget_scrim.xml
                     Column(modifier = GlanceModifier.fillMaxSize()) {
+                        if (topTask.reminderTime != null && topTask.reminderTime > 0) {
+                            val timeStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(topTask.reminderTime))
+                            Row(
+                                modifier = GlanceModifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp)
+                            ) {
+                                Box(
+                                    modifier = GlanceModifier
+                                        .background(ColorProvider(Color(0xAD0F0F0E)))
+                                        .cornerRadius(8.dp)
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                                ) {
+                                    Text(
+                                        text = timeStr,
+                                        style = TextStyle(
+                                            color = WidgetColors.textProvider,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 12.sp
+                                        )
+                                    )
+                                }
+                            }
+                        }
+
                         Spacer(modifier = GlanceModifier.defaultWeight())
 
                         Box(
                             modifier = GlanceModifier
                                 .fillMaxWidth()
                                 .background(ImageProvider(R.drawable.widget_scrim))
-                                .padding(top = 28.dp, start = 8.dp, end = 8.dp, bottom = 8.dp)
+                                .padding(top = 24.dp, start = 9.dp, end = 8.dp, bottom = 8.dp)
                         ) {
                             Row(
                                 modifier = GlanceModifier.fillMaxWidth(),
@@ -148,9 +175,9 @@ class NotionStackWidget : GlanceAppWidget() {
                                 Text(
                                     text = topTask.title.ifBlank { "Việc cần làm" },
                                     style = TextStyle(
-                                        color = ColorProvider(Color(0xFFF5F1E8)),
+                                        color = WidgetColors.textProvider,
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp
+                                        fontSize = 13.sp
                                     ),
                                     maxLines = 1,
                                     modifier = GlanceModifier.defaultWeight()
@@ -179,11 +206,11 @@ class NotionStackWidget : GlanceAppWidget() {
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Hết việc!",
+                            text = "Hết việc",
                             style = TextStyle(
                                 color = WidgetColors.textProvider,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp
+                                fontSize = 13.sp
                             )
                         )
                     }
@@ -192,13 +219,11 @@ class NotionStackWidget : GlanceAppWidget() {
 
             Spacer(modifier = GlanceModifier.width(10.dp))
 
-            // CỘT PHẢI (~58%): Header TIẾP THEO + danh sách việc + Nút "+ Chụp việc mới"
             Column(
                 modifier = GlanceModifier
                     .width(rightColumnWidth)
                     .fillMaxHeight()
             ) {
-                // Header: "TIẾP THEO" on Left, "đã xong/tổng" on Right in Flash Yellow
                 Row(
                     modifier = GlanceModifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -208,7 +233,7 @@ class NotionStackWidget : GlanceAppWidget() {
                         style = TextStyle(
                             color = WidgetColors.textSecondaryProvider,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp
+                            fontSize = 12.sp
                         )
                     )
                     Spacer(modifier = GlanceModifier.defaultWeight())
@@ -217,14 +242,13 @@ class NotionStackWidget : GlanceAppWidget() {
                         style = TextStyle(
                             color = WidgetColors.accentProvider,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp
+                            fontSize = 12.sp
                         )
                     )
                 }
 
-                Spacer(modifier = GlanceModifier.height(4.dp))
+                Spacer(modifier = GlanceModifier.height(6.dp))
 
-                // Checklist Items (Tối đa 3 hàng)
                 if (nextTasks.isEmpty()) {
                     Box(
                         modifier = GlanceModifier
@@ -235,8 +259,8 @@ class NotionStackWidget : GlanceAppWidget() {
                         Text(
                             text = "Không có việc chờ tiếp theo",
                             style = TextStyle(
-                                color = ColorProvider(Color(0xFF8F897B)),
-                                fontSize = 13.sp
+                                color = WidgetColors.textMutedProvider,
+                                fontSize = 12.sp
                             )
                         )
                     }
@@ -259,7 +283,6 @@ class NotionStackWidget : GlanceAppWidget() {
                                     ),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                // Ô vuông 20dp bo 7 viền 1.5dp #8F897B
                                 Image(
                                     provider = ImageProvider(R.drawable.widget_checkbox_empty),
                                     contentDescription = "Chọn hoàn thành",
@@ -269,8 +292,8 @@ class NotionStackWidget : GlanceAppWidget() {
                                 Text(
                                     text = item.title,
                                     style = TextStyle(
-                                        color = ColorProvider(Color(0xFFF5F1E8)),
-                                        fontWeight = FontWeight.Normal,
+                                        color = WidgetColors.textProvider,
+                                        fontWeight = FontWeight.Medium,
                                         fontSize = 13.sp
                                     ),
                                     maxLines = 1
@@ -282,7 +305,6 @@ class NotionStackWidget : GlanceAppWidget() {
 
                 Spacer(modifier = GlanceModifier.height(4.dp))
 
-                // Nút "+ Chụp việc mới": nền flash, chữ onFlash 13sp Bold, cao 36, bo 12
                 Button(
                     text = "+ Chụp việc mới",
                     onClick = actionStartActivity<MainActivity>(),

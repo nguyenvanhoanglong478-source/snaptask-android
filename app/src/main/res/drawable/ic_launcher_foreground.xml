@@ -5,21 +5,18 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Outer Ring: scaled to 61% of central 72x72 safe zone -->
     <path
-        android:strokeColor="#FFD23F"
+        android:strokeColor="#D4FF3A"
         android:strokeWidth="4.7"
         android:strokeLineCap="round"
         android:pathData="M54,34.3 A19.7,19.7 0 1,1 53.99,34.3" />
 
-    <!-- Inner Disk: scaled to 35% of central 72x72 safe zone -->
     <path
-        android:fillColor="#FFD23F"
+        android:fillColor="#D4FF3A"
         android:pathData="M54,41.3 A12.7,12.7 0 1,1 53.99,41.3 Z" />
 
-    <!-- Negative Space Tick Mark -->
     <path
-        android:strokeColor="#17140A"
+        android:strokeColor="#10120A"
         android:strokeWidth="4.3"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"

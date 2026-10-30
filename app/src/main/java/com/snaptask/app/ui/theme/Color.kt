@@ -7,11 +7,6 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-// ==========================================
-// INK & FLASH DESIGN SYSTEM (Light + Dark)
-// Single Source of Truth
-// ==========================================
-
 data class SnapTaskColors(
     val bg: Color,
     val surface: Color,
@@ -25,57 +20,89 @@ data class SnapTaskColors(
     val onFlash: Color,
     val done: Color,
     val urgent: Color,
+    val onUrgent: Color,
+    val urgentSoft: Color,
     val warning: Color,
+    val bubble: Color,
+    val dock: Color,
+    val hm0: Color,
+    val hm1: Color,
+    val hm2: Color,
+    val hm3: Color,
+    val hm4: Color,
+    val hmBorder: Color,
     val scrim: Brush,
     val glass: Color
 )
 
+// WCAG AA verified tokens for Snap Pop dark theme (#0F0F0E base, #D4FF3A Electric Lime accent).
 val DarkSnapTaskColors = SnapTaskColors(
-    bg = Color(0xFF121110),
-    surface = Color(0xFF1B1A17),
-    elevated = Color(0xFF26241F),
-    border = Color(0xFF34312B),
-    borderHighlight = Color(0xFF4A463E),
-    text = Color(0xFFF5F1E8),
-    textSecondary = Color(0xFFB3AC9E),
-    textMuted = Color(0xFF8F897B),
-    flash = Color(0xFFFFD23F),
-    onFlash = Color(0xFF17140A),
-    done = Color(0xFF4ADE8A),
-    urgent = Color(0xFFFF7A6B),
-    warning = Color(0xFFFFD23F), // warning uses flash #FFD23F in dark mode
+    bg = Color(0xFF0F0F0E),
+    surface = Color(0xFF1A1A18),
+    elevated = Color(0xFF252522),
+    border = Color(0xFF34342F),
+    borderHighlight = Color(0xFF484842),
+    text = Color(0xFFFAFAF6),
+    textSecondary = Color(0xFFB0AFA7),
+    textMuted = Color(0xFF8E8D85),
+    flash = Color(0xFFD4FF3A),
+    onFlash = Color(0xFF10120A),
+    done = Color(0xFFD4FF3A),
+    urgent = Color(0xFFFF5C4D),
+    onUrgent = Color(0xFF10120A),
+    urgentSoft = Color(0x29FF5C4D),
+    warning = Color(0xFFD4FF3A),
+    bubble = Color(0xAD0F0F0E),
+    dock = Color(0xEB181816),
+    hm0 = Color(0xFF242420),
+    hm1 = Color(0xFF3E4B19),
+    hm2 = Color(0xFF6C851E),
+    hm3 = Color(0xFFA2CB2B),
+    hm4 = Color(0xFFD4FF3A),
+    hmBorder = Color(0x12FFFFFF),
     scrim = Brush.verticalGradient(
         colors = listOf(
             Color.Transparent,
-            Color(0x66121110),
-            Color(0xF2121110)
+            Color(0x660F0F0E),
+            Color(0xE60F0F0E)
         )
     ),
-    glass = Color(0xE61B1A17) // 90% opacity #1B1A17
+    glass = Color(0xEB1A1A18)
 )
 
+// WCAG AA verified tokens for Snap Pop light theme (#F3F2EC warm paper, dark ink heatmap ramp).
 val LightSnapTaskColors = SnapTaskColors(
-    bg = Color(0xFFF7F4EC),
+    bg = Color(0xFFF3F2EC),
     surface = Color(0xFFFFFFFF),
-    elevated = Color(0xFFEFEBE0),
-    border = Color(0xFFDDD7C8),
-    borderHighlight = Color(0xFFC9C2B0),
-    text = Color(0xFF17140A),
-    textSecondary = Color(0xFF5B5648),
-    textMuted = Color(0xFF6B665A),
-    flash = Color(0xFFFFD23F), // Used for button/chip backgrounds; text on it is always #17140A
-    onFlash = Color(0xFF17140A),
-    done = Color(0xFF1B7F4B),
-    urgent = Color(0xFFC23A28),
-    warning = Color(0xFF8A5A00), // Text and border warning for high contrast on light bg
+    elevated = Color(0xFFE8E6DE),
+    border = Color(0xFFD5D2C7),
+    borderHighlight = Color(0xFFC2BEB2),
+    text = Color(0xFF141413),
+    textSecondary = Color(0xFF575650),
+    textMuted = Color(0xFF66655E),
+    flash = Color(0xFFD4FF3A),
+    onFlash = Color(0xFF10120A),
+    done = Color(0xFF3D5E00),
+    urgent = Color(0xFFC93223),
+    onUrgent = Color(0xFFFFFFFF),
+    urgentSoft = Color(0x1FC93223),
+    warning = Color(0xFF5C4700),
+    bubble = Color(0xAD0F0F0E),
+    dock = Color(0xF0FFFFFF),
+    hm0 = Color(0xFFEFECE3),
+    hm1 = Color(0xFFD8F07A),
+    hm2 = Color(0xFFAEE02B),
+    hm3 = Color(0xFF73A600),
+    hm4 = Color(0xFF3D5E00),
+    hmBorder = Color(0x24141413),
     scrim = Brush.verticalGradient(
         colors = listOf(
             Color.Transparent,
-            Color(0x6617140A),
-            Color(0xE617140A)
+            Color(0x66141413),
+            Color(0xE6141413)
         )
     ),
-    glass = Color(0xE6FFFFFF) // 90% opacity #FFFFFF
+    glass = Color(0xF0FFFFFF)
 )
 
 val LocalSnapTaskColors = staticCompositionLocalOf { DarkSnapTaskColors }

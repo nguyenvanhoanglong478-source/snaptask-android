@@ -142,10 +142,10 @@ fun CompletionProofBottomSheet(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Chụp ảnh kết quả để kích hoạt hiệu ứng 3D lật thẻ Before / After kiểu Locket!",
-                        color = colors.textMuted,
+                        text = "Chụp ảnh kết quả để so sánh Trước / Sau trực quan hoặc lưu thành thẻ chia sẻ.",
+                        color = colors.textSecondary,
                         fontSize = 12.sp,
-                        lineHeight = 15.sp
+                        lineHeight = 16.sp
                     )
                 }
             }

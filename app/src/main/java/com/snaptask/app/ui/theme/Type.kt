@@ -13,7 +13,9 @@ val BeVietnamPro = FontFamily(
     Font(R.font.be_vietnam_pro_regular, FontWeight.Normal),
     Font(R.font.be_vietnam_pro_medium, FontWeight.Medium),
     Font(R.font.be_vietnam_pro_semibold, FontWeight.SemiBold),
-    Font(R.font.be_vietnam_pro_bold, FontWeight.Bold)
+    Font(R.font.be_vietnam_pro_bold, FontWeight.Bold),
+    Font(R.font.be_vietnam_pro_bold, FontWeight.ExtraBold),
+    Font(R.font.be_vietnam_pro_bold, FontWeight.Black)
 )
 
 val Bricolage = FontFamily(
@@ -23,21 +25,22 @@ val Bricolage = FontFamily(
 
 val SnapTaskTypography = Typography(
     headlineLarge = TextStyle(
-        fontFamily = Bricolage,
+        fontFamily = BeVietnamPro,
         fontWeight = FontWeight.ExtraBold,
         fontSize = 32.sp,
-        lineHeight = 36.sp,
-        letterSpacing = (-0.02).em
+        lineHeight = 35.sp,
+        letterSpacing = (-0.03).em
     ),
     headlineMedium = TextStyle(
-        fontFamily = Bricolage,
-        fontWeight = FontWeight.SemiBold,
+        fontFamily = BeVietnamPro,
+        fontWeight = FontWeight.Bold,
         fontSize = 22.sp,
-        lineHeight = 28.sp
+        lineHeight = 27.sp,
+        letterSpacing = (-0.02).em
     ),
     titleMedium = TextStyle(
         fontFamily = BeVietnamPro,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Bold,
         fontSize = 15.sp,
         lineHeight = 20.sp
     ),
@@ -49,15 +52,14 @@ val SnapTaskTypography = Typography(
     ),
     bodySmall = TextStyle(
         fontFamily = BeVietnamPro,
-        fontWeight = FontWeight.Normal,
+        fontWeight = FontWeight.Medium,
         fontSize = 12.sp,
         lineHeight = 16.sp
     ),
     labelSmall = TextStyle(
         fontFamily = BeVietnamPro,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Bold,
         fontSize = 12.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.04.em
+        lineHeight = 16.sp
     )
 )

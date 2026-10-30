@@ -45,7 +45,7 @@ fun EmptyWidgetContent2x2() {
         modifier = GlanceModifier
             .fillMaxSize()
             .background(WidgetColors.bgProvider)
-            .cornerRadius(28.dp)
+            .cornerRadius(26.dp)
             .padding(16.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -58,7 +58,7 @@ fun EmptyWidgetContent2x2() {
                     fontSize = 15.sp
                 )
             )
-            Spacer(modifier = GlanceModifier.height(8.dp))
+            Spacer(modifier = GlanceModifier.height(10.dp))
             Button(
                 text = "Chụp việc mới",
                 onClick = actionStartActivity<MainActivity>(),
@@ -80,13 +80,16 @@ fun FocusContent2x2(
     taskIndex: Int,
     totalTasks: Int
 ) {
+    val now = System.currentTimeMillis()
+    val isOverdue = reminderTime != null && reminderTime in 1 until now
+
     Box(
         modifier = GlanceModifier
             .fillMaxSize()
             .background(WidgetColors.bgProvider)
-            .cornerRadius(28.dp)
+            .cornerRadius(26.dp)
+            .clickable(actionStartActivity<MainActivity>())
     ) {
-        // 1. Photo filling 1:1 squircle
         if (bitmap != null) {
             Image(
                 provider = ImageProvider(bitmap),
@@ -102,30 +105,32 @@ fun FocusContent2x2(
             ) {}
         }
 
-        // 2. Overlaid Column: Top Chips + Spacer + Bottom Scrim Box
         Column(modifier = GlanceModifier.fillMaxSize()) {
-            // Top Chips Row (at position 12, 12)
             Row(
                 modifier = GlanceModifier
                     .fillMaxWidth()
-                    .padding(12.dp),
+                    .padding(10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Top-Left: CHỈ chip giờ nhắc ở vị trí (12,12), nền rgba(18,17,16,0.72), chữ flash 11sp Bold, padding ngang 8 dọc 3, bo 7
                 if (reminderTime != null && reminderTime > 0) {
-                    val timeStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(reminderTime))
+                    val label = if (isOverdue) {
+                        val overdueMins = ((now - reminderTime) / 60000L).coerceAtLeast(1L)
+                        if (overdueMins < 60L) "Trễ ${overdueMins}′" else "Trễ ${overdueMins / 60L}h"
+                    } else {
+                        SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(reminderTime))
+                    }
                     Box(
                         modifier = GlanceModifier
-                            .background(ColorProvider(Color(0xB8121110)))
-                            .cornerRadius(7.dp)
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                            .background(if (isOverdue) WidgetColors.urgentProvider else ColorProvider(Color(0xAD0F0F0E)))
+                            .cornerRadius(9.dp)
+                            .padding(horizontal = 9.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = timeStr,
+                            text = label,
                             style = TextStyle(
-                                color = WidgetColors.accentProvider,
+                                color = if (isOverdue) WidgetColors.onUrgentProvider else WidgetColors.textProvider,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 11.sp
+                                fontSize = 12.sp
                             )
                         )
                     }
@@ -133,13 +138,12 @@ fun FocusContent2x2(
 
                 Spacer(modifier = GlanceModifier.defaultWeight())
 
-                // Top-Right: Chip đếm "n/m" CHỈ hiện khi totalTasks > 1 (để giữ chức năng chuyển việc)
                 if (totalTasks > 1) {
                     Box(
                         modifier = GlanceModifier
-                            .background(ColorProvider(Color(0xB8121110)))
-                            .cornerRadius(7.dp)
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                            .background(ColorProvider(Color(0xAD0F0F0E)))
+                            .cornerRadius(9.dp)
+                            .padding(horizontal = 9.dp, vertical = 4.dp)
                             .clickable(actionRunCallback<NextTaskActionCallback>())
                     ) {
                         Text(
@@ -147,7 +151,7 @@ fun FocusContent2x2(
                             style = TextStyle(
                                 color = WidgetColors.accentProvider,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 11.sp
+                                fontSize = 12.sp
                             )
                         )
                     }
@@ -156,12 +160,11 @@ fun FocusContent2x2(
 
             Spacer(modifier = GlanceModifier.defaultWeight())
 
-            // Bottom Scrim: Linear gradient #00121110 -> #EB121110, padding trên 40, ngang 14, dưới 14
             Box(
                 modifier = GlanceModifier
                     .fillMaxWidth()
                     .background(ImageProvider(R.drawable.widget_scrim))
-                    .padding(top = 40.dp, start = 14.dp, end = 14.dp, bottom = 14.dp)
+                    .padding(top = 36.dp, start = 12.dp, end = 10.dp, bottom = 10.dp)
             ) {
                 Row(
                     modifier = GlanceModifier.fillMaxWidth(),
@@ -171,9 +174,9 @@ fun FocusContent2x2(
                         Text(
                             text = title.ifBlank { "Việc cần làm" },
                             style = TextStyle(
-                                color = ColorProvider(Color(0xFFF5F1E8)),
+                                color = WidgetColors.textProvider,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp
+                                fontSize = 14.sp
                             ),
                             maxLines = 2
                         )
@@ -182,11 +185,11 @@ fun FocusContent2x2(
                         if (remaining > 0) {
                             Spacer(modifier = GlanceModifier.height(2.dp))
                             Text(
-                                text = "Còn $remaining việc nữa",
+                                text = "Còn $remaining việc",
                                 style = TextStyle(
-                                    color = ColorProvider(Color(0xFFE4DFD2)),
+                                    color = WidgetColors.textSecondaryProvider,
                                     fontWeight = FontWeight.Normal,
-                                    fontSize = 11.sp
+                                    fontSize = 12.sp
                                 ),
                                 maxLines = 1
                             )
@@ -200,7 +203,7 @@ fun FocusContent2x2(
                         provider = ImageProvider(R.drawable.ic_widget_check_done),
                         contentDescription = "Hoàn thành",
                         modifier = GlanceModifier
-                            .size(36.dp)
+                            .size(40.dp)
                             .clickable(
                                 actionRunCallback<CompleteTaskActionCallback>(
                                     actionParametersOf(taskIdParam to taskId)

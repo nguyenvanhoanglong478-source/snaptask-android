@@ -12,47 +12,37 @@ import androidx.camera.core.Preview
 import androidx.camera.core.UseCaseGroup
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.FlipCameraAndroid
-import androidx.compose.material.icons.filled.Notes
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -63,13 +53,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview as ComposePreview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -77,22 +72,22 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.snaptask.app.data.preferences.CustomFolder
+import com.snaptask.app.data.preferences.FolderPreferencesRepository
+import com.snaptask.app.data.preferences.RepeatCadence
 import com.snaptask.app.domain.model.Task
 import com.snaptask.app.domain.model.TaskPriority
-import com.snaptask.app.ui.components.ViewfinderCornerBrackets
+import com.snaptask.app.ui.components.SnapDateHelper
 import com.snaptask.app.ui.screens.editor.ReminderPickerDialog
 import com.snaptask.app.ui.screens.home.components.QuickNoteBottomSheet
-import com.snaptask.app.ui.theme.Bricolage
 import com.snaptask.app.ui.theme.SnapTaskIcons
 import com.snaptask.app.ui.theme.SnapTaskTheme
-import com.snaptask.app.ui.theme.snapColors
 import com.snaptask.app.util.DateTimeUtils
 import com.snaptask.app.util.ImageCompressor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -124,37 +119,35 @@ private fun findActivity(context: Context): Activity? {
     return null
 }
 
-private fun formatReminderChipLabel(reminderTime: Long?): String {
-    if (reminderTime == null) return "Đặt giờ nhắc"
-    val cal = Calendar.getInstance()
-    val nowDay = cal.get(Calendar.DAY_OF_YEAR)
-    val nowYear = cal.get(Calendar.YEAR)
-
-    cal.timeInMillis = reminderTime
-    val remDay = cal.get(Calendar.DAY_OF_YEAR)
-    val remYear = cal.get(Calendar.YEAR)
-
-    val timeStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(reminderTime))
-    return when {
-        nowYear == remYear && nowDay == remDay -> "Hôm nay $timeStr"
-        nowYear == remYear && remDay == nowDay + 1 -> "Ngày mai $timeStr"
-        else -> SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(Date(reminderTime))
-    }
-}
+// Forced-dark palette keeps the camera viewfinder free of light-mode glare.
+private val CamBg = Color(0xFF0F0F0E)
+private val CamSurface = Color(0xFF1A1A18)
+private val CamElevated = Color(0xFF252522)
+private val CamBorder = Color(0xFF34342F)
+private val CamText = Color(0xFFFAFAF6)
+private val CamTextSec = Color(0xFFB0AFA7)
+private val CamFlash = Color(0xFFD4FF3A)
+private val CamOnFlash = Color(0xFF10120A)
+private val CamHot = Color(0xFFFF5C4D)
+private val CamBubble = Color(0xAD0F0F0E)
 
 @Composable
 fun CameraCreatorScreen(
-    onSaveTask: (Task) -> Unit,
-    onClose: () -> Unit,
+    tasks: List<Task>,
+    folders: List<CustomFolder>,
+    hasCameraPermission: Boolean,
+    onRequestCameraPermission: () -> Unit,
+    onSaveTask: (Task, RepeatCadence) -> Unit,
+    onSaveQuickNote: (Task) -> Unit,
+    onGoHome: () -> Unit,
+    onOpenFolders: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val colors = MaterialTheme.snapColors
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
 
-    // Camera Hardware References & State
     var cameraProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
     var previewViewRef by remember { mutableStateOf<PreviewView?>(null) }
     var camera by remember { mutableStateOf<Camera?>(null) }
@@ -164,26 +157,44 @@ fun CameraCreatorScreen(
     var flashMode by remember { mutableStateOf(CameraFlashMode.OFF) }
     var isCapturing by remember { mutableStateOf(false) }
 
-    // Instant Feedback & Screen Flash States
     var showShutterFlash by remember { mutableStateOf(false) }
     var showScreenFlash by remember { mutableStateOf(false) }
     var originalScreenBrightness by remember { mutableStateOf<Float?>(null) }
 
-    // Form data
     var capturedPhotoPath by remember { mutableStateOf<String?>(null) }
     var title by remember { mutableStateOf("") }
     var selectedPriority by remember { mutableStateOf(TaskPriority.MEDIUM) }
-    val folderOptions = remember { listOf("Cá nhân", "Công việc", "Nhà") }
-    var selectedFolder by remember { mutableStateOf("Cá nhân") }
+    var repeatCadence by remember { mutableStateOf(RepeatCadence.NONE) }
     var reminderTime by remember { mutableStateOf<Long?>(null) }
     var reminderType by remember { mutableStateOf("NOTIFICATION") }
     var showReminderPicker by remember { mutableStateOf(false) }
     var showQuickNoteSheet by remember { mutableStateOf(false) }
 
+    val defaultFolderIdx = remember(folders) {
+        folders.indexOfFirst { it.isDefault }.let { if (it >= 0) it else 0 }
+    }
+    var selectedFolderIdx by remember(folders.size) { mutableIntStateOf(defaultFolderIdx) }
+    val activeFolder = folders.getOrNull(selectedFolderIdx.coerceIn(0, (folders.size - 1).coerceAtLeast(0)))
+
     val cameraState = if (capturedPhotoPath != null) CameraState.CAPTURED else CameraState.PREVIEWING
 
-    // Rebind Camera whenever cameraSelector changes with ViewPort matching PreviewView
+    val nowMillis = System.currentTimeMillis()
+    val doneToday = remember(tasks) {
+        tasks.count { it.isCompleted && SnapDateHelper.isSameDay(it.completedAt ?: it.createdAt, nowMillis) }
+    }
+    val openTasks = remember(tasks) {
+        tasks.filter { !it.isCompleted }.sortedByDescending { it.createdAt }
+    }
+    val openCount = openTasks.size
+    val totalToday = doneToday + openCount
+    val pendingThumbFiles = remember(openTasks) {
+        openTasks.mapNotNull { t ->
+            if (t.hasImage) File(t.beforeImageUri).takeIf { it.exists() } else null
+        }.take(3)
+    }
+
     fun bindCameraInternal() {
+        if (!hasCameraPermission) return
         val provider = cameraProvider ?: return
         val previewView = previewViewRef ?: return
 
@@ -194,9 +205,10 @@ fun CameraCreatorScreen(
                 it.setSurfaceProvider(previewView.surfaceProvider)
             }
 
+            // Flash is driven manually via 350ms torch/screen assist so exposure settles before capture.
             val capture = ImageCapture.Builder()
                 .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-                .setFlashMode(ImageCapture.FLASH_MODE_OFF) // Controlled via Torch-Assisted synchronization
+                .setFlashMode(ImageCapture.FLASH_MODE_OFF)
                 .build()
 
             imageCapture = capture
@@ -221,24 +233,20 @@ fun CameraCreatorScreen(
             } else {
                 boundCamera.cameraControl.enableTorch(false)
             }
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+        }
     }
 
     fun applyFlashMode(newMode: CameraFlashMode) {
         flashMode = newMode
-        when (newMode) {
-            CameraFlashMode.TORCH -> {
-                if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
-                    camera?.cameraControl?.enableTorch(true)
-                }
-            }
-            CameraFlashMode.ON, CameraFlashMode.AUTO, CameraFlashMode.OFF -> {
-                camera?.cameraControl?.enableTorch(false)
-            }
+        if (newMode == CameraFlashMode.TORCH && cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
+            camera?.cameraControl?.enableTorch(true)
+        } else {
+            camera?.cameraControl?.enableTorch(false)
         }
     }
 
-    LaunchedEffect(cameraSelector) {
+    LaunchedEffect(cameraSelector, hasCameraPermission) {
         bindCameraInternal()
     }
 
@@ -247,7 +255,8 @@ fun CameraCreatorScreen(
             try {
                 camera?.cameraControl?.enableTorch(false)
                 cameraProvider?.unbindAll()
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
 
             val activity = findActivity(context)
             originalScreenBrightness?.let { orig ->
@@ -258,18 +267,31 @@ fun CameraCreatorScreen(
                         layoutParams.screenBrightness = orig
                         window.attributes = layoutParams
                     }
-                } catch (_: Exception) {}
+                } catch (_: Exception) {
+                }
             }
         }
     }
 
+    fun cycleFolder() {
+        if (folders.isEmpty()) {
+            onOpenFolders()
+        } else {
+            selectedFolderIdx = (selectedFolderIdx + 1) % folders.size
+        }
+    }
+
     fun takePhoto() {
+        if (!hasCameraPermission) {
+            onRequestCameraPermission()
+            return
+        }
         val capture = imageCapture ?: return
         if (isCapturing) return
         isCapturing = true
 
         val isFrontCamera = cameraSelector == CameraSelector.DEFAULT_FRONT_CAMERA
-        val isFlashActive = flashMode == CameraFlashMode.ON || flashMode == CameraFlashMode.AUTO || flashMode == CameraFlashMode.TORCH
+        val isFlashActive = flashMode != CameraFlashMode.OFF
 
         scope.launch {
             val activity = findActivity(context)
@@ -290,7 +312,8 @@ fun CameraCreatorScreen(
                 } else if (!isFrontCamera && isFlashActive) {
                     try {
                         camera?.cameraControl?.enableTorch(true)
-                    } catch (_: Exception) {}
+                    } catch (_: Exception) {
+                    }
                     delay(350L)
                 }
 
@@ -313,7 +336,8 @@ fun CameraCreatorScreen(
                                 if (flashMode != CameraFlashMode.TORCH) {
                                     camera?.cameraControl?.enableTorch(false)
                                 }
-                            } catch (_: Exception) {}
+                            } catch (_: Exception) {
+                            }
 
                             if (showScreenFlash) {
                                 showScreenFlash = false
@@ -325,7 +349,8 @@ fun CameraCreatorScreen(
                                             layoutParams.screenBrightness = orig
                                             window.attributes = layoutParams
                                         }
-                                    } catch (_: Exception) {}
+                                    } catch (_: Exception) {
+                                    }
                                 }
                             }
 
@@ -345,7 +370,8 @@ fun CameraCreatorScreen(
                                 if (flashMode != CameraFlashMode.TORCH) {
                                     camera?.cameraControl?.enableTorch(false)
                                 }
-                            } catch (_: Exception) {}
+                            } catch (_: Exception) {
+                            }
 
                             if (showScreenFlash) {
                                 showScreenFlash = false
@@ -357,7 +383,8 @@ fun CameraCreatorScreen(
                                             layoutParams.screenBrightness = orig
                                             window.attributes = layoutParams
                                         }
-                                    } catch (_: Exception) {}
+                                    } catch (_: Exception) {
+                                    }
                                 }
                             }
                             isCapturing = false
@@ -371,471 +398,652 @@ fun CameraCreatorScreen(
                     if (flashMode != CameraFlashMode.TORCH) {
                         camera?.cameraControl?.enableTorch(false)
                     }
-                } catch (_: Exception) {}
+                } catch (_: Exception) {
+                }
             }
         }
     }
 
-    BoxWithConstraints(
+    Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF0C0B0A))
+            .background(CamBg)
+            .imePadding()
     ) {
-        val screenHeight = maxHeight
-        val viewfinderHeight = screenHeight * 0.76f
-
-        val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-        val topBarBottom = statusBarHeight + 8.dp + 44.dp
-        val bracketsTop = topBarBottom + 36.dp
-        val bracketsBottom = viewfinderHeight - 92.dp
-        val bracketsHeight = (bracketsBottom - bracketsTop).coerceAtLeast(120.dp)
-
-        // ==========================================
-        // LỚP 1: KHUNG NGẮM TRÀN VIỀN (CAO 76%)
-        // ==========================================
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(viewfinderHeight)
-                .align(Alignment.TopCenter)
-                .background(Color.Black)
-        ) {
-            if (cameraState == CameraState.PREVIEWING) {
-                AndroidView(
-                    factory = { ctx ->
-                        val previewView = PreviewView(ctx).apply {
-                            scaleType = PreviewView.ScaleType.FILL_CENTER
-                        }
-                        previewViewRef = previewView
-
-                        val providerFuture = ProcessCameraProvider.getInstance(ctx)
-                        providerFuture.addListener({
-                            cameraProvider = providerFuture.get()
-                            bindCameraInternal()
-                        }, ContextCompat.getMainExecutor(ctx))
-
-                        previewView
-                    },
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else {
-                capturedPhotoPath?.let { path ->
-                    AsyncImage(
-                        model = ImageRequest.Builder(context)
-                            .data(File(path))
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = "Ảnh đã chụp",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                }
-            }
-
-            // Dải mờ 200dp từ trong suốt sang #0C0B0A ở đáy khung ngắm
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .align(Alignment.BottomCenter)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color.Transparent, Color(0xFF0C0B0A))
-                        )
-                    )
-            )
-
-            // Shutter Flash Feedback Overlay (120ms)
-            if (showShutterFlash) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.White.copy(alpha = 0.88f))
-                )
-            }
-        }
-
-        // ==========================================
-        // LỚP 3: 4 GÓC NGẮM & CHIP GỢI Ý
-        // ==========================================
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .offset(y = bracketsTop)
-                .height(bracketsHeight)
-        ) {
-            ViewfinderCornerBrackets(
-                modifier = Modifier.fillMaxSize(),
-                color = Color(0xFFF5F1E8),
-                strokeWidth = 5.dp,
-                length = 49.dp,
-                cornerRadius = 20.dp
-            )
-
-            if (cameraState == CameraState.PREVIEWING) {
-                // Chip gợi ý: cao 32, padding ngang 14, nền rgba(12,11,10,0.62), chữ 13 Medium
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 8.dp)
-                        .height(32.dp)
-                        .clip(CircleShape)
-                        .background(Color(0x9E0C0B0A))
-                        .padding(horizontal = 14.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Chụp thứ cần làm, đặt tên sau cũng được",
-                        color = Color(0xFFF5F1E8),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-            } else {
-                // Chip nhãn khi đã chụp: kiểu chip gợi ý
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 8.dp)
-                        .height(32.dp)
-                        .clip(CircleShape)
-                        .background(Color(0x9E0C0B0A))
-                        .padding(horizontal = 14.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Đã chụp",
-                        color = colors.flash,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
-        }
-
-        // ==========================================
-        // LỚP 2: THANH TRÊN (STATUS BAR + 8DP, 44DP)
-        // ==========================================
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(top = 8.dp, start = 20.dp, end = 20.dp)
-                .align(Alignment.TopCenter)
-        ) {
-            // Nút đóng: 44dp tròn, nền rgba(12,11,10,0.6), KHÔNG viền, icon 22dp
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(Color(0x990C0B0A))
-                    .clickable(onClick = onClose)
-                    .align(Alignment.CenterStart),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = "Đóng",
-                    tint = Color(0xFFF5F1E8),
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-
-            // Tiêu đề: Bricolage SemiBold 17/24
-            Text(
-                text = "Việc mới",
-                fontFamily = Bricolage,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 17.sp,
-                lineHeight = 24.sp,
-                color = Color(0xFFF5F1E8),
-                modifier = Modifier.align(Alignment.Center)
-            )
-
-            // Nút flash: 44dp tròn, KHÔNG viền, bật = nền flash + icon onFlash, tắt = nền rgba(12,11,10,0.6) + icon trắng
-            val isFlashOn = flashMode != CameraFlashMode.OFF
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(if (isFlashOn) colors.flash else Color(0x990C0B0A))
-                    .clickable { applyFlashMode(flashMode.next()) }
-                    .align(Alignment.CenterEnd),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = when (flashMode) {
-                        CameraFlashMode.OFF -> SnapTaskIcons.FlashOff
-                        CameraFlashMode.ON, CameraFlashMode.TORCH -> SnapTaskIcons.FlashOn
-                        CameraFlashMode.AUTO -> SnapTaskIcons.FlashAuto
-                    },
-                    contentDescription = "Flash: ${flashMode.name}",
-                    tint = if (isFlashOn) colors.onFlash else Color(0xFFF5F1E8),
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-        }
-
-        // ==========================================
-        // LỚP 4: PANEL DƯỚI (BOTTOMCENTER, NAV PADDING)
-        // ==========================================
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .navigationBarsPadding()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding(),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 1. Ô tên việc: cao 52, bo 16, nền rgba(27,26,23,0.92), viền 1dp #34312B, padding ngang 16, icon bút 20 #8F897B
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xEB1B1A17))
-                    .border(1.dp, Color(0xFF34312B), RoundedCornerShape(16.dp))
-                    .padding(horizontal = 16.dp),
-                contentAlignment = Alignment.CenterStart
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Edit,
-                        contentDescription = null,
-                        tint = Color(0xFF8F897B),
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Box(modifier = Modifier.weight(1f)) {
-                        if (title.isEmpty()) {
-                            Text(
-                                text = "Tên việc, ví dụ: Tưới cây",
-                                color = Color(0xFF8F897B),
-                                fontSize = 14.sp
-                            )
-                        }
-                        BasicTextField(
-                            value = title,
-                            onValueChange = { title = it },
-                            textStyle = TextStyle(
-                                color = Color(0xFFF5F1E8),
-                                fontSize = 14.sp
-                            ),
-                            cursorBrush = SolidColor(colors.flash),
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                }
-            }
-
-            // 2. Hàng chip: cao 36, bo TRÒN ĐẦY ĐỦ, padding ngang 14, chữ 13sp, cách nhau 8
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Chip 1: Giờ nhắc (icon vector 16dp, BỎ emoji)
-                val hasReminder = reminderTime != null
-                val reminderLabel = formatReminderChipLabel(reminderTime)
-
-                Box(
-                    modifier = Modifier
-                        .height(36.dp)
-                        .clip(CircleShape)
-                        .background(if (hasReminder) colors.flash else Color(0xFF26241F))
-                        .border(
-                            1.dp,
-                            if (hasReminder) Color.Transparent else Color(0xFF34312B),
-                            CircleShape
-                        )
-                        .clickable { showReminderPicker = true }
-                        .padding(horizontal = 14.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Schedule,
-                            contentDescription = null,
-                            tint = if (hasReminder) colors.onFlash else Color(0xFFF5F1E8),
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = reminderLabel,
-                            color = if (hasReminder) colors.onFlash else Color(0xFFF5F1E8),
-                            fontSize = 13.sp,
-                            fontWeight = if (hasReminder) FontWeight.SemiBold else FontWeight.Medium
-                        )
-                    }
-                }
-
-                // Chip 2: Ưu tiên (trung tính #26241F, chữ #F5F1E8, KHÔNG vàng cho "Vừa")
-                Box(
-                    modifier = Modifier
-                        .height(36.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF26241F))
-                        .border(1.dp, Color(0xFF34312B), CircleShape)
-                        .clickable {
-                            val nextIndex = (selectedPriority.ordinal + 1) % TaskPriority.entries.size
-                            selectedPriority = TaskPriority.entries[nextIndex]
-                        }
-                        .padding(horizontal = 14.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Ưu tiên: ${selectedPriority.label}",
-                        color = Color(0xFFF5F1E8),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-
-                // Chip 3: Thư mục (trung tính #26241F, chữ #F5F1E8)
-                Box(
-                    modifier = Modifier
-                        .height(36.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF26241F))
-                        .border(1.dp, Color(0xFF34312B), CircleShape)
-                        .clickable {
-                            val nextIdx = (folderOptions.indexOf(selectedFolder) + 1) % folderOptions.size
-                            selectedFolder = folderOptions[nextIdx]
-                        }
-                        .padding(horizontal = 14.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = selectedFolder,
-                        color = Color(0xFFF5F1E8),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-            }
-
-            // 3. Hàng nút chụp (padding trên 6, ngang 8, trải đều): nút phụ 52x52 bo 16 nền #26241F viền #34312B, nút chụp giữa 88dp, nút phụ 52x52
+            // Top Bar: [146dp Today Progress Pill] ... [44dp Flash] [44dp Folders]
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 6.dp)
-                    .padding(horizontal = 8.dp),
+                    .padding(start = 20.dp, end = 20.dp, top = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Nút phụ trái 52x52 bo 16
-                Box(
+                Row(
                     modifier = Modifier
-                        .size(52.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color(0xFF26241F))
-                        .border(1.dp, Color(0xFF34312B), RoundedCornerShape(16.dp))
-                        .clickable {
-                            if (cameraState == CameraState.CAPTURED) {
-                                capturedPhotoPath?.let { File(it).delete() }
-                                capturedPhotoPath = null
-                            } else {
-                                showQuickNoteSheet = true
-                            }
-                        },
-                    contentAlignment = Alignment.Center
+                        .width(148.dp)
+                        .height(44.dp)
+                        .clip(CircleShape)
+                        .background(CamElevated)
+                        .clickable(role = Role.Button, onClick = onGoHome)
+                        .padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
                 ) {
-                    Icon(
-                        imageVector = if (cameraState == CameraState.CAPTURED) Icons.Filled.Refresh else Icons.Filled.Notes,
-                        contentDescription = if (cameraState == CameraState.CAPTURED) "Chụp lại" else "Ghi chú nhanh",
-                        tint = Color(0xFFF5F1E8),
-                        modifier = Modifier.size(22.dp)
+                    val progressFraction = if (totalToday <= 0) 0f else (doneToday.toFloat() / totalToday).coerceIn(0f, 1f)
+                    Canvas(modifier = Modifier.size(18.dp)) {
+                        val stroke = 2.6.dp.toPx()
+                        drawCircle(color = CamBorder, style = Stroke(width = stroke))
+                        if (progressFraction > 0f) {
+                            drawArc(
+                                color = CamFlash,
+                                startAngle = -90f,
+                                sweepAngle = 360f * progressFraction,
+                                useCenter = false,
+                                style = Stroke(width = stroke, cap = StrokeCap.Round)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "$doneToday/$totalToday hôm nay",
+                        color = CamText,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                // Nút chụp giữa 88dp (viền 4dp flash, đĩa trong 66dp flash)
-                Box(
-                    modifier = Modifier
-                        .size(88.dp)
-                        .clip(CircleShape)
-                        .background(Color.Transparent)
-                        .border(4.dp, colors.flash, CircleShape)
-                        .clickable(enabled = !isCapturing) {
-                            if (cameraState == CameraState.PREVIEWING) {
-                                takePhoto()
-                            } else {
-                                val finalPath = capturedPhotoPath ?: ""
-                                onSaveTask(
-                                    Task(
-                                        id = 0,
-                                        title = title.ifBlank { "Việc mới ${DateTimeUtils.formatTime(System.currentTimeMillis())}" },
-                                        beforeImageUri = finalPath,
-                                        folderName = selectedFolder,
-                                        priority = selectedPriority.name,
-                                        reminderTime = reminderTime,
-                                        reminderType = reminderType,
-                                        createdAt = System.currentTimeMillis()
-                                    )
-                                )
-                                onClose()
-                            }
-                        },
-                    contentAlignment = Alignment.Center
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (isCapturing) {
-                        CircularProgressIndicator(
-                            color = colors.flash,
-                            modifier = Modifier.size(32.dp),
-                            strokeWidth = 3.dp
+                    val isFlashActive = flashMode != CameraFlashMode.OFF
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(if (isFlashActive) CamFlash else CamElevated)
+                            .clickable(role = Role.Button) { applyFlashMode(flashMode.next()) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = when (flashMode) {
+                                CameraFlashMode.OFF -> SnapTaskIcons.FlashOff
+                                CameraFlashMode.AUTO -> SnapTaskIcons.FlashAuto
+                                CameraFlashMode.ON, CameraFlashMode.TORCH -> SnapTaskIcons.FlashOn
+                            },
+                            contentDescription = "Bật tắt đèn flash",
+                            tint = if (isFlashActive) CamOnFlash else CamText,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(CamElevated)
+                            .clickable(role = Role.Button, onClick = onOpenFolders),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = SnapTaskIcons.Folder,
+                            contentDescription = "Quản lý thư mục",
+                            tint = CamText,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+            }
+
+            // Rounded 44dp Viewfinder Frame
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(horizontal = 12.dp, vertical = 14.dp)
+                    .clip(RoundedCornerShape(44.dp))
+                    .background(CamSurface)
+                    .border(1.dp, CamBorder, RoundedCornerShape(44.dp))
+            ) {
+                if (cameraState == CameraState.PREVIEWING) {
+                    if (hasCameraPermission) {
+                        AndroidView(
+                            factory = { ctx ->
+                                val previewView = PreviewView(ctx).apply {
+                                    scaleType = PreviewView.ScaleType.FILL_CENTER
+                                }
+                                previewViewRef = previewView
+
+                                val providerFuture = ProcessCameraProvider.getInstance(ctx)
+                                providerFuture.addListener({
+                                    cameraProvider = providerFuture.get()
+                                    bindCameraInternal()
+                                }, ContextCompat.getMainExecutor(ctx))
+
+                                previewView
+                            },
+                            modifier = Modifier.fillMaxSize()
                         )
                     } else {
-                        Box(
+                        Column(
                             modifier = Modifier
-                                .size(66.dp)
-                                .clip(CircleShape)
-                                .background(colors.flash),
-                            contentAlignment = Alignment.Center
+                                .fillMaxSize()
+                                .padding(horizontal = 28.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
                         ) {
-                            if (cameraState == CameraState.CAPTURED) {
-                                Icon(
-                                    imageVector = Icons.Filled.Check,
-                                    contentDescription = "Lưu việc",
-                                    tint = colors.onFlash,
-                                    modifier = Modifier.size(32.dp)
+                            Text(
+                                text = "Chưa cấp quyền máy ảnh",
+                                color = CamText,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Cho phép máy ảnh để chụp việc trong 1 chạm, hoặc bấm nút Aa bên dưới để ghi chú chữ.",
+                                color = CamTextSec,
+                                fontSize = 13.sp,
+                                lineHeight = 18.sp,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Box(
+                                modifier = Modifier
+                                    .height(44.dp)
+                                    .clip(CircleShape)
+                                    .background(CamFlash)
+                                    .clickable(role = Role.Button, onClick = onRequestCameraPermission)
+                                    .padding(horizontal = 20.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Cho phép máy ảnh",
+                                    color = CamOnFlash,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.ExtraBold
                                 )
                             }
                         }
                     }
+                } else {
+                    capturedPhotoPath?.let { path ->
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(File(path))
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "Ảnh việc vừa chụp",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
                 }
 
-                // Nút phụ phải 52x52 bo 16 (Đổi camera)
+                // Bottom scrim so the caption input stays high-contrast over bright subjects
                 Box(
                     modifier = Modifier
-                        .size(52.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color(0xFF26241F))
-                        .border(1.dp, Color(0xFF34312B), RoundedCornerShape(16.dp))
-                        .clickable(enabled = !isCapturing && cameraState == CameraState.PREVIEWING) {
-                            camera?.cameraControl?.enableTorch(false)
-                            cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
-                                CameraSelector.DEFAULT_FRONT_CAMERA
-                            } else {
-                                CameraSelector.DEFAULT_BACK_CAMERA
-                            }
-                        },
+                        .fillMaxWidth()
+                        .height(110.dp)
+                        .align(Alignment.BottomCenter)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, Color(0x990F0F0E))
+                            )
+                        )
+                )
+
+                // Top-left fixed-width (132dp) folder pill
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(16.dp)
+                        .width(132.dp)
+                        .height(30.dp)
+                        .clip(CircleShape)
+                        .background(CamBubble)
+                        .clickable(role = Role.Button) { cycleFolder() }
+                        .padding(horizontal = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    val folderColor = Color(activeFolder?.colorHex ?: 0xFFB0AFA7)
+                    val folderIcon = SnapTaskIcons.folderIconByKey(activeFolder?.iconKey ?: "folder")
+                    val folderLabel = activeFolder?.name ?: "Không mục"
+
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(folderColor)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Icon(
+                        imageVector = folderIcon,
+                        contentDescription = null,
+                        tint = CamText,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(modifier = Modifier.width(5.dp))
+                    Text(
+                        text = folderLabel,
+                        color = CamText,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                // Top-right fixed-width (84dp) captured status pill
+                if (cameraState == CameraState.CAPTURED) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(16.dp)
+                            .width(84.dp)
+                            .height(30.dp)
+                            .clip(CircleShape)
+                            .background(CamFlash),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Đã chụp",
+                            color = CamOnFlash,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                }
+
+                // Bottom-center frosted caption bubble
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(horizontal = 20.dp, vertical = 18.dp)
+                        .widthIn(min = 184.dp, max = 316.dp)
+                        .clip(CircleShape)
+                        .background(CamBubble)
+                        .padding(horizontal = 18.dp, vertical = 10.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.FlipCameraAndroid,
-                        contentDescription = "Đổi camera",
-                        tint = if (cameraState == CameraState.PREVIEWING) Color(0xFFF5F1E8) else Color(0xFF8F897B),
-                        modifier = Modifier.size(22.dp)
+                    if (title.isEmpty()) {
+                        Text(
+                            text = "Thêm tên việc…",
+                            color = Color(0xD9FAFAF6),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                    BasicTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        textStyle = TextStyle(
+                            color = CamText,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center
+                        ),
+                        cursorBrush = SolidColor(CamFlash),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                if (showShutterFlash) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.White.copy(alpha = 0.88f))
                     )
                 }
             }
+
+            // 3 Fixed Equal-Width Metadata Chips: Reminder | Priority | Repeat
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val hasReminder = reminderTime != null
+                val remLabel = reminderTime?.let {
+                    SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(it))
+                } ?: "Nhắc giờ"
+
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(36.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (hasReminder) CamFlash else CamElevated)
+                        .clickable(role = Role.Button) { showReminderPicker = true }
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = SnapTaskIcons.Clock,
+                        contentDescription = null,
+                        tint = if (hasReminder) CamOnFlash else CamText,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(5.dp))
+                    Text(
+                        text = remLabel,
+                        color = if (hasReminder) CamOnFlash else CamText,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                val isHighPrio = selectedPriority == TaskPriority.HIGH
+                val prioText = when (selectedPriority) {
+                    TaskPriority.LOW -> "Thấp"
+                    TaskPriority.MEDIUM -> "Vừa"
+                    TaskPriority.HIGH -> "Cao"
+                }
+
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(36.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (isHighPrio) CamHot else CamElevated)
+                        .clickable(role = Role.Button) {
+                            val nextIdx = (selectedPriority.ordinal + 1) % TaskPriority.entries.size
+                            selectedPriority = TaskPriority.entries[nextIdx]
+                        }
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = SnapTaskIcons.FlagPriority,
+                        contentDescription = null,
+                        tint = if (isHighPrio) CamOnFlash else CamText,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(5.dp))
+                    Text(
+                        text = prioText,
+                        color = if (isHighPrio) CamOnFlash else CamText,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
+                    )
+                }
+
+                val hasRepeat = repeatCadence != RepeatCadence.NONE
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(36.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (hasRepeat) CamFlash else CamElevated)
+                        .clickable(role = Role.Button) { repeatCadence = repeatCadence.next() }
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = SnapTaskIcons.Repeat,
+                        contentDescription = null,
+                        tint = if (hasRepeat) CamOnFlash else CamText,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(5.dp))
+                    Text(
+                        text = repeatCadence.chipLabel,
+                        color = if (hasRepeat) CamOnFlash else CamText,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            // Fixed 88dp-height Shutter / Save Row (zero vertical jump between preview & captured)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
+                    .height(88.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                if (cameraState == CameraState.PREVIEWING) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(36.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(52.dp)
+                                .clip(CircleShape)
+                                .background(CamElevated)
+                                .clickable(role = Role.Button) { showQuickNoteSheet = true },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = SnapTaskIcons.TextAa,
+                                contentDescription = "Ghi chú chữ",
+                                tint = CamText,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(84.dp)
+                                .clip(CircleShape)
+                                .border(4.dp, CamFlash, CircleShape)
+                                .clickable(enabled = !isCapturing, role = Role.Button) { takePhoto() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isCapturing) {
+                                CircularProgressIndicator(
+                                    color = CamFlash,
+                                    modifier = Modifier.size(32.dp),
+                                    strokeWidth = 3.dp
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .size(64.dp)
+                                        .clip(CircleShape)
+                                        .background(CamFlash)
+                                )
+                            }
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(52.dp)
+                                .clip(CircleShape)
+                                .background(CamElevated)
+                                .clickable(enabled = !isCapturing && hasCameraPermission, role = Role.Button) {
+                                    camera?.cameraControl?.enableTorch(false)
+                                    cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
+                                        CameraSelector.DEFAULT_FRONT_CAMERA
+                                    } else {
+                                        CameraSelector.DEFAULT_BACK_CAMERA
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = SnapTaskIcons.CameraFlip,
+                                contentDescription = "Đổi camera",
+                                tint = CamText,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(CircleShape)
+                                .background(CamElevated)
+                                .clickable(role = Role.Button) {
+                                    capturedPhotoPath?.let { File(it).delete() }
+                                    capturedPhotoPath = null
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = SnapTaskIcons.Close,
+                                contentDescription = "Chụp lại",
+                                tint = CamText,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(56.dp)
+                                .clip(CircleShape)
+                                .background(CamFlash)
+                                .clickable(role = Role.Button) {
+                                    val finalPath = capturedPhotoPath ?: return@clickable
+                                    val createdTime = System.currentTimeMillis()
+                                    val cleanTitle = title.trim().ifBlank {
+                                        "Việc mới ${DateTimeUtils.formatTime(createdTime)}"
+                                    }
+                                    val folderName = activeFolder?.name
+                                        ?: FolderPreferencesRepository.UNASSIGNED_FOLDER_NAME
+                                    val newTask = Task(
+                                        id = 0,
+                                        title = cleanTitle,
+                                        beforeImageUri = finalPath,
+                                        folderName = folderName,
+                                        priority = selectedPriority.name,
+                                        tag = repeatCadence.toTaskTag(),
+                                        reminderTime = reminderTime,
+                                        reminderType = if (reminderTime != null) reminderType else "NONE",
+                                        createdAt = createdTime
+                                    )
+                                    onSaveTask(newTask, repeatCadence)
+                                },
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "Lưu việc",
+                                color = CamOnFlash,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Icon(
+                                imageVector = SnapTaskIcons.Check,
+                                contentDescription = null,
+                                tint = CamOnFlash,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(CircleShape)
+                                .background(CamElevated)
+                                .clickable(role = Role.Button) { cycleFolder() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = SnapTaskIcons.Folder,
+                                contentDescription = "Đổi thư mục",
+                                tint = CamText,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Bottom "Việc của tôi" Pill
+            Row(
+                modifier = Modifier
+                    .padding(bottom = 14.dp)
+                    .width(218.dp)
+                    .height(44.dp)
+                    .clip(CircleShape)
+                    .background(CamSurface)
+                    .border(1.dp, CamBorder, CircleShape)
+                    .clickable(role = Role.Button, onClick = onGoHome)
+                    .padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                if (pendingThumbFiles.isNotEmpty()) {
+                    val stackWidth = (26 + (pendingThumbFiles.size - 1) * 16).dp
+                    Box(
+                        modifier = Modifier
+                            .width(stackWidth)
+                            .height(26.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        pendingThumbFiles.forEachIndexed { idx, file ->
+                            AsyncImage(
+                                model = ImageRequest.Builder(context).data(file).crossfade(true).build(),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .offset(x = (idx * 16).dp)
+                                    .size(26.dp)
+                                    .clip(CircleShape)
+                                    .border(2.dp, CamSurface, CircleShape)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+
+                Text(
+                    text = "Việc của tôi · $openCount",
+                    color = CamText,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Icon(
+                    imageVector = SnapTaskIcons.ChevronUp,
+                    contentDescription = null,
+                    tint = CamText,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+
+        // Front-camera full-screen illumination assist
+        if (showScreenFlash) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.White.copy(alpha = 0.96f))
+            )
         }
     }
 
@@ -843,34 +1051,42 @@ fun CameraCreatorScreen(
         ReminderPickerDialog(
             initialReminderTime = reminderTime,
             initialReminderType = reminderType,
-            onDismiss = { showReminderPicker = false },
-            onConfirm = { time, type ->
-                reminderTime = time
-                reminderType = type
+            onConfirm = { pickedTime, pickedType ->
+                reminderTime = pickedTime
+                reminderType = pickedType
                 showReminderPicker = false
-            }
+            },
+            onDismiss = { showReminderPicker = false }
         )
     }
 
     if (showQuickNoteSheet) {
         QuickNoteBottomSheet(
             onDismissRequest = { showQuickNoteSheet = false },
-            onSave = { quickTask ->
-                onSaveTask(quickTask)
+            onSave = { newTask ->
                 showQuickNoteSheet = false
-                onClose()
-            }
+                onSaveQuickNote(newTask)
+            },
+            existingFolders = folders.map { it.name }.ifEmpty { listOf("Nhà", "Công việc", "Cá nhân") }
         )
     }
 }
 
 @ComposePreview(widthDp = 390, heightDp = 844)
 @Composable
-fun PreviewCameraCreatorScreen() {
+private fun PreviewCameraCreatorScreen() {
     SnapTaskTheme(darkTheme = true) {
         CameraCreatorScreen(
-            onSaveTask = {},
-            onClose = {}
+            tasks = emptyList(),
+            folders = listOf(
+                CustomFolder("nha", "Nhà", "home", 0xFFD4FF3A, true)
+            ),
+            hasCameraPermission = false,
+            onRequestCameraPermission = {},
+            onSaveTask = { _, _ -> },
+            onSaveQuickNote = {},
+            onGoHome = {},
+            onOpenFolders = {}
         )
     }
 }

@@ -62,6 +62,9 @@ interface TaskDao {
     @Query("UPDATE tasks SET reminderTime = :reminderTime, reminderType = :reminderType WHERE id = :id")
     suspend fun updateTaskReminder(id: Long, reminderTime: Long?, reminderType: String)
 
+    @Query("UPDATE tasks SET folderName = :newName WHERE folderName = :oldName")
+    suspend fun renameFolderTasks(oldName: String, newName: String)
+
     suspend fun updateTaskStatus(id: Long, newStatus: String) {
         updateTaskStatusWithTime(id, newStatus, System.currentTimeMillis())
     }
