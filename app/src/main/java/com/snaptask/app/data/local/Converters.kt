@@ -26,14 +26,18 @@ class Converters {
         if (jsonString.isNullOrBlank()) return emptyList()
         val list = mutableListOf<SubTask>()
         try {
-            val array = JSONArray(jsonString)
+            val array = JSONArray(jsonString.trim())
             for (i in 0 until array.length()) {
-                val obj = array.getJSONObject(i)
+                val obj = array.optJSONObject(i) ?: continue
+                val rawId = if (obj.isNull("id")) "" else obj.optString("id", "")
+                val id = rawId.ifBlank { i.toString() }
+                val title = if (obj.isNull("title")) "" else obj.optString("title", "")
+                val isDone = obj.optBoolean("isDone", false)
                 list.add(
                     SubTask(
-                        id = obj.optString("id", i.toString()),
-                        title = obj.optString("title", ""),
-                        isDone = obj.optBoolean("isDone", false)
+                        id = id,
+                        title = title,
+                        isDone = isDone
                     )
                 )
             }

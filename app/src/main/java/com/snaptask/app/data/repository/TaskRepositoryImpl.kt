@@ -9,59 +9,147 @@ import com.snaptask.app.util.FileUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-class TaskRepositoryImpl(
-    private val context: Context,
-    private val taskDao: TaskDao
+class TaskRepositoryImpl internal constructor(
+    private val taskDao: TaskDao,
+    private val scheduleReminder: (Task) -> Unit = {},
+    private val cancelReminder: (Long) -> Unit = {},
+    private val deleteImages: (Array<out String?>) -> Unit = { paths -> FileUtils.deleteTaskImages(*paths) },
+    private val onTasksChanged: () -> Unit = {}
 ) : TaskRepository {
+
+    constructor(
+        context: Context,
+        taskDao: TaskDao,
+        onTasksChanged: () -> Unit = {}
+    ) : this(
+        taskDao = taskDao,
+        scheduleReminder = { task -> TaskReminderScheduler.scheduleReminder(context, task) },
+        cancelReminder = { taskId -> TaskReminderScheduler.cancelReminder(context, taskId) },
+        deleteImages = { paths -> FileUtils.deleteTaskImages(*paths) },
+        onTasksChanged = onTasksChanged
+    )
+
+    private val writeMutex = Mutex()
 
     override fun getAllTasks(): Flow<List<Task>> {
         return taskDao.getAllTasksFlow().map { list -> list.map { it.toDomain() } }
     }
 
     override suspend fun createTask(task: Task): Long = withContext(Dispatchers.IO) {
-        val insertedId = taskDao.insertTask(TaskEntity.fromDomain(task))
-        if (task.hasReminder) {
-            TaskReminderScheduler.scheduleReminder(context, task.copy(id = insertedId))
+        val insertedId = writeMutex.withLock {
+            val id = taskDao.insertTask(TaskEntity.fromDomain(task))
+            if (task.hasReminder) {
+                scheduleReminder(task.copy(id = id))
+            }
+            id
         }
+        onTasksChanged()
         insertedId
     }
 
-    override suspend fun updateTask(task: Task) = withContext(Dispatchers.IO) {
-        taskDao.updateTask(TaskEntity.fromDomain(task))
-        if (task.hasReminder && !task.isCompleted) {
-            TaskReminderScheduler.scheduleReminder(context, task)
-        } else {
-            TaskReminderScheduler.cancelReminder(context, task.id)
+    override suspend fun updateTask(task: Task): Unit = withContext(Dispatchers.IO) {
+        val oldPathsToDelete = writeMutex.withLock {
+            val existing = taskDao.getTaskById(task.id)
+            taskDao.updateTask(TaskEntity.fromDomain(task))
+            val replaced = if (existing != null) {
+                buildList {
+                    val oldBefore = existing.beforeImageUri
+                    if (oldBefore.isNotBlank() && oldBefore != task.beforeImageUri && oldBefore != task.afterImageUri) {
+                        add(oldBefore)
+                    }
+                    val oldAfter = existing.afterImageUri
+                    if (!oldAfter.isNullOrBlank() && oldAfter != task.afterImageUri && oldAfter != task.beforeImageUri) {
+                        add(oldAfter)
+                    }
+                }
+            } else {
+                emptyList()
+            }
+            if (task.hasReminder && !task.isCompleted) {
+                scheduleReminder(task)
+            } else {
+                cancelReminder(task.id)
+            }
+            replaced
+        }
+        if (oldPathsToDelete.isNotEmpty()) {
+            deleteImages(oldPathsToDelete.toTypedArray())
+        }
+        onTasksChanged()
+    }
+
+    override suspend fun toggleTaskStatus(id: Long): Unit = withContext(Dispatchers.IO) {
+        val changed = writeMutex.withLock {
+            val task = taskDao.getTaskById(id) ?: return@withLock false
+            val next = !task.isCompleted
+            val completedAt = if (next) System.currentTimeMillis() else null
+            taskDao.toggleCompleted(id, next, completedAt)
+            if (next) {
+                cancelReminder(id)
+            } else {
+                val reopened = task.toDomain().copy(isCompleted = false, completedAt = null)
+                if (reopened.hasReminder) {
+                    scheduleReminder(reopened)
+                }
+            }
+            true
+        }
+        if (changed) {
+            onTasksChanged()
         }
     }
 
-    override suspend fun toggleTaskStatus(id: Long) = withContext(Dispatchers.IO) {
-        val task = taskDao.getTaskById(id) ?: return@withContext
-        val next = !task.isCompleted
-        val completedAt = if (next) System.currentTimeMillis() else null
-        taskDao.toggleCompleted(id, next, completedAt)
-        if (next) {
-            TaskReminderScheduler.cancelReminder(context, id)
+    override suspend fun completeTaskWithProof(
+        taskId: Long,
+        afterImageUri: String?,
+        completionCaption: String?,
+        completedAt: Long
+    ): Unit = withContext(Dispatchers.IO) {
+        var oldAfterToDelete: String? = null
+        writeMutex.withLock {
+            val existing = taskDao.getTaskById(taskId)
+            taskDao.completeTask(taskId, true, afterImageUri, completionCaption, completedAt)
+            val oldAfter = existing?.afterImageUri
+            if (!oldAfter.isNullOrBlank() && oldAfter != afterImageUri && oldAfter != existing.beforeImageUri) {
+                oldAfterToDelete = oldAfter
+            }
+            cancelReminder(taskId)
+        }
+        val toDelete = oldAfterToDelete
+        if (toDelete != null) {
+            deleteImages(arrayOf(toDelete))
+        }
+        onTasksChanged()
+    }
+
+    override suspend fun renameFolderTasks(oldName: String, newName: String): Unit = withContext(Dispatchers.IO) {
+        if (oldName.isNotBlank() && newName.isNotBlank() && oldName != newName) {
+            writeMutex.withLock {
+                taskDao.renameFolderTasks(oldName, newName)
+            }
+            onTasksChanged()
         }
     }
 
-    override suspend fun completeTaskWithProof(taskId: Long, afterImageUri: String?, completionCaption: String?, completedAt: Long) = withContext(Dispatchers.IO) {
-        taskDao.completeTask(taskId, true, afterImageUri, completionCaption, completedAt)
-        TaskReminderScheduler.cancelReminder(context, taskId)
-    }
-
-    override suspend fun renameFolderTasks(oldName: String, newName: String) = withContext(Dispatchers.IO) {
-        if (oldName.isNotBlank() && oldName != newName) {
-            taskDao.renameFolderTasks(oldName, newName)
+    override suspend fun deleteTask(task: Task): Unit = withContext(Dispatchers.IO) {
+        val pathsToDelete = writeMutex.withLock {
+            val existing = taskDao.getTaskById(task.id)
+            taskDao.deleteTask(TaskEntity.fromDomain(task))
+            cancelReminder(task.id)
+            listOfNotNull(
+                task.beforeImageUri.takeIf { it.isNotBlank() },
+                task.afterImageUri?.takeIf { it.isNotBlank() },
+                existing?.beforeImageUri?.takeIf { it.isNotBlank() },
+                existing?.afterImageUri?.takeIf { it.isNotBlank() }
+            ).distinct()
         }
-    }
-
-    override suspend fun deleteTask(task: Task) = withContext(Dispatchers.IO) {
-        FileUtils.deleteFile(task.beforeImageUri)
-        FileUtils.deleteFile(task.afterImageUri)
-        TaskReminderScheduler.cancelReminder(context, task.id)
-        taskDao.deleteTask(TaskEntity.fromDomain(task))
+        if (pathsToDelete.isNotEmpty()) {
+            deleteImages(pathsToDelete.toTypedArray())
+        }
+        onTasksChanged()
     }
 }

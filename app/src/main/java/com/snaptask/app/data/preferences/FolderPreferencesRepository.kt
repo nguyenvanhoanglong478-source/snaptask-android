@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.Locale
+import java.util.UUID
 
 data class CustomFolder(
     val id: String,
@@ -37,7 +39,7 @@ enum class RepeatCadence(
     companion object {
         fun fromKeyOrTag(value: String?): RepeatCadence {
             if (value.isNullOrBlank()) return NONE
-            val cleaned = value.removePrefix("REPEAT_")
+            val cleaned = value.trim().uppercase(Locale.ROOT).removePrefix("REPEAT_")
             return entries.firstOrNull { it.key.equals(cleaned, ignoreCase = true) } ?: NONE
         }
     }
@@ -96,15 +98,18 @@ class FolderPreferencesRepository(context: Context) {
             seed
         } else {
             runCatching {
-                val arr = JSONArray(rawFolders)
+                val arr = JSONArray(rawFolders.trim())
                 buildList {
                     for (i in 0 until arr.length()) {
-                        val obj = arr.getJSONObject(i)
+                        val obj = arr.optJSONObject(i) ?: continue
+                        val rawId = if (obj.isNull("id")) "" else obj.optString("id", "")
+                        val rawName = if (obj.isNull("name")) "" else obj.optString("name", "")
+                        val rawIcon = if (obj.isNull("iconKey")) "" else obj.optString("iconKey", "")
                         add(
                             CustomFolder(
-                                id = obj.optString("id", "f_$i"),
-                                name = obj.optString("name", "Thư mục"),
-                                iconKey = obj.optString("iconKey", "home"),
+                                id = rawId.ifBlank { "f_$i" },
+                                name = rawName.trim().ifBlank { "Thư mục" },
+                                iconKey = rawIcon.ifBlank { "home" },
                                 colorHex = obj.optLong("colorHex", 0xFFD4FF3A),
                                 isDefault = obj.optBoolean("isDefault", false)
                             )
@@ -116,13 +121,14 @@ class FolderPreferencesRepository(context: Context) {
 
         val rawRepeat = prefs.getString(KEY_REPEAT_JSON, "{}") ?: "{}"
         val repeatMap = runCatching {
-            val obj = JSONObject(rawRepeat)
+            val obj = JSONObject(rawRepeat.ifBlank { "{}" })
             val map = mutableMapOf<Long, RepeatCadence>()
             val keys = obj.keys()
             while (keys.hasNext()) {
                 val k = keys.next()
+                if (obj.isNull(k)) continue
                 val taskId = k.toLongOrNull() ?: continue
-                val cadence = RepeatCadence.fromKeyOrTag(obj.optString(k))
+                val cadence = RepeatCadence.fromKeyOrTag(obj.optString(k, ""))
                 if (cadence != RepeatCadence.NONE) {
                     map[taskId] = cadence
                 }
@@ -170,16 +176,19 @@ class FolderPreferencesRepository(context: Context) {
         prefs.edit().putString(KEY_REPEAT_JSON, obj.toString()).apply()
     }
 
+    @Synchronized
     fun setSmartUrgentEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_SMART_URGENT, enabled).apply()
         _configFlow.value = _configFlow.value.copy(smartUrgentEnabled = enabled)
     }
 
+    @Synchronized
     fun setSmartProofEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_SMART_PROOF, enabled).apply()
         _configFlow.value = _configFlow.value.copy(smartProofEnabled = enabled)
     }
 
+    @Synchronized
     fun moveFolder(index: Int, delta: Int) {
         val current = _configFlow.value.folders.toMutableList()
         val target = index + delta
@@ -191,6 +200,7 @@ class FolderPreferencesRepository(context: Context) {
         _configFlow.value = _configFlow.value.copy(folders = current)
     }
 
+    @Synchronized
     fun saveFolder(
         editingId: String?,
         rawName: String,
@@ -199,6 +209,7 @@ class FolderPreferencesRepository(context: Context) {
         makeDefault: Boolean
     ): Pair<String?, String> {
         val cleanName = rawName.trim().ifBlank { "Thư mục mới" }
+        val cleanIcon = iconKey.ifBlank { ICON_KEYS.first() }
         val current = _configFlow.value.folders.toMutableList()
         var oldNameIfRenamed: String? = null
 
@@ -215,7 +226,7 @@ class FolderPreferencesRepository(context: Context) {
                 }
                 cleared[idx] = prev.copy(
                     name = cleanName,
-                    iconKey = iconKey,
+                    iconKey = cleanIcon,
                     colorHex = colorHex,
                     isDefault = makeDefault || prev.isDefault
                 )
@@ -225,16 +236,16 @@ class FolderPreferencesRepository(context: Context) {
             if (existingSameName >= 0) {
                 val prev = cleared[existingSameName]
                 cleared[existingSameName] = prev.copy(
-                    iconKey = iconKey,
+                    iconKey = cleanIcon,
                     colorHex = colorHex,
                     isDefault = makeDefault || prev.isDefault
                 )
             } else {
                 cleared.add(
                     CustomFolder(
-                        id = "f_${System.currentTimeMillis()}",
+                        id = "f_${System.currentTimeMillis()}_${UUID.randomUUID().toString().take(6)}",
                         name = cleanName,
-                        iconKey = iconKey,
+                        iconKey = cleanIcon,
                         colorHex = colorHex,
                         isDefault = makeDefault || cleared.isEmpty()
                     )
@@ -248,6 +259,7 @@ class FolderPreferencesRepository(context: Context) {
         return Pair(oldNameIfRenamed, cleanName)
     }
 
+    @Synchronized
     fun deleteFolder(id: String): String? {
         val current = _configFlow.value.folders
         val target = current.firstOrNull { it.id == id } ?: return null
@@ -257,6 +269,7 @@ class FolderPreferencesRepository(context: Context) {
         return target.name
     }
 
+    @Synchronized
     fun syncDiscoveredFolders(taskFolderNames: List<String>) {
         val current = _configFlow.value.folders.toMutableList()
         var changed = false
@@ -268,7 +281,7 @@ class FolderPreferencesRepository(context: Context) {
                 val icon = ICON_KEYS[current.size % ICON_KEYS.size]
                 current.add(
                     CustomFolder(
-                        id = "disc_${name.lowercase().hashCode()}",
+                        id = "disc_${name.lowercase(Locale.ROOT).hashCode()}",
                         name = name,
                         iconKey = icon,
                         colorHex = color,
@@ -285,6 +298,7 @@ class FolderPreferencesRepository(context: Context) {
         }
     }
 
+    @Synchronized
     fun setTaskRepeat(taskId: Long, cadence: RepeatCadence) {
         if (taskId <= 0L) return
         val next = _configFlow.value.repeatByTaskId.toMutableMap()

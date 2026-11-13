@@ -22,6 +22,8 @@ class BootReceiver : BroadcastReceiver() {
                     for (entity in pendingWithReminder) {
                         TaskReminderScheduler.scheduleReminder(context, entity.toDomain())
                     }
+                } catch (_: Exception) {
+                    // Guard boot receiver against transient storage/alarm failures
                 } finally {
                     pendingResult.finish()
                 }

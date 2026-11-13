@@ -10,11 +10,15 @@ import com.snaptask.app.data.preferences.FolderPreferencesRepository
 import com.snaptask.app.data.repository.TaskRepository
 import com.snaptask.app.data.repository.TaskRepositoryImpl
 import com.snaptask.app.util.FileUtils
+import com.snaptask.app.widget.SnapTaskWidgetUpdater
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 class SnapTaskApplication : Application() {
+
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     lateinit var database: AppDatabase
         private set
@@ -29,7 +33,11 @@ class SnapTaskApplication : Application() {
         super.onCreate()
 
         database = AppDatabase.getInstance(this)
-        taskRepository = TaskRepositoryImpl(this, database.taskDao())
+        taskRepository = TaskRepositoryImpl(
+            context = this,
+            taskDao = database.taskDao(),
+            onTasksChanged = { SnapTaskWidgetUpdater.requestUpdate(this) }
+        )
         folderPreferences = FolderPreferencesRepository(this)
 
         // Low-End RAM Tuning for Coil Image Loader:
@@ -50,8 +58,9 @@ class SnapTaskApplication : Application() {
             .build()
         Coil.setImageLoader(imageLoader)
 
-        // Background cleanup of stale temp files on IO thread
-        CoroutineScope(Dispatchers.IO).launch {
+        // Background cleanup of leftover capture temp files and stale cache on IO thread
+        applicationScope.launch {
+            FileUtils.clearTempCache(this@SnapTaskApplication)
             FileUtils.clearOldTempFiles(this@SnapTaskApplication)
         }
     }

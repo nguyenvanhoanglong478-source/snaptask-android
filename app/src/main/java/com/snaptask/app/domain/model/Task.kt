@@ -1,6 +1,7 @@
 package com.snaptask.app.domain.model
 
 import com.snaptask.app.data.local.Converters
+import java.util.Locale
 
 data class Task(
     val id: Long = 0,
@@ -25,7 +26,9 @@ data class Task(
     val hasImage: Boolean get() = beforeImageUri.isNotBlank()
 
     val priorityEnum: TaskPriority
-        get() = runCatching { TaskPriority.valueOf(priority) }.getOrDefault(TaskPriority.MEDIUM)
+        get() = runCatching {
+            TaskPriority.valueOf(priority.trim().uppercase(Locale.ROOT))
+        }.getOrDefault(TaskPriority.MEDIUM)
 
     val parsedSubtasks: List<SubTask>
         get() = Converters().toSubTaskList(subTasksJson)
@@ -34,5 +37,8 @@ data class Task(
         get() = isCompleted && !afterImageUri.isNullOrBlank()
 
     val hasReminder: Boolean
-        get() = reminderTime != null && reminderTime > System.currentTimeMillis() && !isCompleted
+        get() = reminderTime != null &&
+            reminderTime > System.currentTimeMillis() &&
+            !isCompleted &&
+            !reminderType.equals("NONE", ignoreCase = true)
 }

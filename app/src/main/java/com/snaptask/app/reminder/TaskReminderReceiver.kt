@@ -32,6 +32,8 @@ class TaskReminderReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 handleReminder(context, intent)
+            } catch (_: Exception) {
+                // Guard background broadcast receiver coroutine
             } finally {
                 pendingResult.finish()
             }
@@ -50,12 +52,17 @@ class TaskReminderReceiver : BroadcastReceiver() {
             return
         }
 
-        val taskTitle = intent.getStringExtra(TaskReminderScheduler.EXTRA_TASK_TITLE) ?: "Việc cần làm"
-        val taskDesc = intent.getStringExtra(TaskReminderScheduler.EXTRA_TASK_DESC) ?: ""
-        val taskImage = intent.getStringExtra(TaskReminderScheduler.EXTRA_TASK_IMAGE) ?: ""
-        val reminderType = intent.getStringExtra(TaskReminderScheduler.EXTRA_REMINDER_TYPE) ?: "NOTIFICATION"
+        val taskTitle = intent.getStringExtra(TaskReminderScheduler.EXTRA_TASK_TITLE)?.takeIf { it.isNotBlank() }
+            ?: taskEntity.title.ifBlank { "Việc cần làm" }
+        val taskDesc = intent.getStringExtra(TaskReminderScheduler.EXTRA_TASK_DESC)
+            ?: taskEntity.description
+        val taskImage = intent.getStringExtra(TaskReminderScheduler.EXTRA_TASK_IMAGE)?.takeIf { it.isNotBlank() }
+            ?: taskEntity.beforeImageUri
+        val reminderType = intent.getStringExtra(TaskReminderScheduler.EXTRA_REMINDER_TYPE)?.takeIf { it.isNotBlank() }
+            ?: taskEntity.reminderType
 
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+            ?: return
         createChannels(notificationManager)
 
         val isAlarmMode = reminderType == "ALARM"
@@ -113,8 +120,10 @@ class TaskReminderReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Optional: BigPicture before photo preview
-        val photoBitmap = WidgetBitmapHelper.loadOptimizedBitmap(taskImage, maxSize = 600)
+        // Optional: BigPicture before photo preview (never recycle prematurely while notify() parcels it)
+        val photoBitmap = runCatching {
+            WidgetBitmapHelper.loadOptimizedBitmap(taskImage, maxSize = 600)
+        }.getOrNull()
 
         val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_stat_snaptask)
@@ -124,7 +133,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
             .setContentIntent(contentPendingIntent)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
 
-        if (photoBitmap != null) {
+        if (photoBitmap != null && !photoBitmap.isRecycled) {
             builder.setLargeIcon(photoBitmap)
             builder.setStyle(
                 NotificationCompat.BigPictureStyle()
@@ -158,7 +167,11 @@ class TaskReminderReceiver : BroadcastReceiver() {
         if (isAlarmMode) {
             notification.flags = notification.flags or Notification.FLAG_INSISTENT
         }
-        notificationManager.notify(taskId.toInt(), notification)
+        try {
+            notificationManager.notify(taskId.toInt(), notification)
+        } catch (_: SecurityException) {
+            // Notification permission may have been revoked after scheduling
+        }
     }
 
     private fun createChannels(notificationManager: NotificationManager) {
