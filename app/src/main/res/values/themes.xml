@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.SnapTask" parent="android:Theme.Material.NoActionBar">
+    <style name="Base.Theme.SnapTask" parent="android:Theme.Material.NoActionBar">
         <item name="android:statusBarColor">#F3F2EC</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:navigationBarColor">#F3F2EC</item>
-        <item name="android:windowLightNavigationBar">true</item>
         <item name="android:windowBackground">#F3F2EC</item>
     </style>
+
+    <style name="Theme.SnapTask" parent="Base.Theme.SnapTask" />
 
     <style name="Theme.SnapTask.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">#0F0F0E</item>

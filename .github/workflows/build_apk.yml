@@ -37,6 +37,51 @@ jobs:
       - name: Run Android Lint
         run: ./gradlew lintDebug --no-configuration-cache --stacktrace
 
+      - name: Verify Lint Results (0 Fatal / 0 Error)
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import sys
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          report = Path("app/build/reports/lint-results-debug.xml")
+          if not report.exists():
+              print(f"::error::Lint report not found: {report}")
+              sys.exit(1)
+
+          root = ET.parse(report).getroot()
+          issues = root.findall("issue")
+          counts = {"Fatal": 0, "Error": 0, "Warning": 0, "Information": 0}
+          failing = []
+
+          for issue in issues:
+              sev = issue.attrib.get("severity", "Unknown")
+              counts[sev] = counts.get(sev, 0) + 1
+              if sev in ("Fatal", "Error"):
+                  loc = issue.find("location")
+                  where = ""
+                  if loc is not None:
+                      f = loc.attrib.get("file", "")
+                      ln = loc.attrib.get("line", "")
+                      where = f" ({f}:{ln})" if ln else (f" ({f})" if f else "")
+                  failing.append(
+                      f"[{sev}] {issue.attrib.get('id', '?')}: "
+                      f"{issue.attrib.get('message', '')}{where}"
+                  )
+
+          print(
+              f"Lint severity counts -> Fatal: {counts['Fatal']}, "
+              f"Error: {counts['Error']}, Warning: {counts['Warning']}, "
+              f"Information: {counts['Information']}"
+          )
+          for item in failing:
+              print(f"::error::{item}")
+
+          if counts["Fatal"] + counts["Error"] > 0:
+              sys.exit(1)
+          PY
+
       - name: Build Debug APK
         run: ./gradlew assembleDebug --no-configuration-cache --stacktrace
 
