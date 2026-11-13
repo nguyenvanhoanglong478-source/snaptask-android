@@ -1,11 +1,16 @@
 package com.snaptask.app.ui.screens.detail
 
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -27,6 +32,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -47,25 +54,36 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.snaptask.app.data.local.Converters
@@ -80,8 +98,10 @@ import com.snaptask.app.ui.components.SnapSegmentedControl
 import com.snaptask.app.ui.screens.editor.ReminderPickerDialog
 import com.snaptask.app.ui.theme.SnapTaskIcons
 import com.snaptask.app.ui.theme.snapColors
+import com.snaptask.app.util.DateTimeUtils
 import java.io.File
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
@@ -112,6 +132,26 @@ private class SplitRightClipShape(private val fraction: Float) : Shape {
     }
 }
 
+private val ExpandPhotoIcon: ImageVector by lazy {
+    ImageVector.Builder(
+        name = "ExpandPhoto",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).path(
+        stroke = SolidColor(Color.White),
+        strokeLineWidth = 2.0f,
+        strokeLineCap = StrokeCap.Round,
+        strokeLineJoin = StrokeJoin.Round
+    ) {
+        moveTo(15f, 4f); lineTo(20f, 4f); lineTo(20f, 9f)
+        moveTo(9f, 20f); lineTo(4f, 20f); lineTo(4f, 15f)
+        moveTo(20f, 4f); lineTo(14f, 10f)
+        moveTo(4f, 20f); lineTo(10f, 14f)
+    }.build()
+}
+
 @Composable
 fun TaskDetailScreen(
     task: Task,
@@ -126,23 +166,29 @@ fun TaskDetailScreen(
 ) {
     val colors = MaterialTheme.snapColors
     val context = LocalContext.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     val converters = remember { Converters() }
     val scrollState = rememberScrollState()
 
-    var currentTitle by remember(task.id) { mutableStateOf(task.title) }
-    var currentDescription by remember(task.id) { mutableStateOf(task.description) }
-    var currentCompletionCaption by remember(task.id) { mutableStateOf(task.completionCaption ?: "") }
-    var currentPriority by remember(task.id) { mutableStateOf(task.priorityEnum) }
-    var currentFolder by remember(task.id) { mutableStateOf(task.folderName) }
+    val originalSubtasks = remember(task.id, task.subTasksJson) { task.parsedSubtasks }
+
+    var currentTitle by remember(task.id, task.title) { mutableStateOf(task.title) }
+    var currentDescription by remember(task.id, task.description) { mutableStateOf(task.description) }
+    var currentCompletionCaption by remember(task.id, task.completionCaption) { mutableStateOf(task.completionCaption ?: "") }
+    var currentPriority by remember(task.id, task.priority) { mutableStateOf(task.priorityEnum) }
+    var currentFolder by remember(task.id, task.folderName) { mutableStateOf(task.folderName) }
+    var currentDueDate by remember(task.id, task.dueDate) { mutableStateOf(task.dueDate) }
     var isCompleted by remember(task.id, task.isCompleted) { mutableStateOf(task.isCompleted) }
     var isPinned by remember(task.id, task.isPinnedToWidget) { mutableStateOf(task.isPinnedToWidget) }
     var reminderTime by remember(task.id, task.reminderTime) { mutableStateOf(task.reminderTime) }
     var reminderType by remember(task.id, task.reminderType) { mutableStateOf(task.reminderType) }
-    var subtasks by remember(task.id, task.subTasksJson) { mutableStateOf(task.parsedSubtasks) }
+    var subtasks by remember(task.id, task.subTasksJson) { mutableStateOf(originalSubtasks) }
 
     var newSubtaskText by remember { mutableStateOf("") }
     var showMenu by remember { mutableStateOf(false) }
     var showReminderPicker by remember { mutableStateOf(false) }
+    var showUnsavedDialog by remember { mutableStateOf(false) }
+    var fullscreenShowingAfter by remember { mutableStateOf<Boolean?>(null) }
     var isEditing by rememberSaveable { mutableStateOf(false) }
     var compareMode by rememberSaveable { mutableIntStateOf(0) }
     var isCardFlipped by rememberSaveable { mutableStateOf(false) }
@@ -161,12 +207,37 @@ fun TaskDetailScreen(
         folders.firstOrNull { it.name.equals(currentFolder, ignoreCase = true) }
     }
 
+    val hasUnsavedChanges = remember(
+        currentTitle,
+        currentDescription,
+        currentCompletionCaption,
+        currentPriority,
+        currentFolder,
+        currentDueDate,
+        reminderTime,
+        reminderType,
+        subtasks,
+        originalSubtasks,
+        task
+    ) {
+        currentTitle.trim() != task.title.trim() ||
+            currentDescription.trim() != task.description.trim() ||
+            currentCompletionCaption.trim() != (task.completionCaption?.trim() ?: "") ||
+            currentPriority != task.priorityEnum ||
+            currentFolder != task.folderName ||
+            currentDueDate != task.dueDate ||
+            reminderTime != task.reminderTime ||
+            reminderType != task.reminderType ||
+            subtasks != originalSubtasks
+    }
+
     fun buildSnapshot(
         completed: Boolean = isCompleted,
         completedAtOverride: Long? = if (completed) (task.completedAt ?: System.currentTimeMillis()) else null,
         pinned: Boolean = isPinned,
         priority: TaskPriority = currentPriority,
         folder: String = currentFolder,
+        dueDate: Long? = currentDueDate,
         remTime: Long? = reminderTime,
         remType: String = reminderType,
         subs: List<SubTask> = subtasks
@@ -180,10 +251,78 @@ fun TaskDetailScreen(
             isPinnedToWidget = pinned,
             priority = priority.name,
             folderName = folder,
+            dueDate = dueDate,
             reminderTime = remTime,
             reminderType = remType,
             subTasksJson = converters.fromSubTaskList(subs)
         )
+    }
+
+    fun handleBackPress() {
+        if (hasUnsavedChanges) {
+            showUnsavedDialog = true
+        } else {
+            onBack()
+        }
+    }
+
+    fun openDueDatePicker() {
+        val baseCal = Calendar.getInstance().apply {
+            currentDueDate?.let { timeInMillis = it } ?: run {
+                set(Calendar.HOUR_OF_DAY, 23)
+                set(Calendar.MINUTE, 59)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+        }
+        DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                TimePickerDialog(
+                    context,
+                    { _, hourOfDay, minute ->
+                        val picked = Calendar.getInstance().apply {
+                            set(Calendar.YEAR, year)
+                            set(Calendar.MONTH, month)
+                            set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                            set(Calendar.HOUR_OF_DAY, hourOfDay)
+                            set(Calendar.MINUTE, minute)
+                            set(Calendar.SECOND, 0)
+                            set(Calendar.MILLISECOND, 0)
+                        }.timeInMillis
+                        currentDueDate = picked
+                        if (!isEditing) {
+                            onSaveTask(buildSnapshot(dueDate = picked))
+                        }
+                    },
+                    baseCal.get(Calendar.HOUR_OF_DAY),
+                    baseCal.get(Calendar.MINUTE),
+                    true
+                ).show()
+            },
+            baseCal.get(Calendar.YEAR),
+            baseCal.get(Calendar.MONTH),
+            baseCal.get(Calendar.DAY_OF_MONTH)
+        ).show()
+    }
+
+    fun addSubtask() {
+        val trimmed = newSubtaskText.trim()
+        if (trimmed.isEmpty()) return
+        val updated = subtasks + SubTask(
+            id = UUID.randomUUID().toString(),
+            title = trimmed,
+            isDone = false
+        )
+        subtasks = updated
+        newSubtaskText = ""
+        if (!isEditing) {
+            onSaveTask(buildSnapshot(subs = updated))
+        }
+    }
+
+    BackHandler(enabled = hasUnsavedChanges && !showUnsavedDialog && fullscreenShowingAfter == null) {
+        showUnsavedDialog = true
     }
 
     val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
@@ -225,7 +364,7 @@ fun TaskDetailScreen(
                 RoundIconButton(
                     icon = SnapTaskIcons.ChevronLeft,
                     contentDescription = "Quay lại",
-                    onClick = onBack
+                    onClick = { handleBackPress() }
                 )
 
                 Box(
@@ -478,7 +617,8 @@ fun TaskDetailScreen(
                         splitFraction = splitFraction,
                         onSplitChange = { splitFraction = it },
                         isCardFlipped = isCardFlipped,
-                        onToggleFlip = { isCardFlipped = !isCardFlipped }
+                        onToggleFlip = { isCardFlipped = !isCardFlipped },
+                        onOpenFullscreen = { showAfter -> fullscreenShowingAfter = showAfter }
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -498,7 +638,7 @@ fun TaskDetailScreen(
                             .clip(RoundedCornerShape(36.dp))
                             .background(colors.surface)
                             .border(1.dp, colors.border, RoundedCornerShape(36.dp))
-                            .clickable { onOpenAfterCamera(task) }
+                            .clickable { fullscreenShowingAfter = false }
                     ) {
                         AsyncImage(
                             model = ImageRequest.Builder(context).data(beforeFile).crossfade(true).build(),
@@ -523,6 +663,12 @@ fun TaskDetailScreen(
                                 .align(Alignment.TopStart)
                                 .padding(14.dp)
                         )
+                        ExpandPhotoButton(
+                            onClick = { fullscreenShowingAfter = false },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(14.dp)
+                        )
                         Box(
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
@@ -541,6 +687,38 @@ fun TaskDetailScreen(
                                 fontWeight = FontWeight.ExtraBold
                             )
                         }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+                } else if (hasAfter && afterFile != null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1f)
+                            .clip(RoundedCornerShape(36.dp))
+                            .background(colors.surface)
+                            .border(1.dp, colors.border, RoundedCornerShape(36.dp))
+                            .clickable { fullscreenShowingAfter = true }
+                    ) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context).data(afterFile).crossfade(true).build(),
+                            contentDescription = "Ảnh sau",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                        CompareBadgeTag(
+                            text = "SAU",
+                            isAfter = true,
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(14.dp)
+                        )
+                        ExpandPhotoButton(
+                            onClick = { fullscreenShowingAfter = true },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(14.dp)
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
@@ -626,7 +804,9 @@ fun TaskDetailScreen(
                                     TaskPriority.HIGH -> TaskPriority.LOW
                                 }
                                 currentPriority = next
-                                onSaveTask(buildSnapshot(priority = next))
+                                if (!isEditing) {
+                                    onSaveTask(buildSnapshot(priority = next))
+                                }
                             }
                             .padding(horizontal = 8.dp),
                         contentAlignment = Alignment.Center
@@ -703,7 +883,6 @@ fun TaskDetailScreen(
                                     val curIdx = folders.indexOfFirst { it.name.equals(currentFolder, ignoreCase = true) }
                                     val nextFolder = folders[(curIdx + 1) % folders.size].name
                                     currentFolder = nextFolder
-                                    onSaveTask(buildSnapshot(folder = nextFolder))
                                 } else {
                                     onOpenFolders()
                                 }
@@ -728,6 +907,94 @@ fun TaskDetailScreen(
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                val nowMillis = System.currentTimeMillis()
+                val isTaskOverdue = DateTimeUtils.isOverdue(currentDueDate, isCompleted, nowMillis)
+                val dueLabel = currentDueDate?.let { DateTimeUtils.formatDueLabel(it, nowMillis) }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(38.dp)
+                            .clip(CircleShape)
+                            .background(if (isTaskOverdue) colors.urgentSoft else colors.elevated)
+                            .border(
+                                width = 1.dp,
+                                color = when {
+                                    isTaskOverdue -> colors.urgent
+                                    currentDueDate != null -> colors.borderHighlight
+                                    else -> colors.border
+                                },
+                                shape = CircleShape
+                            )
+                            .clickable(role = Role.Button) { openDueDatePicker() }
+                            .padding(horizontal = 12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = SnapTaskIcons.Calendar,
+                                contentDescription = null,
+                                tint = when {
+                                    isTaskOverdue -> colors.urgent
+                                    currentDueDate != null -> colors.done
+                                    else -> colors.textSecondary
+                                },
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = when {
+                                    isTaskOverdue && dueLabel != null -> "Quá hạn · $dueLabel"
+                                    dueLabel != null -> "Hạn chót · $dueLabel"
+                                    else -> "Đặt hạn chót"
+                                },
+                                color = when {
+                                    isTaskOverdue -> colors.urgent
+                                    currentDueDate != null -> colors.text
+                                    else -> colors.textSecondary
+                                },
+                                fontSize = 12.sp,
+                                fontWeight = if (isTaskOverdue) FontWeight.ExtraBold else FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    if (currentDueDate != null) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(colors.elevated)
+                                .border(1.dp, colors.border, CircleShape)
+                                .clickable(role = Role.Button) {
+                                    currentDueDate = null
+                                    if (!isEditing) {
+                                        onSaveTask(buildSnapshot(dueDate = null))
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = SnapTaskIcons.Close,
+                                contentDescription = "Xóa hạn chót",
+                                tint = colors.textSecondary,
+                                modifier = Modifier.size(14.dp)
                             )
                         }
                     }
@@ -764,7 +1031,9 @@ fun TaskDetailScreen(
                                         val updated = subtasks.toMutableList()
                                         updated[idx] = st.copy(isDone = !st.isDone)
                                         subtasks = updated
-                                        onSaveTask(buildSnapshot(subs = updated))
+                                        if (!isEditing) {
+                                            onSaveTask(buildSnapshot(subs = updated))
+                                        }
                                     }
                                     .padding(vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically
@@ -787,7 +1056,6 @@ fun TaskDetailScreen(
                                             .clickable(role = Role.Button) {
                                                 val updated = subtasks.toMutableList().also { it.removeAt(idx) }
                                                 subtasks = updated
-                                                onSaveTask(buildSnapshot(subs = updated))
                                             },
                                         contentAlignment = Alignment.Center
                                     ) {
@@ -818,6 +1086,13 @@ fun TaskDetailScreen(
                             },
                             textStyle = TextStyle(color = colors.text, fontSize = 14.sp),
                             singleLine = true,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                            keyboardActions = KeyboardActions(
+                                onDone = {
+                                    addSubtask()
+                                    keyboardController?.hide()
+                                }
+                            ),
                             shape = RoundedCornerShape(14.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedTextColor = colors.text,
@@ -836,16 +1111,7 @@ fun TaskDetailScreen(
                                 .clip(RoundedCornerShape(14.dp))
                                 .background(colors.flash)
                                 .clickable(role = Role.Button) {
-                                    if (newSubtaskText.isNotBlank()) {
-                                        val updated = subtasks + SubTask(
-                                            id = UUID.randomUUID().toString(),
-                                            title = newSubtaskText.trim(),
-                                            isDone = false
-                                        )
-                                        subtasks = updated
-                                        newSubtaskText = ""
-                                        onSaveTask(buildSnapshot(subs = updated))
-                                    }
+                                    addSubtask()
                                 },
                             contentAlignment = Alignment.Center
                         ) {
@@ -955,9 +1221,40 @@ fun TaskDetailScreen(
                 reminderTime = newTime
                 reminderType = newType
                 showReminderPicker = false
-                onSaveTask(buildSnapshot(remTime = newTime, remType = newType))
+                if (!isEditing) {
+                    onSaveTask(buildSnapshot(remTime = newTime, remType = newType))
+                }
             },
             onDismiss = { showReminderPicker = false }
+        )
+    }
+
+    if (showUnsavedDialog) {
+        UnsavedChangesDialog(
+            onSave = {
+                showUnsavedDialog = false
+                isEditing = false
+                onSaveTask(buildSnapshot())
+                onBack()
+            },
+            onDiscard = {
+                showUnsavedDialog = false
+                isEditing = false
+                onBack()
+            },
+            onCancel = {
+                showUnsavedDialog = false
+            }
+        )
+    }
+
+    fullscreenShowingAfter?.let { initialAfter ->
+        FullscreenPhotoDialog(
+            beforeFile = if (hasBefore) beforeFile else null,
+            afterFile = if (hasAfter) afterFile else null,
+            initialShowingAfter = initialAfter,
+            completionCaption = currentCompletionCaption.trim(),
+            onDismiss = { fullscreenShowingAfter = null }
         )
     }
 }
@@ -970,7 +1267,8 @@ private fun BeforeAfterComparisonBox(
     splitFraction: Float,
     onSplitChange: (Float) -> Unit,
     isCardFlipped: Boolean,
-    onToggleFlip: () -> Unit
+    onToggleFlip: () -> Unit,
+    onOpenFullscreen: (showingAfter: Boolean) -> Unit
 ) {
     val colors = MaterialTheme.snapColors
     val context = LocalContext.current
@@ -1062,6 +1360,13 @@ private fun BeforeAfterComparisonBox(
                         .align(Alignment.TopEnd)
                         .padding(14.dp)
                 )
+
+                ExpandPhotoButton(
+                    onClick = { onOpenFullscreen(splitFraction < 0.5f) },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(14.dp)
+                )
             }
         }
 
@@ -1111,6 +1416,13 @@ private fun BeforeAfterComparisonBox(
                             .padding(14.dp)
                     )
 
+                    ExpandPhotoButton(
+                        onClick = { onOpenFullscreen(showingAfter) },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(14.dp)
+                    )
+
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
@@ -1147,7 +1459,8 @@ private fun BeforeAfterComparisonBox(
                         contentDescription = "Ảnh trước",
                         modifier = Modifier
                             .weight(1f)
-                            .fillMaxHeight(),
+                            .fillMaxHeight()
+                            .clickable { onOpenFullscreen(false) },
                         contentScale = ContentScale.Crop
                     )
                     Box(
@@ -1161,7 +1474,8 @@ private fun BeforeAfterComparisonBox(
                         contentDescription = "Ảnh sau",
                         modifier = Modifier
                             .weight(1f)
-                            .fillMaxHeight(),
+                            .fillMaxHeight()
+                            .clickable { onOpenFullscreen(true) },
                         contentScale = ContentScale.Crop
                     )
                 }
@@ -1180,6 +1494,327 @@ private fun BeforeAfterComparisonBox(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(14.dp)
+                )
+
+                ExpandPhotoButton(
+                    onClick = { onOpenFullscreen(true) },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(14.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExpandPhotoButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = MaterialTheme.snapColors
+    Box(
+        modifier = modifier
+            .size(38.dp)
+            .clip(CircleShape)
+            .background(colors.bubble)
+            .border(1.dp, Color(0x33FFFFFF), CircleShape)
+            .clickable(role = Role.Button, onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = ExpandPhotoIcon,
+            contentDescription = "Xem ảnh toàn màn hình",
+            tint = Color(0xFFFAFAF6),
+            modifier = Modifier.size(18.dp)
+        )
+    }
+}
+
+@Composable
+private fun UnsavedChangesDialog(
+    onSave: () -> Unit,
+    onDiscard: () -> Unit,
+    onCancel: () -> Unit
+) {
+    val colors = MaterialTheme.snapColors
+    Dialog(onDismissRequest = onCancel) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(26.dp))
+                .background(colors.surface)
+                .border(1.dp, colors.border, RoundedCornerShape(26.dp))
+                .padding(20.dp)
+        ) {
+            Text(
+                text = "Lưu thay đổi?",
+                color = colors.text,
+                fontSize = 19.sp,
+                fontWeight = FontWeight.ExtraBold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Bạn có chỉnh sửa chưa lưu. Bạn muốn lưu trước khi quay lại không?",
+                color = colors.textSecondary,
+                fontSize = 14.sp,
+                lineHeight = 20.sp
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(46.dp)
+                    .clip(CircleShape)
+                    .background(colors.flash)
+                    .clickable(role = Role.Button, onClick = onSave),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Lưu",
+                    color = colors.onFlash,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.ExtraBold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(44.dp)
+                        .clip(CircleShape)
+                        .background(colors.urgentSoft)
+                        .border(1.dp, colors.urgent, CircleShape)
+                        .clickable(role = Role.Button, onClick = onDiscard),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Bỏ thay đổi",
+                        color = colors.urgent,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(44.dp)
+                        .clip(CircleShape)
+                        .background(colors.elevated)
+                        .border(1.dp, colors.border, CircleShape)
+                        .clickable(role = Role.Button, onClick = onCancel),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Hủy",
+                        color = colors.text,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FullscreenPhotoDialog(
+    beforeFile: File?,
+    afterFile: File?,
+    initialShowingAfter: Boolean,
+    completionCaption: String,
+    onDismiss: () -> Unit
+) {
+    val colors = MaterialTheme.snapColors
+    val context = LocalContext.current
+    val canSwitch = beforeFile != null && afterFile != null
+    var showingAfter by remember(initialShowingAfter, beforeFile, afterFile) {
+        mutableStateOf(
+            when {
+                initialShowingAfter && afterFile != null -> true
+                beforeFile != null -> false
+                else -> afterFile != null
+            }
+        )
+    }
+
+    val activeFile = if (showingAfter && afterFile != null) afterFile else beforeFile
+    var scale by remember(showingAfter) { mutableFloatStateOf(1f) }
+    var offset by remember(showingAfter) { mutableStateOf(Offset.Zero) }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFF0A0A09))
+        ) {
+            if (activeFile != null) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(activeFile)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = if (showingAfter) "Ảnh kết quả Sau toàn màn hình" else "Ảnh Trước toàn màn hình",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .pointerInput(showingAfter) {
+                            detectTapGestures(
+                                onDoubleTap = {
+                                    if (scale > 1.05f) {
+                                        scale = 1f
+                                        offset = Offset.Zero
+                                    } else {
+                                        scale = 2.5f
+                                        offset = Offset.Zero
+                                    }
+                                }
+                            )
+                        }
+                        .pointerInput(showingAfter) {
+                            detectTransformGestures { _, pan, zoom, _ ->
+                                val newScale = (scale * zoom).coerceIn(1f, 4f)
+                                val maxX = (size.width * (newScale - 1f)) / 2f
+                                val maxY = (size.height * (newScale - 1f)) / 2f
+                                scale = newScale
+                                offset = if (newScale <= 1f) {
+                                    Offset.Zero
+                                } else {
+                                    Offset(
+                                        x = (offset.x + pan.x).coerceIn(-maxX, maxX),
+                                        y = (offset.y + pan.y).coerceIn(-maxY, maxY)
+                                    )
+                                }
+                            }
+                        }
+                        .graphicsLayer {
+                            scaleX = scale
+                            scaleY = scale
+                            translationX = offset.x
+                            translationY = offset.y
+                        }
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (canSwitch) {
+                    Row(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(Color(0xAD1A1A18))
+                            .border(1.dp, Color(0x33FFFFFF), CircleShape)
+                            .padding(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .height(34.dp)
+                                .clip(CircleShape)
+                                .background(if (!showingAfter) colors.flash else Color.Transparent)
+                                .clickable(role = Role.Tab) { showingAfter = false }
+                                .padding(horizontal = 16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "TRƯỚC",
+                                color = if (!showingAfter) colors.onFlash else Color(0xFFFAFAF6),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .height(34.dp)
+                                .clip(CircleShape)
+                                .background(if (showingAfter) colors.flash else Color.Transparent)
+                                .clickable(role = Role.Tab) { showingAfter = true }
+                                .padding(horizontal = 16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "SAU",
+                                color = if (showingAfter) colors.onFlash else Color(0xFFFAFAF6),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        }
+                    }
+                } else {
+                    CompareBadgeTag(
+                        text = if (showingAfter) "SAU" else "TRƯỚC",
+                        isAfter = showingAfter
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xAD1A1A18))
+                        .border(1.dp, Color(0x33FFFFFF), CircleShape)
+                        .clickable(role = Role.Button, onClick = onDismiss),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = SnapTaskIcons.Close,
+                        contentDescription = "Đóng",
+                        tint = Color(0xFFFAFAF6),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(horizontal = 20.dp, vertical = 18.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (showingAfter && completionCaption.isNotBlank()) {
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(Color(0xAD1A1A18))
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = "“$completionCaption”",
+                            color = Color(0xFFFAFAF6),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+
+                Text(
+                    text = "Chụm hoặc nhấn đúp để thu phóng",
+                    color = Color(0x99FAFAF6),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium
                 )
             }
         }

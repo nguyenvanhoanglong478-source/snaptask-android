@@ -41,10 +41,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -61,6 +64,7 @@ import com.snaptask.app.ui.components.SnapDateHelper
 import com.snaptask.app.ui.components.SnapSegmentedControl
 import com.snaptask.app.ui.theme.SnapTaskIcons
 import com.snaptask.app.ui.theme.snapColors
+import com.snaptask.app.util.DateTimeUtils
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -90,15 +94,24 @@ fun BoardScreen(
     val now = System.currentTimeMillis()
     var groupMode by rememberSaveable { mutableIntStateOf(0) }
 
-    val columns = remember(groupMode, tasks, folders, colors.hm4, colors.urgent, colors.textMuted) {
+    val columns = remember(groupMode, tasks, folders, now / 30_000L, colors.hm4, colors.urgent, colors.textMuted) {
         if (groupMode == 0) {
-            val openGeneral = tasks.filter { !it.isCompleted && it.reminderTime == null && !it.isPinnedToWidget }
-                .sortedByDescending { it.createdAt }
-            val openScheduled = tasks.filter { !it.isCompleted && (it.reminderTime != null || it.isPinnedToWidget) }
-                .sortedBy { it.reminderTime ?: it.createdAt }
+            val openGeneral = tasks.filter {
+                !it.isCompleted &&
+                    it.reminderTime == null &&
+                    (it.dueDate == null || it.dueDate <= 0L) &&
+                    !it.isPinnedToWidget
+            }.sortedByDescending { it.createdAt }
+            val openScheduled = tasks.filter {
+                !it.isCompleted &&
+                    (it.reminderTime != null || (it.dueDate != null && it.dueDate > 0L) || it.isPinnedToWidget)
+            }.sortedBy { it.dueDate?.takeIf { d -> d > 0L } ?: it.reminderTime ?: it.createdAt }
             val doneList = tasks.filter { it.isCompleted }
                 .sortedByDescending { it.completedAt ?: it.createdAt }
-            val hasOverdue = openScheduled.any { it.reminderTime != null && it.reminderTime < now }
+            val hasOverdue = openScheduled.any {
+                (it.reminderTime != null && it.reminderTime < now) ||
+                    DateTimeUtils.isOverdue(it.dueDate?.takeIf { d -> d > 0L }, it.isCompleted, now)
+            }
 
             listOf(
                 KanbanColumnData(
@@ -399,18 +412,39 @@ private fun BoardKanbanColumn(
                 }
             } else if (column.tasks.isEmpty()) {
                 item(key = "col_empty") {
-                    Box(
+                    val emptyText = when (column.key) {
+                        "status_todo" -> "Chưa có việc cần làm."
+                        "status_focus" -> "Chưa có việc hẹn giờ hoặc ghim."
+                        "status_done" -> "Chưa có việc hoàn thành."
+                        else -> "Thư mục này chưa có việc nào."
+                    }
+                    val emptyIcon = when (column.key) {
+                        "status_focus" -> SnapTaskIcons.Clock
+                        "status_done" -> SnapTaskIcons.Check
+                        else -> SnapTaskIcons.Today
+                    }
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(18.dp))
                             .background(colors.elevated)
-                            .padding(18.dp)
+                            .border(1.dp, colors.border, RoundedCornerShape(18.dp))
+                            .padding(horizontal = 18.dp, vertical = 22.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        Icon(
+                            imageVector = emptyIcon,
+                            contentDescription = null,
+                            tint = colors.textMuted,
+                            modifier = Modifier.size(20.dp)
+                        )
                         Text(
-                            text = "Chưa có việc nào trong cột này.",
+                            text = emptyText,
                             color = colors.textMuted,
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Medium,
+                            textAlign = TextAlign.Center
                         )
                     }
                 }
@@ -465,6 +499,7 @@ private fun BoardTaskCard(
 ) {
     val colors = MaterialTheme.snapColors
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
     val beforeFile = remember(task.beforeImageUri) {
         if (task.beforeImageUri.isNotBlank()) File(task.beforeImageUri) else null
     }
@@ -473,8 +508,36 @@ private fun BoardTaskCard(
     }
     val hasBefore = beforeFile != null && beforeFile.exists()
     val hasAfter = afterFile != null && afterFile.exists()
-    val isOverdue = !task.isCompleted && task.reminderTime != null && task.reminderTime < nowMillis
+    val validReminder = task.reminderTime?.takeIf { it > 0L }
+    val validDue = task.dueDate?.takeIf { it > 0L }
+    val isReminderOverdue = !task.isCompleted && validReminder != null && validReminder < nowMillis
+    val isDueOverdue = DateTimeUtils.isOverdue(validDue, task.isCompleted, nowMillis)
+    val isOverdue = isReminderOverdue || isDueOverdue
     val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+
+    val badgeInfo: Triple<String, Color, Color>? = when {
+        task.isCompleted -> Triple(
+            "${SnapDateHelper.durationMinutes(task)} phút",
+            colors.flash,
+            colors.onFlash
+        )
+        isOverdue -> Triple(
+            "Trễ hạn",
+            colors.urgent,
+            colors.onUrgent
+        )
+        validReminder != null -> Triple(
+            timeFormat.format(Date(validReminder)),
+            colors.bubble,
+            Color(0xFFFAFAF6)
+        )
+        validDue != null -> Triple(
+            "Hạn ${DateTimeUtils.formatDueLabel(validDue, nowMillis)}",
+            colors.bubble,
+            Color(0xFFFAFAF6)
+        )
+        else -> null
+    }
 
     Column(
         modifier = Modifier
@@ -527,72 +590,60 @@ private fun BoardTaskCard(
                     )
                 }
 
-                when {
-                    task.isCompleted -> {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopStart)
-                                .padding(8.dp)
-                                .height(22.dp)
-                                .clip(CircleShape)
-                                .background(colors.flash)
-                                .padding(horizontal = 8.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "${SnapDateHelper.durationMinutes(task)} phút",
-                                color = colors.onFlash,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                        }
-                    }
-                    isOverdue -> {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopStart)
-                                .padding(8.dp)
-                                .height(22.dp)
-                                .clip(CircleShape)
-                                .background(colors.urgent)
-                                .padding(horizontal = 8.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "Trễ hạn",
-                                color = colors.onUrgent,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                        }
-                    }
-                    task.reminderTime != null -> {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopStart)
-                                .padding(8.dp)
-                                .height(22.dp)
-                                .clip(CircleShape)
-                                .background(colors.bubble)
-                                .padding(horizontal = 8.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = timeFormat.format(Date(task.reminderTime)),
-                                color = Color(0xFFFAFAF6),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                if (badgeInfo != null) {
+                    val (label, bg, fg) = badgeInfo
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(8.dp)
+                            .height(22.dp)
+                            .clip(CircleShape)
+                            .background(bg)
+                            .padding(horizontal = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = label,
+                            color = fg,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
+            }
+        } else if (badgeInfo != null) {
+            val (label, bg, fg) = badgeInfo
+            Box(
+                modifier = Modifier
+                    .padding(start = 12.dp, top = 10.dp, end = 12.dp)
+                    .height(22.dp)
+                    .clip(CircleShape)
+                    .background(bg)
+                    .padding(horizontal = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = label,
+                    color = fg,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 12.dp, top = 10.dp, bottom = 10.dp, end = 6.dp),
+                .padding(
+                    start = 12.dp,
+                    top = if (!(hasBefore || hasAfter) && badgeInfo != null) 6.dp else 10.dp,
+                    bottom = 10.dp,
+                    end = 6.dp
+                ),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -607,9 +658,14 @@ private fun BoardTaskCard(
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(2.dp))
+                val metaText = if (validDue != null && !task.isCompleted) {
+                    "${task.folderName} · Hạn ${DateTimeUtils.formatDueLabel(validDue, nowMillis)}"
+                } else {
+                    task.folderName
+                }
                 Text(
-                    text = task.folderName,
-                    color = colors.textSecondary,
+                    text = metaText,
+                    color = if (isDueOverdue) colors.urgent else colors.textSecondary,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
@@ -624,7 +680,10 @@ private fun BoardTaskCard(
                     .clickable(
                         role = Role.Checkbox,
                         onClickLabel = "Đổi trạng thái hoàn thành",
-                        onClick = onToggleStatus
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onToggleStatus()
+                        }
                     ),
                 contentAlignment = Alignment.Center
             ) {

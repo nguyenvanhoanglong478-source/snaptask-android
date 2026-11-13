@@ -6,15 +6,19 @@ import android.content.ContextWrapper
 import android.view.WindowManager
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.core.UseCaseGroup
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +29,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -35,11 +40,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -48,12 +58,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.semantics.Role
@@ -62,6 +76,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview as ComposePreview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -71,10 +86,14 @@ import coil.request.ImageRequest
 import com.snaptask.app.domain.model.Task
 import com.snaptask.app.ui.theme.SnapTaskIcons
 import com.snaptask.app.ui.theme.SnapTaskTheme
+import com.snaptask.app.util.FileUtils
 import com.snaptask.app.util.ImageCompressor
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
+import java.util.concurrent.TimeUnit
+import kotlin.math.roundToInt
 
 private fun findProofActivity(context: Context): Activity? {
     var ctx = context
@@ -106,6 +125,7 @@ fun CameraAfterProofScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
+    val snackbarHostState = remember { SnackbarHostState() }
 
     var cameraProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
     var previewViewRef by remember { mutableStateOf<PreviewView?>(null) }
@@ -114,6 +134,7 @@ fun CameraAfterProofScreen(
 
     var cameraSelector by remember { mutableStateOf(CameraSelector.DEFAULT_BACK_CAMERA) }
     var flashMode by remember { mutableStateOf(CameraFlashMode.OFF) }
+    var hasFlashUnit by remember { mutableStateOf(false) }
     var isCapturing by remember { mutableStateOf(false) }
     var isGhostOverlayEnabled by remember { mutableStateOf(true) }
 
@@ -121,12 +142,68 @@ fun CameraAfterProofScreen(
     var showScreenFlash by remember { mutableStateOf(false) }
     var originalScreenBrightness by remember { mutableStateOf<Float?>(null) }
 
+    var focusTapOffset by remember { mutableStateOf<Offset?>(null) }
+    var focusTapTriggerId by remember { mutableIntStateOf(0) }
+    val focusRingAlpha = remember { Animatable(0f) }
+    val focusRingScale = remember { Animatable(1.25f) }
+
     var capturedPhotoPath by remember { mutableStateOf<String?>(null) }
+    var isPhotoSaved by remember { mutableStateOf(false) }
     var completionCaption by remember { mutableStateOf(task.completionCaption ?: "") }
 
     val beforeFile = remember(task.beforeImageUri) { File(task.beforeImageUri) }
     val hasBeforeFile = remember(beforeFile) { task.beforeImageUri.isNotBlank() && beforeFile.exists() }
     val cameraState = if (capturedPhotoPath != null) CameraState.CAPTURED else CameraState.PREVIEWING
+
+    fun showCameraError(message: String) {
+        scope.launch {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            snackbarHostState.showSnackbar(
+                message = message,
+                duration = SnackbarDuration.Short
+            )
+        }
+    }
+
+    fun restoreScreenBrightness() {
+        val saved = originalScreenBrightness ?: return
+        originalScreenBrightness = null
+        try {
+            val window = findProofActivity(context)?.window
+            val layoutParams = window?.attributes
+            if (layoutParams != null) {
+                layoutParams.screenBrightness = saved
+                window.attributes = layoutParams
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    fun cleanupFlashEffects() {
+        showScreenFlash = false
+        restoreScreenBrightness()
+        val isBackCamera = cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA
+        val keepTorch = isBackCamera && hasFlashUnit && flashMode == CameraFlashMode.TORCH
+        if (!keepTorch) {
+            try {
+                camera?.cameraControl?.enableTorch(false)
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    fun discardUnsavedProof() {
+        if (!isPhotoSaved) {
+            FileUtils.deleteTaskImages(capturedPhotoPath)
+        }
+        capturedPhotoPath = null
+        isPhotoSaved = false
+    }
+
+    fun handleClose() {
+        discardUnsavedProof()
+        onClose()
+    }
 
     fun bindCameraInternal() {
         val provider = cameraProvider ?: return
@@ -160,27 +237,76 @@ fun CameraAfterProofScreen(
                 groupBuilder.build()
             )
             camera = boundCamera
+            val cameraHasFlash = boundCamera.cameraInfo.hasFlashUnit()
+            hasFlashUnit = cameraHasFlash
 
-            if (flashMode == CameraFlashMode.TORCH && cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
+            val isBackCamera = cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA
+            if (isBackCamera && !cameraHasFlash) {
+                flashMode = CameraFlashMode.OFF
+                boundCamera.cameraControl.enableTorch(false)
+            } else if (flashMode == CameraFlashMode.TORCH && isBackCamera && cameraHasFlash) {
                 boundCamera.cameraControl.enableTorch(true)
             } else {
                 boundCamera.cameraControl.enableTorch(false)
             }
         } catch (_: Exception) {
+            camera = null
+            imageCapture = null
+            hasFlashUnit = false
+            if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
+                flashMode = CameraFlashMode.OFF
+            }
+            showCameraError("Không thể khởi tạo máy ảnh. Vui lòng thử lại.")
         }
     }
 
     fun applyFlashMode(newMode: CameraFlashMode) {
+        val isBackCamera = cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA
+        if (isBackCamera && !hasFlashUnit) {
+            flashMode = CameraFlashMode.OFF
+            try {
+                camera?.cameraControl?.enableTorch(false)
+            } catch (_: Exception) {
+            }
+            return
+        }
         flashMode = newMode
-        if (newMode == CameraFlashMode.TORCH && cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
-            camera?.cameraControl?.enableTorch(true)
-        } else {
-            camera?.cameraControl?.enableTorch(false)
+        try {
+            if (newMode == CameraFlashMode.TORCH && isBackCamera && hasFlashUnit) {
+                camera?.cameraControl?.enableTorch(true)
+            } else {
+                camera?.cameraControl?.enableTorch(false)
+            }
+        } catch (_: Exception) {
+            showCameraError("Không thể bật đèn flash trên thiết bị này.")
         }
     }
 
     LaunchedEffect(cameraSelector) {
+        focusTapOffset = null
         bindCameraInternal()
+    }
+
+    LaunchedEffect(cameraState) {
+        if (cameraState == CameraState.CAPTURED) {
+            focusTapOffset = null
+            try {
+                camera?.cameraControl?.enableTorch(false)
+                cameraProvider?.unbindAll()
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    LaunchedEffect(focusTapTriggerId) {
+        if (focusTapTriggerId > 0 && focusTapOffset != null) {
+            focusRingAlpha.snapTo(1f)
+            focusRingScale.snapTo(1.28f)
+            focusRingScale.animateTo(1f, tween(durationMillis = 180))
+            delay(650L)
+            focusRingAlpha.animateTo(0f, tween(durationMillis = 200))
+            focusTapOffset = null
+        }
     }
 
     DisposableEffect(Unit) {
@@ -190,24 +316,18 @@ fun CameraAfterProofScreen(
                 cameraProvider?.unbindAll()
             } catch (_: Exception) {
             }
-
-            val activity = findProofActivity(context)
-            originalScreenBrightness?.let { orig ->
-                try {
-                    val window = activity?.window
-                    val layoutParams = window?.attributes
-                    if (layoutParams != null) {
-                        layoutParams.screenBrightness = orig
-                        window.attributes = layoutParams
-                    }
-                } catch (_: Exception) {
-                }
+            restoreScreenBrightness()
+            if (!isPhotoSaved) {
+                FileUtils.deleteTaskImages(capturedPhotoPath)
             }
         }
     }
 
     fun takeProofPhoto() {
-        val capture = imageCapture ?: return
+        val capture = imageCapture ?: run {
+            showCameraError("Máy ảnh chưa sẵn sàng. Vui lòng thử lại.")
+            return
+        }
         if (isCapturing) return
         isCapturing = true
 
@@ -215,22 +335,23 @@ fun CameraAfterProofScreen(
         val isFlashActive = flashMode != CameraFlashMode.OFF
 
         scope.launch {
-            val activity = findProofActivity(context)
-            var originalBrightness: Float? = null
+            var captureSubmitted = false
+            var rawFile: File? = null
 
             try {
                 if (isFrontCamera && isFlashActive) {
-                    val window = activity?.window
+                    val window = findProofActivity(context)?.window
                     val layoutParams = window?.attributes
                     if (layoutParams != null) {
-                        originalBrightness = layoutParams.screenBrightness
-                        originalScreenBrightness = originalBrightness
+                        if (originalScreenBrightness == null) {
+                            originalScreenBrightness = layoutParams.screenBrightness
+                        }
                         layoutParams.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_FULL
                         window.attributes = layoutParams
                     }
                     showScreenFlash = true
                     delay(350L)
-                } else if (!isFrontCamera && isFlashActive) {
+                } else if (!isFrontCamera && hasFlashUnit && isFlashActive) {
                     try {
                         camera?.cameraControl?.enableTorch(true)
                     } catch (_: Exception) {
@@ -240,85 +361,71 @@ fun CameraAfterProofScreen(
 
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 showShutterFlash = true
-                launch {
+                scope.launch {
                     delay(120L)
                     showShutterFlash = false
                 }
 
-                val rawFile = File(context.cacheDir, "proof_${System.currentTimeMillis()}.jpg")
-                val outputOptions = ImageCapture.OutputFileOptions.Builder(rawFile).build()
+                val tempFile = File(context.cacheDir, "raw_proof_${System.currentTimeMillis()}.jpg")
+                rawFile = tempFile
+                val outputOptions = ImageCapture.OutputFileOptions.Builder(tempFile).build()
 
+                captureSubmitted = true
                 capture.takePicture(
                     outputOptions,
                     ContextCompat.getMainExecutor(context),
                     object : ImageCapture.OnImageSavedCallback {
                         override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                            try {
-                                if (flashMode != CameraFlashMode.TORCH) {
-                                    camera?.cameraControl?.enableTorch(false)
-                                }
-                            } catch (_: Exception) {
-                            }
-
-                            if (showScreenFlash) {
-                                showScreenFlash = false
-                                originalBrightness?.let { orig ->
-                                    try {
-                                        val window = activity?.window
-                                        val layoutParams = window?.attributes
-                                        if (layoutParams != null) {
-                                            layoutParams.screenBrightness = orig
-                                            window.attributes = layoutParams
-                                        }
-                                    } catch (_: Exception) {
-                                    }
-                                }
-                            }
-
-                            scope.launch {
+                            cleanupFlashEffects()
+                            val compressJob = scope.launch {
                                 try {
-                                    capturedPhotoPath = ImageCompressor.compressPhoto(context, rawFile)
+                                    val compressedPath = ImageCompressor.compressPhoto(context, tempFile)
+                                    val previousUnsaved = if (!isPhotoSaved) capturedPhotoPath else null
+                                    capturedPhotoPath = compressedPath
+                                    isPhotoSaved = false
+                                    if (previousUnsaved != null && previousUnsaved != compressedPath) {
+                                        FileUtils.deleteTaskImages(previousUnsaved)
+                                    }
+                                } catch (e: CancellationException) {
+                                    FileUtils.deleteTaskImages(tempFile.absolutePath)
+                                    throw e
                                 } catch (_: Exception) {
+                                    FileUtils.deleteTaskImages(tempFile.absolutePath)
+                                    showCameraError("Không thể xử lý ảnh kết quả. Vui lòng thử lại.")
                                 } finally {
                                     isCapturing = false
                                 }
                             }
+                            if (compressJob.isCancelled) {
+                                FileUtils.deleteTaskImages(tempFile.absolutePath)
+                                isCapturing = false
+                            }
                         }
 
                         override fun onError(exception: ImageCaptureException) {
-                            try {
-                                if (flashMode != CameraFlashMode.TORCH) {
-                                    camera?.cameraControl?.enableTorch(false)
-                                }
-                            } catch (_: Exception) {
-                            }
-
-                            if (showScreenFlash) {
-                                showScreenFlash = false
-                                originalBrightness?.let { orig ->
-                                    try {
-                                        val window = activity?.window
-                                        val layoutParams = window?.attributes
-                                        if (layoutParams != null) {
-                                            layoutParams.screenBrightness = orig
-                                            window.attributes = layoutParams
-                                        }
-                                    } catch (_: Exception) {
-                                    }
-                                }
-                            }
+                            cleanupFlashEffects()
+                            FileUtils.deleteTaskImages(tempFile.absolutePath)
                             isCapturing = false
+                            showCameraError("Chụp ảnh kết quả thất bại. Vui lòng thử lại.")
                         }
                     }
                 )
-            } catch (_: Exception) {
+            } catch (e: CancellationException) {
+                captureSubmitted = false
+                FileUtils.deleteTaskImages(rawFile?.absolutePath)
+                cleanupFlashEffects()
                 isCapturing = false
-                showScreenFlash = false
-                try {
-                    if (flashMode != CameraFlashMode.TORCH) {
-                        camera?.cameraControl?.enableTorch(false)
-                    }
-                } catch (_: Exception) {
+                throw e
+            } catch (_: Exception) {
+                captureSubmitted = false
+                FileUtils.deleteTaskImages(rawFile?.absolutePath)
+                cleanupFlashEffects()
+                isCapturing = false
+                showCameraError("Không thể chụp ảnh kết quả. Vui lòng thử lại.")
+            } finally {
+                if (!captureSubmitted) {
+                    cleanupFlashEffects()
+                    isCapturing = false
                 }
             }
         }
@@ -349,7 +456,7 @@ fun CameraAfterProofScreen(
                         .size(44.dp)
                         .clip(CircleShape)
                         .background(ProofElevated)
-                        .clickable(role = Role.Button, onClick = onClose),
+                        .clickable(role = Role.Button) { handleClose() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -385,13 +492,18 @@ fun CameraAfterProofScreen(
                     )
                 }
 
-                val isFlashOn = flashMode != CameraFlashMode.OFF
+                val isBackCamera = cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA
+                val isFlashSupported = !isBackCamera || hasFlashUnit
+                val isFlashOn = flashMode != CameraFlashMode.OFF && isFlashSupported
                 Box(
                     modifier = Modifier
                         .size(44.dp)
+                        .alpha(if (isFlashSupported) 1f else 0.35f)
                         .clip(CircleShape)
                         .background(if (isFlashOn) ProofFlash else ProofElevated)
-                        .clickable(role = Role.Button) { applyFlashMode(flashMode.next()) },
+                        .clickable(enabled = isFlashSupported, role = Role.Button) {
+                            applyFlashMode(flashMode.next())
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -427,8 +539,12 @@ fun CameraAfterProofScreen(
 
                             val providerFuture = ProcessCameraProvider.getInstance(ctx)
                             providerFuture.addListener({
-                                cameraProvider = providerFuture.get()
-                                bindCameraInternal()
+                                try {
+                                    cameraProvider = providerFuture.get()
+                                    bindCameraInternal()
+                                } catch (_: Exception) {
+                                    showCameraError("Không thể khởi động máy ảnh. Vui lòng thử lại.")
+                                }
                             }, ContextCompat.getMainExecutor(ctx))
 
                             previewView
@@ -448,6 +564,60 @@ fun CameraAfterProofScreen(
                                 .alpha(0.28f),
                             contentScale = ContentScale.Crop
                         )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pointerInput(camera, previewViewRef) {
+                                detectTapGestures { tapOffset ->
+                                    val boundCamera = camera ?: return@detectTapGestures
+                                    val pv = previewViewRef ?: return@detectTapGestures
+                                    try {
+                                        val point = pv.meteringPointFactory.createPoint(tapOffset.x, tapOffset.y)
+                                        val action = FocusMeteringAction.Builder(
+                                            point,
+                                            FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE
+                                        )
+                                            .setAutoCancelDuration(3, TimeUnit.SECONDS)
+                                            .build()
+                                        focusTapOffset = tapOffset
+                                        focusTapTriggerId++
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        boundCamera.cameraControl.startFocusAndMetering(action)
+                                    } catch (_: Exception) {
+                                    }
+                                }
+                            }
+                    )
+
+                    focusTapOffset?.let { tap ->
+                        val ringSizeDp = 64.dp
+                        val ringPx = with(LocalDensity.current) { ringSizeDp.toPx() }
+                        Box(
+                            modifier = Modifier
+                                .offset {
+                                    IntOffset(
+                                        x = (tap.x - ringPx / 2f).roundToInt(),
+                                        y = (tap.y - ringPx / 2f).roundToInt()
+                                    )
+                                }
+                                .size(ringSizeDp)
+                                .graphicsLayer {
+                                    scaleX = focusRingScale.value
+                                    scaleY = focusRingScale.value
+                                    alpha = focusRingAlpha.value
+                                }
+                                .border(2.dp, ProofFlash, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(ProofFlash)
+                            )
+                        }
                     }
                 } else {
                     capturedPhotoPath?.let { path ->
@@ -579,7 +749,7 @@ fun CameraAfterProofScreen(
                                 .size(52.dp)
                                 .clip(CircleShape)
                                 .background(ProofElevated)
-                                .clickable(role = Role.Button, onClick = onClose),
+                                .clickable(role = Role.Button) { handleClose() },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -620,7 +790,10 @@ fun CameraAfterProofScreen(
                                 .clip(CircleShape)
                                 .background(ProofElevated)
                                 .clickable(enabled = !isCapturing, role = Role.Button) {
-                                    camera?.cameraControl?.enableTorch(false)
+                                    try {
+                                        camera?.cameraControl?.enableTorch(false)
+                                    } catch (_: Exception) {
+                                    }
                                     cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
                                         CameraSelector.DEFAULT_FRONT_CAMERA
                                     } else {
@@ -649,8 +822,7 @@ fun CameraAfterProofScreen(
                                 .clip(CircleShape)
                                 .background(ProofElevated)
                                 .clickable(role = Role.Button) {
-                                    capturedPhotoPath?.let { File(it).delete() }
-                                    capturedPhotoPath = null
+                                    discardUnsavedProof()
                                 },
                             contentAlignment = Alignment.Center
                         ) {
@@ -670,6 +842,7 @@ fun CameraAfterProofScreen(
                                 .background(ProofFlash)
                                 .clickable(role = Role.Button) {
                                     val finalPath = capturedPhotoPath ?: return@clickable
+                                    isPhotoSaved = true
                                     onProofCaptured(finalPath, completionCaption.trim())
                                 },
                             verticalAlignment = Alignment.CenterVertically,
@@ -699,6 +872,22 @@ fun CameraAfterProofScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.White.copy(alpha = 0.96f))
+            )
+        }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 16.dp)
+        ) { data ->
+            Snackbar(
+                snackbarData = data,
+                containerColor = ProofElevated,
+                contentColor = ProofText,
+                actionColor = ProofFlash,
+                shape = RoundedCornerShape(16.dp)
             )
         }
     }

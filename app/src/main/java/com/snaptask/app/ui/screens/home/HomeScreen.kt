@@ -37,6 +37,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -47,8 +48,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -69,13 +72,17 @@ import com.snaptask.app.ui.screens.home.components.CompletionProofBottomSheet
 import com.snaptask.app.ui.screens.home.components.QuickNoteBottomSheet
 import com.snaptask.app.ui.theme.SnapTaskIcons
 import com.snaptask.app.ui.theme.snapColors
+import com.snaptask.app.util.DateTimeUtils
+import com.snaptask.app.util.FileUtils
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private data class FeedFilterChip(
     val key: String,
@@ -108,9 +115,17 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     val colors = MaterialTheme.snapColors
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     val now = System.currentTimeMillis()
     val todayKey = remember(now / 60_000L) { SnapDateHelper.dayKey(now) }
+
+    val storageUsed by produceState(initialValue = "", key1 = tasks) {
+        value = withContext(Dispatchers.IO) {
+            runCatching { FileUtils.getStorageUsedFormatted(context) }.getOrDefault("")
+        }
+    }
 
     var activeFilter by rememberSaveable { mutableStateOf("all") }
     var proofTargetTask by remember { mutableStateOf<Task?>(null) }
@@ -125,8 +140,12 @@ fun HomeScreen(
 
     val openTasks = remember(tasks, now / 30_000L) {
         tasks.filter { !it.isCompleted }.sortedWith(
-            compareByDescending<Task> { it.reminderTime != null && it.reminderTime < now }
+            compareByDescending<Task> {
+                (it.reminderTime != null && it.reminderTime < now) ||
+                    DateTimeUtils.isOverdue(it.dueDate?.takeIf { d -> d > 0L }, it.isCompleted, now)
+            }
                 .thenByDescending { it.priorityEnum == TaskPriority.HIGH }
+                .thenBy { it.dueDate?.takeIf { d -> d > 0L } ?: it.reminderTime ?: Long.MAX_VALUE }
                 .thenBy { it.reminderTime ?: Long.MAX_VALUE }
                 .thenByDescending { it.createdAt }
         )
@@ -136,7 +155,9 @@ fun HomeScreen(
     }
     val urgentTasks = remember(openTasks, now / 30_000L) {
         openTasks.filter {
-            it.priorityEnum == TaskPriority.HIGH || (it.reminderTime != null && it.reminderTime < now)
+            it.priorityEnum == TaskPriority.HIGH ||
+                (it.reminderTime != null && it.reminderTime < now) ||
+                DateTimeUtils.isOverdue(it.dueDate?.takeIf { d -> d > 0L }, it.isCompleted, now)
         }
     }
     val proofTasks = remember(completedTasks) {
@@ -221,6 +242,7 @@ fun HomeScreen(
     }
 
     fun triggerDoneStamp(task: Task) {
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
         scope.launch {
             stampedTaskId = task.id
             stampScale.snapTo(0.45f)
@@ -293,20 +315,52 @@ fun HomeScreen(
                             )
                         }
 
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        Column(
+                            horizontalAlignment = Alignment.End,
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            RoundIconButton(
-                                icon = if (isDarkTheme) SnapTaskIcons.Sun else SnapTaskIcons.Moon,
-                                contentDescription = if (isDarkTheme) "Chuyển giao diện sáng" else "Chuyển giao diện tối",
-                                onClick = onToggleTheme
-                            )
-                            RoundIconButton(
-                                icon = SnapTaskIcons.Flame,
-                                contentDescription = "Nhìn lại tuần",
-                                onClick = onOpenRecap
-                            )
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RoundIconButton(
+                                    icon = if (isDarkTheme) SnapTaskIcons.Sun else SnapTaskIcons.Moon,
+                                    contentDescription = if (isDarkTheme) "Chuyển giao diện sáng" else "Chuyển giao diện tối",
+                                    onClick = onToggleTheme
+                                )
+                                RoundIconButton(
+                                    icon = SnapTaskIcons.Flame,
+                                    contentDescription = "Nhìn lại tuần",
+                                    onClick = onOpenRecap
+                                )
+                            }
+
+                            if (storageUsed.isNotBlank()) {
+                                Row(
+                                    modifier = Modifier
+                                        .height(22.dp)
+                                        .clip(CircleShape)
+                                        .background(colors.elevated)
+                                        .border(1.dp, colors.border, CircleShape)
+                                        .padding(horizontal = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = SnapTaskIcons.Camera,
+                                        contentDescription = "Dung lượng ảnh",
+                                        tint = colors.textMuted,
+                                        modifier = Modifier.size(11.dp)
+                                    )
+                                    Text(
+                                        text = storageUsed,
+                                        color = colors.textMuted,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
                         }
                     }
 
@@ -408,7 +462,9 @@ fun HomeScreen(
             } else if (visibleOpenTasks.isEmpty() && visibleCompletedGrid.isEmpty()) {
                 item(key = "empty_state") {
                     FeedEmptyCard(
+                        isFirstRun = tasks.isEmpty(),
                         filterKey = effectiveFilter,
+                        onClearFilter = { activeFilter = "all" },
                         onOpenCamera = onOpenCamera,
                         onOpenQuickNote = { showQuickNoteSheet = true }
                     )
@@ -493,14 +549,20 @@ fun HomeScreen(
                             CompletedBentoTile(
                                 task = rowTasks[0],
                                 onClick = { onTaskClick(rowTasks[0]) },
-                                onReopen = { onToggleTaskStatus(rowTasks[0]) },
+                                onReopen = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onToggleTaskStatus(rowTasks[0])
+                                },
                                 modifier = Modifier.weight(1f)
                             )
                             if (rowTasks.size > 1) {
                                 CompletedBentoTile(
                                     task = rowTasks[1],
                                     onClick = { onTaskClick(rowTasks[1]) },
-                                    onReopen = { onToggleTaskStatus(rowTasks[1]) },
+                                    onReopen = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        onToggleTaskStatus(rowTasks[1])
+                                    },
                                     modifier = Modifier.weight(1f)
                                 )
                             } else {
@@ -546,6 +608,7 @@ fun HomeScreen(
                 onOpenProofCamera(chosen)
             },
             onQuickComplete = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 val chosen = targetForProof
                 proofTargetTask = null
                 onQuickComplete(chosen)
@@ -659,7 +722,10 @@ private fun PhotoFeedTaskCard(
     val colors = MaterialTheme.snapColors
     val context = LocalContext.current
     val imageFile = remember(task.beforeImageUri) { File(task.beforeImageUri) }
-    val isOverdue = task.reminderTime != null && task.reminderTime < nowMillis
+    val validReminder = task.reminderTime?.takeIf { it > 0L }
+    val validDue = task.dueDate?.takeIf { it > 0L }
+    val isReminderOverdue = validReminder != null && validReminder < nowMillis
+    val isDueOverdue = DateTimeUtils.isOverdue(validDue, task.isCompleted, nowMillis)
     val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
 
     Box(
@@ -716,82 +782,153 @@ private fun PhotoFeedTaskCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            when {
-                isOverdue && task.reminderTime != null -> {
-                    Box(
-                        modifier = Modifier
-                            .height(32.dp)
-                            .clip(CircleShape)
-                            .background(colors.urgent)
-                            .padding(horizontal = 12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 8.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                when {
+                    isReminderOverdue && validReminder != null -> {
+                        Box(
+                            modifier = Modifier
+                                .height(32.dp)
+                                .clip(CircleShape)
+                                .background(colors.urgent)
+                                .padding(horizontal = 12.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                imageVector = SnapTaskIcons.Clock,
-                                contentDescription = null,
-                                tint = colors.onUrgent,
-                                modifier = Modifier.size(14.dp)
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Icon(
+                                    imageVector = SnapTaskIcons.Clock,
+                                    contentDescription = null,
+                                    tint = colors.onUrgent,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = "Trễ ${formatOverdueDuration(nowMillis - validReminder)}",
+                                    color = colors.onUrgent,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                    isDueOverdue && validDue != null -> {
+                        Box(
+                            modifier = Modifier
+                                .height(32.dp)
+                                .clip(CircleShape)
+                                .background(colors.urgent)
+                                .padding(horizontal = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Icon(
+                                    imageVector = SnapTaskIcons.Clock,
+                                    contentDescription = null,
+                                    tint = colors.onUrgent,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = "Quá hạn · ${DateTimeUtils.formatDueLabel(validDue, nowMillis)}",
+                                    color = colors.onUrgent,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                    validReminder != null -> {
+                        Box(
+                            modifier = Modifier
+                                .height(32.dp)
+                                .clip(CircleShape)
+                                .background(colors.bubble)
+                                .border(1.dp, Color(0x22FAFAF6), CircleShape)
+                                .padding(horizontal = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Icon(
+                                    imageVector = SnapTaskIcons.Clock,
+                                    contentDescription = null,
+                                    tint = Color(0xFFFAFAF6),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = timeFormat.format(Date(validReminder)),
+                                    color = Color(0xFFFAFAF6),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                    }
+                    validDue != null -> {
+                        Box(
+                            modifier = Modifier
+                                .height(32.dp)
+                                .clip(CircleShape)
+                                .background(colors.bubble)
+                                .border(1.dp, Color(0x22FAFAF6), CircleShape)
+                                .padding(horizontal = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Icon(
+                                    imageVector = SnapTaskIcons.Clock,
+                                    contentDescription = null,
+                                    tint = Color(0xFFFAFAF6),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = "Hạn ${DateTimeUtils.formatDueLabel(validDue, nowMillis)}",
+                                    color = Color(0xFFFAFAF6),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                    task.priorityEnum == TaskPriority.HIGH -> {
+                        Box(
+                            modifier = Modifier
+                                .height(32.dp)
+                                .clip(CircleShape)
+                                .background(colors.urgent)
+                                .padding(horizontal = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Text(
-                                text = "Trễ ${formatOverdueDuration(nowMillis - task.reminderTime)}",
+                                text = "Gấp",
                                 color = colors.onUrgent,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
                     }
+                    else -> Spacer(modifier = Modifier.width(4.dp))
                 }
-                task.reminderTime != null -> {
-                    Box(
-                        modifier = Modifier
-                            .height(32.dp)
-                            .clip(CircleShape)
-                            .background(colors.bubble)
-                            .border(1.dp, Color(0x22FAFAF6), CircleShape)
-                            .padding(horizontal = 12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(5.dp)
-                        ) {
-                            Icon(
-                                imageVector = SnapTaskIcons.Clock,
-                                contentDescription = null,
-                                tint = Color(0xFFFAFAF6),
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Text(
-                                text = timeFormat.format(Date(task.reminderTime)),
-                                color = Color(0xFFFAFAF6),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-                task.priorityEnum == TaskPriority.HIGH -> {
-                    Box(
-                        modifier = Modifier
-                            .height(32.dp)
-                            .clip(CircleShape)
-                            .background(colors.urgent)
-                            .padding(horizontal = 12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Gấp",
-                            color = colors.onUrgent,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-                else -> Spacer(modifier = Modifier.width(4.dp))
             }
 
             if (repeatCadence != RepeatCadence.NONE) {
@@ -869,15 +1006,27 @@ private fun PhotoFeedTaskCard(
                     .border(1.dp, Color(0x1FFAFAF6), RoundedCornerShape(22.dp))
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
-                Text(
-                    text = task.title,
-                    color = Color(0xFFFAFAF6),
-                    fontSize = 18.sp,
-                    lineHeight = 23.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(
+                        text = task.title,
+                        color = Color(0xFFFAFAF6),
+                        fontSize = 18.sp,
+                        lineHeight = 23.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (validDue != null && validReminder != null) {
+                        Text(
+                            text = "Hạn ${DateTimeUtils.formatDueLabel(validDue, nowMillis)}",
+                            color = if (isDueOverdue) colors.urgent else Color(0xFFB0AFA7),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
             }
 
             Box(
@@ -944,10 +1093,16 @@ private fun QuickNoteFeedCard(
 ) {
     val colors = MaterialTheme.snapColors
     val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
-    val isOverdue = task.reminderTime != null && task.reminderTime < nowMillis
+    val validReminder = task.reminderTime?.takeIf { it > 0L }
+    val validDue = task.dueDate?.takeIf { it > 0L }
+    val isReminderOverdue = validReminder != null && validReminder < nowMillis
+    val isDueOverdue = DateTimeUtils.isOverdue(validDue, task.isCompleted, nowMillis)
+    val isOverdue = isReminderOverdue || isDueOverdue
     val metaSuffix = when {
-        isOverdue && task.reminderTime != null -> " · Trễ ${formatOverdueDuration(nowMillis - task.reminderTime)}"
-        task.reminderTime != null -> " · ${timeFormat.format(Date(task.reminderTime))}"
+        isReminderOverdue && validReminder != null -> " · Trễ ${formatOverdueDuration(nowMillis - validReminder)}"
+        isDueOverdue && validDue != null -> " · Quá hạn (${DateTimeUtils.formatDueLabel(validDue, nowMillis)})"
+        validReminder != null -> " · ${timeFormat.format(Date(validReminder))}"
+        validDue != null -> " · Hạn ${DateTimeUtils.formatDueLabel(validDue, nowMillis)}"
         else -> ""
     }
 
@@ -998,6 +1153,18 @@ private fun QuickNoteFeedCard(
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
                 maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        if (validDue != null && validReminder != null) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "Hạn chót: ${DateTimeUtils.formatDueLabel(validDue, nowMillis)}",
+                color = if (isDueOverdue) colors.urgent else colors.textSecondary,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }
@@ -1218,12 +1385,19 @@ private fun CompletedBentoTile(
 
 @Composable
 private fun FeedEmptyCard(
+    isFirstRun: Boolean,
     filterKey: String,
+    onClearFilter: () -> Unit,
     onOpenCamera: () -> Unit,
     onOpenQuickNote: () -> Unit
 ) {
     val colors = MaterialTheme.snapColors
+    val isFilteredEmpty = !isFirstRun && filterKey != "all"
     val (headline, body) = when {
+        isFirstRun -> Pair(
+            "Chưa có việc nào",
+            "Chụp nhanh góc cần dọn hoặc viết một ghi chú ngắn để bắt đầu ngày mới."
+        )
         filterKey == "done" -> Pair(
             "Chưa có việc nào hoàn thành",
             "Khi bạn bấm dấu tích trên một việc, ảnh Trước / Sau sẽ lưu vào đây."
@@ -1238,11 +1412,11 @@ private fun FeedEmptyCard(
         )
         filterKey.startsWith("folder:") -> Pair(
             "Thư mục này chưa có việc nào",
-            "Chụp ảnh việc mới hoặc ghi chú chữ để thêm vào thư mục."
+            "Chụp ảnh việc mới hoặc xóa bộ lọc để xem toàn bộ danh sách."
         )
         else -> Pair(
-            "Chưa có việc cần làm hôm nay",
-            "Chụp nhanh góc cần dọn hoặc viết một ghi chú ngắn để bắt đầu."
+            "Hôm nay chưa có việc cần làm",
+            "Các việc trước đây đã hoàn thành. Chụp việc mới hoặc viết ghi chú để tiếp tục."
         )
     }
 
@@ -1276,38 +1450,74 @@ private fun FeedEmptyCard(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp)
-                    .clip(CircleShape)
-                    .background(colors.flash)
-                    .clickable(role = Role.Button, onClick = onOpenCamera),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Chụp việc mới",
-                    color = colors.onFlash,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.ExtraBold
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp)
-                    .clip(CircleShape)
-                    .background(colors.elevated)
-                    .border(1.dp, colors.border, CircleShape)
-                    .clickable(role = Role.Button, onClick = onOpenQuickNote),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Ghi chú chữ",
-                    color = colors.text,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
-                )
+            if (isFilteredEmpty) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .clip(CircleShape)
+                        .background(colors.flash)
+                        .clickable(role = Role.Button, onClick = onClearFilter),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Xóa bộ lọc",
+                        color = colors.onFlash,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .clip(CircleShape)
+                        .background(colors.elevated)
+                        .border(1.dp, colors.border, CircleShape)
+                        .clickable(role = Role.Button, onClick = onOpenCamera),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Chụp việc mới",
+                        color = colors.text,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .clip(CircleShape)
+                        .background(colors.flash)
+                        .clickable(role = Role.Button, onClick = onOpenCamera),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Chụp việc mới",
+                        color = colors.onFlash,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .clip(CircleShape)
+                        .background(colors.elevated)
+                        .border(1.dp, colors.border, CircleShape)
+                        .clickable(role = Role.Button, onClick = onOpenQuickNote),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Ghi chú chữ",
+                        color = colors.text,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }

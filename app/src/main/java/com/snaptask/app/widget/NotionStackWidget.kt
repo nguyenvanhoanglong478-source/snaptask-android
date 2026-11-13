@@ -45,10 +45,11 @@ import androidx.glance.unit.ColorProvider
 import com.snaptask.app.R
 import com.snaptask.app.data.local.AppDatabase
 import com.snaptask.app.data.local.TaskEntity
+import com.snaptask.app.domain.model.TaskPriority
 import com.snaptask.app.ui.MainActivity
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import com.snaptask.app.util.DateTimeUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class NotionStackWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = NotionStackWidget()
@@ -59,10 +60,19 @@ class NotionStackWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val database = AppDatabase.getInstance(context)
-        val pendingTasks = database.taskDao().getPendingTasksForWidget()
-        val completedCount = database.taskDao().getCompletedCount()
-        val totalCount = database.taskDao().getTotalCount()
+        val widgetData = withContext(Dispatchers.IO) {
+            runCatching {
+                val dao = AppDatabase.getInstance(context).taskDao()
+                Triple(
+                    dao.getPendingTasksForWidget(),
+                    dao.getCompletedCount(),
+                    dao.getTotalCount()
+                )
+            }.getOrDefault(Triple(emptyList(), 0, 0))
+        }
+        val pendingTasks = widgetData.first
+        val completedCount = widgetData.second
+        val totalCount = widgetData.third
 
         val topTask: TaskEntity? = pendingTasks.firstOrNull()
         val nextTasks: List<TaskEntity> = if (pendingTasks.size > 1) {
@@ -71,15 +81,17 @@ class NotionStackWidget : GlanceAppWidget() {
             emptyList()
         }
 
-        val bitmap: Bitmap? = topTask?.let {
-            val mainUri = if (it.isCompleted && !it.afterImageUri.isNullOrBlank()) it.afterImageUri else it.beforeImageUri
-            val pipUri = if (it.isCompleted && !it.afterImageUri.isNullOrBlank()) it.beforeImageUri else null
-            WidgetBitmapHelper.createWidgetCompositeBitmap(
-                mainImageUri = mainUri,
-                miniPipImageUri = pipUri,
-                isCompleted = it.isCompleted,
-                outputSize = 380
-            )
+        val bitmap: Bitmap? = withContext(Dispatchers.IO) {
+            topTask?.let {
+                val mainUri = if (it.isCompleted && !it.afterImageUri.isNullOrBlank()) it.afterImageUri else it.beforeImageUri
+                val pipUri = if (it.isCompleted && !it.afterImageUri.isNullOrBlank()) it.beforeImageUri else null
+                WidgetBitmapHelper.createWidgetCompositeBitmap(
+                    mainImageUri = mainUri,
+                    miniPipImageUri = pipUri,
+                    isCompleted = it.isCompleted,
+                    outputSize = 380
+                )
+            }
         }
 
         provideContent {
@@ -107,6 +119,16 @@ class NotionStackWidget : GlanceAppWidget() {
         val availableWidth = (widgetSize.width - 30.dp).coerceAtLeast(100.dp)
         val leftColumnWidth = availableWidth * 0.42f
         val rightColumnWidth = availableWidth * 0.58f
+        val taskIdParam = ActionParameters.Key<Long>("taskId")
+        val now = System.currentTimeMillis()
+
+        val featuredClickAction = if (topTask != null) {
+            actionRunCallback<OpenTaskActionCallback>(
+                actionParametersOf(taskIdParam to topTask.id)
+            )
+        } else {
+            actionStartActivity<MainActivity>()
+        }
 
         Row(
             modifier = GlanceModifier
@@ -122,7 +144,7 @@ class NotionStackWidget : GlanceAppWidget() {
                     .fillMaxHeight()
                     .cornerRadius(20.dp)
                     .background(WidgetColors.elevatedProvider)
-                    .clickable(actionStartActivity<MainActivity>())
+                    .clickable(featuredClickAction)
             ) {
                 if (topTask != null) {
                     if (bitmap != null) {
@@ -134,9 +156,26 @@ class NotionStackWidget : GlanceAppWidget() {
                         )
                     }
 
+                    val validReminder = topTask.reminderTime?.takeIf { it > 0L }
+                    val validDue = topTask.dueDate?.takeIf { it > 0L }
+                    val isHighPriority = runCatching {
+                        TaskPriority.valueOf(topTask.priority) == TaskPriority.HIGH
+                    }.getOrDefault(false)
+                    val isReminderOverdue = validReminder != null && validReminder < now
+                    val isDueOverdue = DateTimeUtils.isOverdue(validDue, isCompleted = false, nowMillis = now)
+                    val isOverdue = isReminderOverdue || isDueOverdue
+                    val badgeText: String? = when {
+                        isReminderOverdue -> "Trễ"
+                        isDueOverdue -> "Quá hạn"
+                        validReminder != null -> DateTimeUtils.formatTime(validReminder)
+                        validDue != null -> DateTimeUtils.formatDueLabel(validDue, now)
+                        isHighPriority -> "Gấp"
+                        else -> null
+                    }
+                    val isUrgentBadge = isOverdue || badgeText == "Gấp"
+
                     Column(modifier = GlanceModifier.fillMaxSize()) {
-                        if (topTask.reminderTime != null && topTask.reminderTime > 0) {
-                            val timeStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(topTask.reminderTime))
+                        if (badgeText != null) {
                             Row(
                                 modifier = GlanceModifier
                                     .fillMaxWidth()
@@ -144,18 +183,30 @@ class NotionStackWidget : GlanceAppWidget() {
                             ) {
                                 Box(
                                     modifier = GlanceModifier
-                                        .background(ColorProvider(Color(0xAD0F0F0E)))
+                                        .background(if (isUrgentBadge) WidgetColors.urgentProvider else ColorProvider(Color(0xAD0F0F0E)))
                                         .cornerRadius(8.dp)
                                         .padding(horizontal = 8.dp, vertical = 3.dp)
                                 ) {
-                                    Text(
-                                        text = timeStr,
-                                        style = TextStyle(
-                                            color = WidgetColors.textProvider,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 12.sp
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        if (isHighPriority && !isUrgentBadge) {
+                                            Box(
+                                                modifier = GlanceModifier
+                                                    .size(6.dp)
+                                                    .cornerRadius(3.dp)
+                                                    .background(WidgetColors.urgentProvider)
+                                            ) {}
+                                            Spacer(modifier = GlanceModifier.width(4.dp))
+                                        }
+                                        Text(
+                                            text = badgeText,
+                                            style = TextStyle(
+                                                color = if (isUrgentBadge) WidgetColors.onUrgentProvider else WidgetColors.textProvider,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 11.sp
+                                            ),
+                                            maxLines = 1
                                         )
-                                    )
+                                    }
                                 }
                             }
                         }
@@ -185,7 +236,6 @@ class NotionStackWidget : GlanceAppWidget() {
 
                                 Spacer(modifier = GlanceModifier.width(6.dp))
 
-                                val taskIdParam = ActionParameters.Key<Long>("taskId")
                                 Image(
                                     provider = ImageProvider(R.drawable.ic_widget_check_done),
                                     contentDescription = "Hoàn thành",
@@ -271,7 +321,12 @@ class NotionStackWidget : GlanceAppWidget() {
                             .defaultWeight()
                     ) {
                         nextTasks.forEach { item ->
-                            val taskIdParam = ActionParameters.Key<Long>("taskId")
+                            val itemHighPriority = runCatching {
+                                TaskPriority.valueOf(item.priority) == TaskPriority.HIGH
+                            }.getOrDefault(false)
+                            val itemOverdue = (item.reminderTime != null && item.reminderTime in 1 until now) ||
+                                DateTimeUtils.isOverdue(item.dueDate?.takeIf { it > 0L }, isCompleted = false, nowMillis = now)
+
                             Row(
                                 modifier = GlanceModifier
                                     .fillMaxWidth()
@@ -289,6 +344,15 @@ class NotionStackWidget : GlanceAppWidget() {
                                     modifier = GlanceModifier.size(20.dp)
                                 )
                                 Spacer(modifier = GlanceModifier.width(8.dp))
+                                if (itemHighPriority || itemOverdue) {
+                                    Box(
+                                        modifier = GlanceModifier
+                                            .size(6.dp)
+                                            .cornerRadius(3.dp)
+                                            .background(WidgetColors.urgentProvider)
+                                    ) {}
+                                    Spacer(modifier = GlanceModifier.width(5.dp))
+                                }
                                 Text(
                                     text = item.title,
                                     style = TextStyle(
@@ -296,7 +360,8 @@ class NotionStackWidget : GlanceAppWidget() {
                                         fontWeight = FontWeight.Medium,
                                         fontSize = 13.sp
                                     ),
-                                    maxLines = 1
+                                    maxLines = 1,
+                                    modifier = GlanceModifier.defaultWeight()
                                 )
                             }
                         }

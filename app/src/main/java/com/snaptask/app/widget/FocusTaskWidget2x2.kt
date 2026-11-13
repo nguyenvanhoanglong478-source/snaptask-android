@@ -34,10 +34,9 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.snaptask.app.R
+import com.snaptask.app.domain.model.TaskPriority
 import com.snaptask.app.ui.MainActivity
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import com.snaptask.app.util.DateTimeUtils
 
 @Composable
 fun EmptyWidgetContent2x2() {
@@ -46,6 +45,7 @@ fun EmptyWidgetContent2x2() {
             .fillMaxSize()
             .background(WidgetColors.bgProvider)
             .cornerRadius(26.dp)
+            .clickable(actionStartActivity<MainActivity>())
             .padding(16.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -76,19 +76,41 @@ fun FocusContent2x2(
     taskId: Long,
     title: String,
     reminderTime: Long?,
+    dueDate: Long? = null,
+    priority: String = TaskPriority.MEDIUM.name,
     bitmap: Bitmap?,
     taskIndex: Int,
     totalTasks: Int
 ) {
+    val taskIdParam = ActionParameters.Key<Long>("taskId")
     val now = System.currentTimeMillis()
-    val isOverdue = reminderTime != null && reminderTime in 1 until now
+    val validReminder = reminderTime?.takeIf { it > 0L }
+    val validDue = dueDate?.takeIf { it > 0L }
+    val isHighPriority = runCatching { TaskPriority.valueOf(priority) == TaskPriority.HIGH }.getOrDefault(false)
+    val isReminderOverdue = validReminder != null && validReminder < now
+    val isDueOverdue = DateTimeUtils.isOverdue(validDue, isCompleted = false, nowMillis = now)
+    val isOverdue = isReminderOverdue || isDueOverdue
+
+    val statusText: String? = when {
+        isReminderOverdue && validReminder != null -> "Trễ ${formatShortOverdue(now - validReminder)}"
+        isDueOverdue -> "Quá hạn"
+        validReminder != null -> DateTimeUtils.formatTime(validReminder)
+        validDue != null -> DateTimeUtils.formatDueLabel(validDue, now)
+        isHighPriority -> "Gấp"
+        else -> null
+    }
+    val isUrgentBadge = isOverdue || statusText == "Gấp"
 
     Box(
         modifier = GlanceModifier
             .fillMaxSize()
             .background(WidgetColors.bgProvider)
             .cornerRadius(26.dp)
-            .clickable(actionStartActivity<MainActivity>())
+            .clickable(
+                actionRunCallback<OpenTaskActionCallback>(
+                    actionParametersOf(taskIdParam to taskId)
+                )
+            )
     ) {
         if (bitmap != null) {
             Image(
@@ -112,27 +134,33 @@ fun FocusContent2x2(
                     .padding(10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (reminderTime != null && reminderTime > 0) {
-                    val label = if (isOverdue) {
-                        val overdueMins = ((now - reminderTime) / 60000L).coerceAtLeast(1L)
-                        if (overdueMins < 60L) "Trễ ${overdueMins}′" else "Trễ ${overdueMins / 60L}h"
-                    } else {
-                        SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(reminderTime))
-                    }
+                if (statusText != null) {
                     Box(
                         modifier = GlanceModifier
-                            .background(if (isOverdue) WidgetColors.urgentProvider else ColorProvider(Color(0xAD0F0F0E)))
+                            .background(if (isUrgentBadge) WidgetColors.urgentProvider else ColorProvider(Color(0xAD0F0F0E)))
                             .cornerRadius(9.dp)
-                            .padding(horizontal = 9.dp, vertical = 4.dp)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
-                        Text(
-                            text = label,
-                            style = TextStyle(
-                                color = if (isOverdue) WidgetColors.onUrgentProvider else WidgetColors.textProvider,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (isHighPriority && !isUrgentBadge) {
+                                Box(
+                                    modifier = GlanceModifier
+                                        .size(6.dp)
+                                        .cornerRadius(3.dp)
+                                        .background(WidgetColors.urgentProvider)
+                                ) {}
+                                Spacer(modifier = GlanceModifier.width(5.dp))
+                            }
+                            Text(
+                                text = statusText,
+                                style = TextStyle(
+                                    color = if (isUrgentBadge) WidgetColors.onUrgentProvider else WidgetColors.textProvider,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.sp
+                                ),
+                                maxLines = 1
                             )
-                        )
+                        }
                     }
                 }
 
@@ -182,14 +210,19 @@ fun FocusContent2x2(
                         )
 
                         val remaining = maxOf(0, totalTasks - taskIndex)
-                        if (remaining > 0) {
+                        val subLabel = when {
+                            remaining > 0 -> "Còn $remaining việc"
+                            validReminder != null && validDue != null -> "Hạn ${DateTimeUtils.formatDueLabel(validDue, now)}"
+                            else -> null
+                        }
+                        if (subLabel != null) {
                             Spacer(modifier = GlanceModifier.height(2.dp))
                             Text(
-                                text = "Còn $remaining việc",
+                                text = subLabel,
                                 style = TextStyle(
-                                    color = WidgetColors.textSecondaryProvider,
+                                    color = if (isDueOverdue && remaining == 0) WidgetColors.urgentProvider else WidgetColors.textSecondaryProvider,
                                     fontWeight = FontWeight.Normal,
-                                    fontSize = 12.sp
+                                    fontSize = 11.sp
                                 ),
                                 maxLines = 1
                             )
@@ -198,7 +231,6 @@ fun FocusContent2x2(
 
                     Spacer(modifier = GlanceModifier.width(8.dp))
 
-                    val taskIdParam = ActionParameters.Key<Long>("taskId")
                     Image(
                         provider = ImageProvider(R.drawable.ic_widget_check_done),
                         contentDescription = "Hoàn thành",
@@ -213,5 +245,14 @@ fun FocusContent2x2(
                 }
             }
         }
+    }
+}
+
+private fun formatShortOverdue(diffMs: Long): String {
+    val mins = (diffMs / 60_000L).coerceAtLeast(1L)
+    return when {
+        mins < 60L -> "${mins}′"
+        mins < 1440L -> "${mins / 60L}h"
+        else -> "${mins / 1440L}d"
     }
 }
