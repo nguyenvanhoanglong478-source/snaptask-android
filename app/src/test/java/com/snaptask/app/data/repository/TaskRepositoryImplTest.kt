@@ -404,11 +404,12 @@ class TaskRepositoryImplTest {
 
         override suspend fun getPendingTasksWithFutureReminder(now: Long): List<TaskEntity> = synchronized(lock) {
             tasks.values
-                .filter {
-                    !it.isCompleted &&
-                        it.reminderTime != null &&
-                        it.reminderTime > now &&
-                        it.reminderType != "NONE"
+                .filter { entity ->
+                    val reminderAt = entity.reminderTime
+                    !entity.isCompleted &&
+                        reminderAt != null &&
+                        reminderAt > now &&
+                        entity.reminderType != "NONE"
                 }
                 .sortedBy { it.reminderTime }
         }
