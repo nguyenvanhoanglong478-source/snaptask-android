@@ -103,6 +103,7 @@ fun CompletionProofBottomSheet(
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
                             .data(beforeFile)
+                            .size(200)
                             .crossfade(true)
                             .build(),
                         contentDescription = "Before Thumbnail",

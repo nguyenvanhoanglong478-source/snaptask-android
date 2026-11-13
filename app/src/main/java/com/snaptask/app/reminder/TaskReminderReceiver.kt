@@ -8,6 +8,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
+import android.media.AudioManager
 import android.media.RingtoneManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
@@ -27,11 +28,15 @@ class TaskReminderReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
+        val taskId = intent.getLongExtra(TaskReminderScheduler.EXTRA_TASK_ID, -1L)
+        if (taskId == -1L) return
+
+        val appContext = context.applicationContext
         val pendingResult = goAsync()
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                handleReminder(context, intent)
+                handleReminder(appContext, intent, taskId)
             } catch (_: Exception) {
                 // Guard background broadcast receiver coroutine
             } finally {
@@ -40,11 +45,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
         }
     }
 
-    private suspend fun handleReminder(context: Context, intent: Intent) {
-        // Read task reminder data directly from intent extras
-        val taskId = intent.getLongExtra(TaskReminderScheduler.EXTRA_TASK_ID, -1L)
-        if (taskId == -1L) return
-
+    private suspend fun handleReminder(context: Context, intent: Intent, taskId: Long) {
         // Verify task exists and is not completed before alerting
         val db = AppDatabase.getInstance(context)
         val taskEntity = db.taskDao().getTaskById(taskId)
@@ -65,7 +66,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
             ?: return
         createChannels(notificationManager)
 
-        val isAlarmMode = reminderType == "ALARM"
+        val isAlarmMode = reminderType.equals("ALARM", ignoreCase = true)
         val channelId = if (isAlarmMode) CHANNEL_ALARM else CHANNEL_NOTIFICATION
 
         // 1. Content Intent: Click notification opens app directly to this task
@@ -122,7 +123,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
 
         // Optional: BigPicture before photo preview (never recycle prematurely while notify() parcels it)
         val photoBitmap = runCatching {
-            WidgetBitmapHelper.loadOptimizedBitmap(taskImage, maxSize = 600)
+            WidgetBitmapHelper.loadOptimizedBitmap(taskImage, maxSize = 512)
         }.getOrNull()
 
         val builder = NotificationCompat.Builder(context, channelId)
@@ -143,12 +144,16 @@ class TaskReminderReceiver : BroadcastReceiver() {
         }
 
         if (isAlarmMode) {
-            // Priority & FullScreen for Alarm
+            // Priority & FullScreen for Alarm (API 34+ requires canUseFullScreenIntent check)
             builder.priority = NotificationCompat.PRIORITY_MAX
             builder.setCategory(NotificationCompat.CATEGORY_ALARM)
             builder.setOngoing(true)
             builder.setAutoCancel(false)
-            builder.setFullScreenIntent(contentPendingIntent, true)
+            val canUseFullScreen = Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE ||
+                runCatching { notificationManager.canUseFullScreenIntent() }.getOrDefault(false)
+            if (canUseFullScreen) {
+                builder.setFullScreenIntent(contentPendingIntent, true)
+            }
             builder.setTimeoutAfter(60_000)
 
             builder.addAction(0, "Tắt chuông", stopAlarmPendingIntent)
@@ -161,6 +166,22 @@ class TaskReminderReceiver : BroadcastReceiver() {
 
             builder.addAction(0, "Hoàn thành nhanh", completePendingIntent)
             builder.addAction(0, "Báo lại sau 10p", snoozePendingIntent)
+        }
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            if (isAlarmMode) {
+                val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                    ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+                    ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                if (alarmUri != null) {
+                    builder.setSound(alarmUri, AudioManager.STREAM_ALARM)
+                } else {
+                    builder.setDefaults(NotificationCompat.DEFAULT_SOUND)
+                }
+                builder.setVibrate(longArrayOf(0, 800, 400, 800, 400, 1000))
+            } else {
+                builder.setDefaults(NotificationCompat.DEFAULT_SOUND or NotificationCompat.DEFAULT_VIBRATE)
+            }
         }
 
         val notification = builder.build()
@@ -196,6 +217,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
 
             // Alarm Channel V3: System-managed loud alarm audio with USAGE_ALARM
             val alarmSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
                 ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
             val audioAttributes = AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_ALARM)
@@ -208,7 +230,9 @@ class TaskReminderReceiver : BroadcastReceiver() {
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Chuông báo thức lớn nhắc nhở nhiệm vụ khẩn cấp"
-                setSound(alarmSoundUri, audioAttributes)
+                if (alarmSoundUri != null) {
+                    setSound(alarmSoundUri, audioAttributes)
+                }
                 enableVibration(true)
                 vibrationPattern = longArrayOf(0, 800, 400, 800, 400, 1000)
                 setShowBadge(true)

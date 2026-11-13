@@ -36,6 +36,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -47,6 +48,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -65,12 +67,15 @@ import com.snaptask.app.domain.model.Task
 import com.snaptask.app.ui.components.RoundIconButton
 import com.snaptask.app.ui.components.SnapDateHelper
 import com.snaptask.app.ui.theme.SnapTaskIcons
+import com.snaptask.app.ui.theme.snapColors
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.math.max
+import kotlin.math.roundToInt
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -88,6 +93,7 @@ fun ShareCardScreen(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = MaterialTheme.snapColors
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -115,20 +121,25 @@ fun ShareCardScreen(
         if (isExporting) return
         scope.launch {
             isExporting = true
+            var bitmap: Bitmap? = null
             try {
-                val bitmap = withContext(Dispatchers.IO) {
+                val rendered = withContext(Dispatchers.IO) {
                     renderSharePosterBitmap(
                         task = task,
                         dateLabel = dateLabel,
                         formatIndex = formatIndex
                     )
                 }
+                bitmap = rendered
 
                 if (target == ShareTarget.SAVE_GALLERY) {
                     val savedOk = withContext(Dispatchers.IO) {
-                        saveBitmapToGallery(context, bitmap, "snaptask_${task.id}_${System.currentTimeMillis()}.png")
+                        saveBitmapToGallery(
+                            context,
+                            rendered,
+                            "snaptask_${task.id}_${System.currentTimeMillis()}.png"
+                        )
                     }
-                    bitmap.recycle()
                     val msg = if (savedOk) {
                         "Đã lưu thẻ Trước / Sau vào Thư viện ảnh!"
                     } else {
@@ -140,7 +151,7 @@ fun ShareCardScreen(
                         val dir = File(context.cacheDir, "shared_cards").apply { mkdirs() }
                         val outFile = File(dir, "snaptask_card_${task.id}.png")
                         FileOutputStream(outFile).use { out ->
-                            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                            rendered.compress(Bitmap.CompressFormat.PNG, 100, out)
                         }
                         FileProvider.getUriForFile(
                             context,
@@ -148,7 +159,6 @@ fun ShareCardScreen(
                             outFile
                         )
                     }
-                    bitmap.recycle()
 
                     val sendIntent = Intent(Intent.ACTION_SEND).apply {
                         type = "image/png"
@@ -178,9 +188,14 @@ fun ShareCardScreen(
                         }
                     }
                 }
-            } catch (_: Exception) {
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Throwable) {
                 Toast.makeText(context, "Không tạo được ảnh chia sẻ, vui lòng thử lại.", Toast.LENGTH_SHORT).show()
             } finally {
+                if (bitmap != null && !bitmap.isRecycled) {
+                    bitmap.recycle()
+                }
                 isExporting = false
             }
         }
@@ -189,7 +204,7 @@ fun ShareCardScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF0A0A09))
+            .background(colors.bg)
             .statusBarsPadding()
             .navigationBarsPadding()
             .padding(horizontal = 20.dp),
@@ -206,12 +221,12 @@ fun ShareCardScreen(
                 icon = SnapTaskIcons.Close,
                 contentDescription = "Đóng",
                 onClick = onClose,
-                containerColor = Color(0xFF1F1F1C),
-                contentColor = Color(0xFFFAFAF6)
+                containerColor = colors.elevated,
+                contentColor = colors.text
             )
             Text(
                 text = "Chia sẻ",
-                color = Color(0xFFFAFAF6),
+                color = colors.text,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.ExtraBold,
                 textAlign = TextAlign.Center,
@@ -233,6 +248,7 @@ fun ShareCardScreen(
                     .aspectRatio(cardAspect, matchHeightConstraintsFirst = formatIndex == 0)
                     .clip(RoundedCornerShape(30.dp))
                     .background(Color(0xFFD4FF3A))
+                    .border(1.dp, Color(0x2610120A), RoundedCornerShape(30.dp))
                     .padding(16.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
@@ -347,7 +363,8 @@ fun ShareCardScreen(
                 Box(
                     modifier = Modifier
                         .clip(CircleShape)
-                        .background(Color(0xD910120A))
+                        .background(Color(0xE610120A))
+                        .border(1.dp, Color(0x33FFFFFF), CircleShape)
                         .padding(horizontal = 18.dp, vertical = 12.dp)
                 ) {
                     Row(
@@ -387,10 +404,10 @@ fun ShareCardScreen(
                             .weight(1f)
                             .height(38.dp)
                             .clip(CircleShape)
-                            .background(if (selected) Color(0xFFFAFAF6) else Color(0xFF1F1F1C))
+                            .background(if (selected) colors.text else colors.elevated)
                             .border(
                                 width = 1.dp,
-                                color = if (selected) Color(0xFFFAFAF6) else Color(0xFF34342F),
+                                color = if (selected) colors.text else colors.border,
                                 shape = CircleShape
                             )
                             .clickable(role = Role.Tab) { formatIndex = idx },
@@ -398,7 +415,7 @@ fun ShareCardScreen(
                     ) {
                         Text(
                             text = label,
-                            color = if (selected) Color(0xFF0F0F0E) else Color(0xFFFAFAF6),
+                            color = if (selected) colors.bg else colors.text,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -414,21 +431,25 @@ fun ShareCardScreen(
                 ShareActionColumn(
                     icon = SnapTaskIcons.ShareUp,
                     label = "Story",
+                    enabled = !isExporting,
                     onClick = { exportAndDispatch(ShareTarget.STORY) }
                 )
                 ShareActionColumn(
                     icon = SnapTaskIcons.ShareUp,
                     label = "Zalo",
+                    enabled = !isExporting,
                     onClick = { exportAndDispatch(ShareTarget.ZALO) }
                 )
                 ShareActionColumn(
                     icon = SnapTaskIcons.Download,
                     label = "Lưu ảnh",
+                    enabled = !isExporting,
                     onClick = { exportAndDispatch(ShareTarget.SAVE_GALLERY) }
                 )
                 ShareActionColumn(
                     icon = SnapTaskIcons.MoreHorizontal,
                     label = "Khác",
+                    enabled = !isExporting,
                     onClick = { exportAndDispatch(ShareTarget.MORE) }
                 )
             }
@@ -453,6 +474,7 @@ private fun PosterPhotoSlot(
             AsyncImage(
                 model = ImageRequest.Builder(context)
                     .data(file)
+                    .size(720)
                     .crossfade(true)
                     .build(),
                 contentDescription = tagText,
@@ -497,9 +519,12 @@ private fun PosterPhotoSlot(
 private fun ShareActionColumn(
     icon: ImageVector,
     label: String,
+    enabled: Boolean,
     onClick: () -> Unit
 ) {
+    val colors = MaterialTheme.snapColors
     Column(
+        modifier = Modifier.alpha(if (enabled) 1f else 0.5f),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
@@ -507,21 +532,21 @@ private fun ShareActionColumn(
             modifier = Modifier
                 .size(56.dp)
                 .clip(CircleShape)
-                .background(Color(0xFF252522))
-                .border(1.dp, Color(0xFF34342F), CircleShape)
-                .clickable(role = Role.Button, onClickLabel = label, onClick = onClick),
+                .background(colors.surface)
+                .border(1.dp, colors.border, CircleShape)
+                .clickable(enabled = enabled, role = Role.Button, onClickLabel = label, onClick = onClick),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                tint = Color(0xFFFAFAF6),
+                tint = colors.text,
                 modifier = Modifier.size(22.dp)
             )
         }
         Text(
             text = label,
-            color = Color(0xFFB0AFA7),
+            color = colors.textSecondary,
             fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold
         )
@@ -533,99 +558,158 @@ private fun renderSharePosterBitmap(
     dateLabel: String,
     formatIndex: Int
 ): Bitmap {
-    val width = 1080
-    val height = if (formatIndex == 0) 1680 else 1080
-    val poster = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(poster)
-
-    val limePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFD4FF3A.toInt() }
-    val inkPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF10120A.toInt() }
-    val slotBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF171715.toInt() }
-
-    canvas.drawRoundRect(RectF(0f, 0f, width.toFloat(), height.toFloat()), 72f, 72f, limePaint)
-
-    val brandPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFF10120A.toInt()
-        textSize = 44f
-        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-    }
-    val datePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFF10120A.toInt()
-        textSize = 34f
-        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        textAlign = Paint.Align.RIGHT
-    }
-
-    val pad = 52f
-    canvas.drawText("snaptask", pad, 94f, brandPaint)
-    canvas.drawText(dateLabel, width - pad, 92f, datePaint)
-
-    val contentTop = 132f
-    val contentBottom = height - 138f
-    val gap = 24f
-
-    val beforeBmp = decodeSampledFile(task.beforeImageUri, 1080)
-    val afterPath = if (!task.afterImageUri.isNullOrBlank()) task.afterImageUri else task.beforeImageUri
-    val afterBmp = decodeSampledFile(afterPath, 1080)
-    val hasDistinctAfter = !task.afterImageUri.isNullOrBlank() && File(task.afterImageUri).exists()
-
-    if (formatIndex == 2) {
-        val slotW = (width - pad * 2 - gap) / 2f
-        val leftRect = RectF(pad, contentTop, pad + slotW, contentBottom)
-        val rightRect = RectF(pad + slotW + gap, contentTop, width - pad, contentBottom)
-        drawPhotoSlotOnCanvas(canvas, leftRect, beforeBmp, "TRƯỚC", isAfter = false, slotBgPaint)
-        drawPhotoSlotOnCanvas(
-            canvas,
-            rightRect,
-            afterBmp,
-            if (hasDistinctAfter) "SAU" else "HIỆN TẠI",
-            isAfter = true,
-            slotBgPaint
+    return try {
+        renderSharePosterAtScale(
+            task = task,
+            dateLabel = dateLabel,
+            formatIndex = formatIndex,
+            scale = 1f,
+            config = Bitmap.Config.ARGB_8888
         )
-    } else {
-        val slotH = (contentBottom - contentTop - gap) / 2f
-        val topRect = RectF(pad, contentTop, width - pad, contentTop + slotH)
-        val bottomRect = RectF(pad, contentTop + slotH + gap, width - pad, contentBottom)
-        drawPhotoSlotOnCanvas(canvas, topRect, beforeBmp, "TRƯỚC", isAfter = false, slotBgPaint)
-        drawPhotoSlotOnCanvas(
-            canvas,
-            bottomRect,
-            afterBmp,
-            if (hasDistinctAfter) "SAU" else "HIỆN TẠI",
-            isAfter = true,
-            slotBgPaint
+    } catch (_: OutOfMemoryError) {
+        System.gc()
+        renderSharePosterAtScale(
+            task = task,
+            dateLabel = dateLabel,
+            formatIndex = formatIndex,
+            scale = 720f / 1080f,
+            config = Bitmap.Config.RGB_565
         )
     }
+}
 
-    beforeBmp?.recycle()
-    afterBmp?.recycle()
+private fun renderSharePosterAtScale(
+    task: Task,
+    dateLabel: String,
+    formatIndex: Int,
+    scale: Float,
+    config: Bitmap.Config
+): Bitmap {
+    val baseWidth = 1080
+    val baseHeight = if (formatIndex == 0) 1680 else 1080
+    val outWidth = (baseWidth * scale).roundToInt().coerceAtLeast(1)
+    val outHeight = (baseHeight * scale).roundToInt().coerceAtLeast(1)
+    val poster = Bitmap.createBitmap(outWidth, outHeight, config)
 
-    val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFF10120A.toInt()
-        textSize = 48f
-        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+    var beforeBmp: Bitmap? = null
+    var afterBmp: Bitmap? = null
+
+    try {
+        val canvas = Canvas(poster)
+        if (config == Bitmap.Config.RGB_565) {
+            canvas.drawColor(0xFF0A0A09.toInt())
+        }
+        if (scale != 1f) {
+            canvas.scale(scale, scale)
+        }
+
+        val width = baseWidth
+        val height = baseHeight
+
+        val limePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFD4FF3A.toInt() }
+        val inkPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF10120A.toInt() }
+        val slotBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF171715.toInt() }
+
+        canvas.drawRoundRect(RectF(0f, 0f, width.toFloat(), height.toFloat()), 72f, 72f, limePaint)
+
+        val brandPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFF10120A.toInt()
+            textSize = 44f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        }
+        val datePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFF10120A.toInt()
+            textSize = 34f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            textAlign = Paint.Align.RIGHT
+        }
+
+        val pad = 52f
+        canvas.drawText("snaptask", pad, 94f, brandPaint)
+        canvas.drawText(dateLabel, width - pad, 92f, datePaint)
+
+        val contentTop = 132f
+        val contentBottom = height - 138f
+        val gap = 24f
+
+        val decodeMaxDim = (1080 * scale).roundToInt().coerceAtLeast(540)
+        beforeBmp = decodeSampledFile(task.beforeImageUri, decodeMaxDim)
+        val afterUri = task.afterImageUri
+        val hasAnyAfter = !afterUri.isNullOrBlank() && File(afterUri).exists()
+        val hasDistinctAfter = hasAnyAfter && afterUri != task.beforeImageUri
+        afterBmp = if (hasDistinctAfter) {
+            decodeSampledFile(afterUri, decodeMaxDim)
+        } else {
+            beforeBmp
+        }
+
+        if (formatIndex == 2) {
+            val slotW = (width - pad * 2 - gap) / 2f
+            val leftRect = RectF(pad, contentTop, pad + slotW, contentBottom)
+            val rightRect = RectF(pad + slotW + gap, contentTop, width - pad, contentBottom)
+            drawPhotoSlotOnCanvas(canvas, leftRect, beforeBmp, "TRƯỚC", isAfter = false, slotBgPaint)
+            drawPhotoSlotOnCanvas(
+                canvas,
+                rightRect,
+                afterBmp,
+                if (hasAnyAfter) "SAU" else "HIỆN TẠI",
+                isAfter = true,
+                slotBgPaint
+            )
+        } else {
+            val slotH = (contentBottom - contentTop - gap) / 2f
+            val topRect = RectF(pad, contentTop, width - pad, contentTop + slotH)
+            val bottomRect = RectF(pad, contentTop + slotH + gap, width - pad, contentBottom)
+            drawPhotoSlotOnCanvas(canvas, topRect, beforeBmp, "TRƯỚC", isAfter = false, slotBgPaint)
+            drawPhotoSlotOnCanvas(
+                canvas,
+                bottomRect,
+                afterBmp,
+                if (hasAnyAfter) "SAU" else "HIỆN TẠI",
+                isAfter = true,
+                slotBgPaint
+            )
+        }
+
+        val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFF10120A.toInt()
+            textSize = 48f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        }
+        val clippedTitle = if (task.title.length > 34) task.title.take(33) + "…" else task.title
+        canvas.drawText(clippedTitle, pad, height - 58f, titlePaint)
+
+        val badgeCx = width - pad - 34f
+        val badgeCy = height - 74f
+        canvas.drawCircle(badgeCx, badgeCy, 34f, inkPaint)
+        val tickPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFFD4FF3A.toInt()
+            style = Paint.Style.STROKE
+            strokeWidth = 7f
+            strokeCap = Paint.Cap.ROUND
+            strokeJoin = Paint.Join.ROUND
+        }
+        val tickPath = Path().apply {
+            moveTo(badgeCx - 14f, badgeCy + 1f)
+            lineTo(badgeCx - 3f, badgeCy + 12f)
+            lineTo(badgeCx + 15f, badgeCy - 10f)
+        }
+        canvas.drawPath(tickPath, tickPaint)
+
+        return poster
+    } catch (t: Throwable) {
+        if (!poster.isRecycled) {
+            poster.recycle()
+        }
+        throw t
+    } finally {
+        if (afterBmp != null && afterBmp !== beforeBmp && !afterBmp.isRecycled) {
+            afterBmp.recycle()
+        }
+        if (beforeBmp != null && !beforeBmp.isRecycled) {
+            beforeBmp.recycle()
+        }
     }
-    val clippedTitle = if (task.title.length > 34) task.title.take(33) + "…" else task.title
-    canvas.drawText(clippedTitle, pad, height - 58f, titlePaint)
-
-    val badgeCx = width - pad - 34f
-    val badgeCy = height - 74f
-    canvas.drawCircle(badgeCx, badgeCy, 34f, inkPaint)
-    val tickPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFFD4FF3A.toInt()
-        style = Paint.Style.STROKE
-        strokeWidth = 7f
-        strokeCap = Paint.Cap.ROUND
-        strokeJoin = Paint.Join.ROUND
-    }
-    val tickPath = Path().apply {
-        moveTo(badgeCx - 14f, badgeCy + 1f)
-        lineTo(badgeCx - 3f, badgeCy + 12f)
-        lineTo(badgeCx + 15f, badgeCy - 10f)
-    }
-    canvas.drawPath(tickPath, tickPaint)
-
-    return poster
 }
 
 private fun drawPhotoSlotOnCanvas(
@@ -686,8 +770,20 @@ private fun decodeSampledFile(path: String?, maxDim: Int): Bitmap? {
     while (bounds.outWidth / sample > maxDim * 2 || bounds.outHeight / sample > maxDim * 2) {
         sample *= 2
     }
-    val decodeOpts = BitmapFactory.Options().apply { inSampleSize = sample }
-    return BitmapFactory.decodeFile(f.absolutePath, decodeOpts)
+    val decodeOpts = BitmapFactory.Options().apply {
+        inSampleSize = sample
+        inPreferredConfig = Bitmap.Config.RGB_565
+    }
+    return try {
+        BitmapFactory.decodeFile(f.absolutePath, decodeOpts)
+    } catch (_: OutOfMemoryError) {
+        decodeOpts.inSampleSize = sample * 2
+        try {
+            BitmapFactory.decodeFile(f.absolutePath, decodeOpts)
+        } catch (_: OutOfMemoryError) {
+            null
+        }
+    }
 }
 
 private fun saveBitmapToGallery(context: Context, bitmap: Bitmap, fileName: String): Boolean {

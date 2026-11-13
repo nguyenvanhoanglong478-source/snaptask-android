@@ -25,12 +25,18 @@ class NotificationActionReceiver : BroadcastReceiver() {
         val taskId = intent.getLongExtra(TaskReminderScheduler.EXTRA_TASK_ID, -1L)
         if (taskId == -1L) return
 
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+        val appContext = context.applicationContext
+        val notificationManager = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
 
         when (intent.action) {
             ACTION_STOP_ALARM -> {
+                val wasActive = runCatching {
+                    notificationManager?.activeNotifications?.any { it.id == taskId.toInt() } ?: true
+                }.getOrDefault(true)
                 notificationManager?.cancel(taskId.toInt())
-                Toast.makeText(context, "Đã tắt chuông báo thức!", Toast.LENGTH_SHORT).show()
+                if (wasActive) {
+                    Toast.makeText(appContext, "Đã tắt chuông báo thức!", Toast.LENGTH_SHORT).show()
+                }
             }
 
             ACTION_COMPLETE_TASK -> {
@@ -39,15 +45,21 @@ class NotificationActionReceiver : BroadcastReceiver() {
 
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
-                        val db = AppDatabase.getInstance(context)
-                        db.taskDao().toggleCompleted(taskId, true, System.currentTimeMillis())
-                        TaskReminderScheduler.cancelReminder(context, taskId)
+                        val db = AppDatabase.getInstance(appContext)
+                        val existing = db.taskDao().getTaskById(taskId)
+                        val newlyCompleted = existing != null && !existing.isCompleted
+                        if (newlyCompleted) {
+                            db.taskDao().toggleCompleted(taskId, true, System.currentTimeMillis())
+                        }
+                        TaskReminderScheduler.cancelReminder(appContext, taskId)
 
                         // Refresh all home screen widgets
-                        SnapTaskWidgetUpdater.updateAllWidgets(context)
+                        SnapTaskWidgetUpdater.updateAllWidgets(appContext)
 
-                        Handler(Looper.getMainLooper()).post {
-                            Toast.makeText(context, "Đã hoàn thành công việc!", Toast.LENGTH_SHORT).show()
+                        if (newlyCompleted) {
+                            Handler(Looper.getMainLooper()).post {
+                                Toast.makeText(appContext, "Đã hoàn thành công việc!", Toast.LENGTH_SHORT).show()
+                            }
                         }
                     } catch (_: Exception) {
                         // Guard background broadcast receiver coroutine
@@ -63,7 +75,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
 
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
-                        val db = AppDatabase.getInstance(context)
+                        val db = AppDatabase.getInstance(appContext)
                         val taskEntity = db.taskDao().getTaskById(taskId)
                         if (taskEntity == null || taskEntity.isCompleted) {
                             return@launch
@@ -71,15 +83,20 @@ class NotificationActionReceiver : BroadcastReceiver() {
 
                         val snoozeTime = System.currentTimeMillis() + 10 * 60 * 1000L // +10 minutes
                         val fallbackType = intent.getStringExtra(TaskReminderScheduler.EXTRA_REMINDER_TYPE) ?: "NOTIFICATION"
-                        val type = if (taskEntity.reminderType != "NONE") taskEntity.reminderType else fallbackType
+                        val type = if (!taskEntity.reminderType.equals("NONE", ignoreCase = true)) {
+                            taskEntity.reminderType
+                        } else {
+                            fallbackType
+                        }
 
                         db.taskDao().updateTaskReminder(taskId, snoozeTime, type)
 
                         val updatedTask = taskEntity.copy(reminderTime = snoozeTime, reminderType = type).toDomain()
-                        TaskReminderScheduler.scheduleReminder(context, updatedTask)
+                        TaskReminderScheduler.scheduleReminder(appContext, updatedTask)
+                        SnapTaskWidgetUpdater.updateAllWidgets(appContext)
 
                         Handler(Looper.getMainLooper()).post {
-                            Toast.makeText(context, "Sẽ nhắc lại sau 10 phút!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(appContext, "Sẽ nhắc lại sau 10 phút!", Toast.LENGTH_SHORT).show()
                         }
                     } catch (_: Exception) {
                         // Guard background broadcast receiver coroutine

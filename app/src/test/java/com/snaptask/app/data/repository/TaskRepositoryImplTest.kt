@@ -24,6 +24,7 @@ class TaskRepositoryImplTest {
     private lateinit var cancelledReminders: MutableList<Long>
     private lateinit var deletedImages: MutableList<String>
     private lateinit var onTasksChangedCount: AtomicInteger
+    private lateinit var deletedTaskIds: MutableList<Long>
     private lateinit var repository: TaskRepositoryImpl
 
     private val futureMillis: Long
@@ -39,6 +40,7 @@ class TaskRepositoryImplTest {
         cancelledReminders = Collections.synchronizedList(mutableListOf())
         deletedImages = Collections.synchronizedList(mutableListOf())
         onTasksChangedCount = AtomicInteger(0)
+        deletedTaskIds = Collections.synchronizedList(mutableListOf())
 
         repository = TaskRepositoryImpl(
             taskDao = fakeDao,
@@ -47,7 +49,8 @@ class TaskRepositoryImplTest {
             deleteImages = { paths ->
                 paths.filterNotNull().forEach { deletedImages.add(it) }
             },
-            onTasksChanged = { onTasksChangedCount.incrementAndGet() }
+            onTasksChanged = { onTasksChangedCount.incrementAndGet() },
+            onTaskDeleted = { taskId -> deletedTaskIds.add(taskId) }
         )
     }
 
@@ -350,7 +353,7 @@ class TaskRepositoryImplTest {
     }
 
     @Test
-    fun `deleteTask removes row deletes both images cancels reminder and fires onTasksChanged`() = runTest {
+    fun `deleteTask removes row deletes both images cancels reminder and fires callbacks`() = runTest {
         val id = repository.createTask(
             Task(
                 title = "Dọn kho",
@@ -361,6 +364,7 @@ class TaskRepositoryImplTest {
         )
         cancelledReminders.clear()
         onTasksChangedCount.set(0)
+        assertTrue(deletedTaskIds.isEmpty())
 
         val toDelete = fakeDao.getTaskById(id)!!.toDomain()
         repository.deleteTask(toDelete)
@@ -370,6 +374,7 @@ class TaskRepositoryImplTest {
         assertEquals(setOf("/snaps/before_kho.webp", "/snaps/after_kho.webp"), deletedImages.toSet())
         assertEquals(2, deletedImages.size)
         assertEquals(listOf(id), cancelledReminders)
+        assertEquals(listOf(id), deletedTaskIds)
         assertEquals(1, onTasksChangedCount.get())
     }
 

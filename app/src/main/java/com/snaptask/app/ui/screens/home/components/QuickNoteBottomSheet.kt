@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -19,6 +21,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -41,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.snaptask.app.data.local.Converters
@@ -99,6 +104,8 @@ fun QuickNoteBottomSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 6.dp)
+                .imePadding()
+                .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
         ) {
             // Header Bar
@@ -278,6 +285,19 @@ fun QuickNoteBottomSheet(
                         unfocusedContainerColor = colors.elevated,
                         focusedBorderColor = colors.flash,
                         unfocusedBorderColor = colors.border
+                    ),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            if (newSubtaskText.isNotBlank()) {
+                                subtasks = subtasks + SubTask(
+                                    id = java.util.UUID.randomUUID().toString(),
+                                    title = newSubtaskText.trim(),
+                                    isDone = false
+                                )
+                                newSubtaskText = ""
+                            }
+                        }
                     ),
                     singleLine = true
                 )
@@ -469,7 +489,7 @@ fun QuickNoteBottomSheet(
                             isFavorite = false,
                             folderName = selectedFolder,
                             priority = priority.name,
-                            subTasksJson = Converters().fromSubTaskList(subtasks),
+                            subTasksJson = Converters.encodeSubTaskList(subtasks),
                             reminderTime = reminderTime,
                             reminderType = reminderType
                         )

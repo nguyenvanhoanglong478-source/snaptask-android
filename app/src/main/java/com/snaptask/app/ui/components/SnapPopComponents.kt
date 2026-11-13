@@ -21,7 +21,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -29,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -36,10 +41,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.snaptask.app.domain.model.Task
 import com.snaptask.app.ui.theme.SnapTaskIcons
 import com.snaptask.app.ui.theme.snapColors
 import java.util.Calendar
+import kotlinx.coroutines.delay
 
 enum class DockTab(val label: String) {
     TODAY("Hôm nay"),
@@ -448,4 +456,24 @@ object SnapDateHelper {
 
         return Pair(current, maxOf(best, current))
     }
+}
+
+/**
+ * Emits an updated epoch timestamp immediately when lifecycle enters STARTED
+ * and at most once per [intervalMs] while active, avoiding per-frame allocations.
+ */
+@Composable
+fun rememberLifecycleTickerMillis(intervalMs: Long = 30_000L): Long {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var nowBucket by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(lifecycleOwner, intervalMs) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            nowBucket = System.currentTimeMillis()
+            while (true) {
+                delay(intervalMs)
+                nowBucket = System.currentTimeMillis()
+            }
+        }
+    }
+    return nowBucket
 }

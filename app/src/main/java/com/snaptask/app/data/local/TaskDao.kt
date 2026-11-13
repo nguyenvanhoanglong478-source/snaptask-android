@@ -17,7 +17,34 @@ interface TaskDao {
     @Query("SELECT * FROM tasks WHERE id = :id LIMIT 1")
     suspend fun getTaskById(id: Long): TaskEntity?
 
-    @Query("SELECT * FROM tasks WHERE isCompleted = 0 ORDER BY isPinnedToWidget DESC, createdAt DESC LIMIT 5")
+    @Query(
+        """
+        SELECT * FROM tasks
+        WHERE isCompleted = 0
+        ORDER BY
+            isPinnedToWidget DESC,
+            CASE WHEN priority = 'HIGH' THEN 0 ELSE 1 END ASC,
+            CASE
+                WHEN (reminderTime IS NOT NULL AND reminderTime > 0 AND reminderType != 'NONE')
+                  OR (dueDate IS NOT NULL AND dueDate > 0)
+                THEN 0
+                ELSE 1
+            END ASC,
+            CASE
+                WHEN (reminderTime IS NOT NULL AND reminderTime > 0 AND reminderType != 'NONE')
+                  OR (dueDate IS NOT NULL AND dueDate > 0)
+                THEN COALESCE(
+                    NULLIF(CASE WHEN reminderType != 'NONE' THEN reminderTime ELSE NULL END, 0),
+                    NULLIF(dueDate, 0),
+                    createdAt
+                )
+                ELSE 0
+            END ASC,
+            CASE priority WHEN 'HIGH' THEN 0 WHEN 'MEDIUM' THEN 1 ELSE 2 END ASC,
+            createdAt DESC
+        LIMIT 5
+        """
+    )
     suspend fun getPendingTasksForWidget(): List<TaskEntity>
 
     @Query("SELECT * FROM tasks WHERE isCompleted = 0 AND reminderTime IS NOT NULL AND reminderTime > :now AND reminderType != 'NONE' ORDER BY reminderTime ASC")

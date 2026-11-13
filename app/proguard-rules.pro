@@ -24,11 +24,13 @@
 -keep class com.snaptask.app.data.preferences.** { *; }
 
 # Jetpack Glance AppWidgets, Receivers & Action Callbacks
+-keep class com.snaptask.app.widget.** { *; }
 -keep class * extends androidx.glance.appwidget.GlanceAppWidget { *; }
 -keep class * extends androidx.glance.appwidget.GlanceAppWidgetReceiver { *; }
 -keep class * implements androidx.glance.appwidget.action.ActionCallback { *; }
 
-# BroadcastReceivers (Boot, Reminder, Notification Actions)
+# BroadcastReceivers & Reminder Scheduler (Boot, Reminder, Notification Actions)
+-keep class com.snaptask.app.reminder.** { *; }
 -keep class * extends android.content.BroadcastReceiver { *; }
 -keep class com.snaptask.app.reminder.BootReceiver { *; }
 -keep class com.snaptask.app.reminder.TaskReminderReceiver { *; }

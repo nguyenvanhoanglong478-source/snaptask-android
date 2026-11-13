@@ -47,7 +47,7 @@ class LocketFocusWidget : GlanceAppWidget() {
                     mainImageUri = mainUri,
                     miniPipImageUri = pipUri,
                     isCompleted = it.isCompleted,
-                    outputSize = 420
+                    outputSize = 360
                 )
             }
         }

@@ -5,7 +5,6 @@ import android.content.Intent
 import androidx.glance.GlanceId
 import androidx.glance.action.ActionParameters
 import androidx.glance.appwidget.action.ActionCallback
-import androidx.glance.appwidget.updateAll
 import com.snaptask.app.data.local.AppDatabase
 import com.snaptask.app.reminder.TaskReminderScheduler
 import com.snaptask.app.ui.MainActivity
@@ -73,7 +72,6 @@ class NextTaskActionCallback : ActionCallback {
             }
         }
 
-        runCatching { LocketFocusWidget().updateAll(context) }
-        runCatching { SnapTaskWidget().updateAll(context) }
+        SnapTaskWidgetUpdater.updateAllWidgets(context)
     }
 }

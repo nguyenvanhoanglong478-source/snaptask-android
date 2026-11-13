@@ -89,7 +89,7 @@ class NotionStackWidget : GlanceAppWidget() {
                     mainImageUri = mainUri,
                     miniPipImageUri = pipUri,
                     isCompleted = it.isCompleted,
-                    outputSize = 380
+                    outputSize = 340
                 )
             }
         }
@@ -183,7 +183,7 @@ class NotionStackWidget : GlanceAppWidget() {
                             ) {
                                 Box(
                                     modifier = GlanceModifier
-                                        .background(if (isUrgentBadge) WidgetColors.urgentProvider else ColorProvider(Color(0xAD0F0F0E)))
+                                        .background(if (isUrgentBadge) WidgetColors.urgentProvider else ColorProvider(Color(0xCC0F0F0E)))
                                         .cornerRadius(8.dp)
                                         .padding(horizontal = 8.dp, vertical = 3.dp)
                                 ) {
@@ -330,39 +330,56 @@ class NotionStackWidget : GlanceAppWidget() {
                             Row(
                                 modifier = GlanceModifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 3.dp)
-                                    .clickable(
-                                        actionRunCallback<CompleteTaskActionCallback>(
-                                            actionParametersOf(taskIdParam to item.id)
-                                        )
-                                    ),
+                                    .padding(vertical = 3.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Image(
-                                    provider = ImageProvider(R.drawable.widget_checkbox_empty),
-                                    contentDescription = "Chọn hoàn thành",
-                                    modifier = GlanceModifier.size(20.dp)
-                                )
-                                Spacer(modifier = GlanceModifier.width(8.dp))
-                                if (itemHighPriority || itemOverdue) {
-                                    Box(
-                                        modifier = GlanceModifier
-                                            .size(6.dp)
-                                            .cornerRadius(3.dp)
-                                            .background(WidgetColors.urgentProvider)
-                                    ) {}
-                                    Spacer(modifier = GlanceModifier.width(5.dp))
+                                Box(
+                                    modifier = GlanceModifier
+                                        .size(26.dp)
+                                        .clickable(
+                                            actionRunCallback<CompleteTaskActionCallback>(
+                                                actionParametersOf(taskIdParam to item.id)
+                                            )
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Image(
+                                        provider = ImageProvider(R.drawable.widget_checkbox_empty),
+                                        contentDescription = "Chọn hoàn thành",
+                                        modifier = GlanceModifier.size(20.dp)
+                                    )
                                 }
-                                Text(
-                                    text = item.title,
-                                    style = TextStyle(
-                                        color = WidgetColors.textProvider,
-                                        fontWeight = FontWeight.Medium,
-                                        fontSize = 13.sp
-                                    ),
-                                    maxLines = 1,
-                                    modifier = GlanceModifier.defaultWeight()
-                                )
+                                Spacer(modifier = GlanceModifier.width(6.dp))
+                                Row(
+                                    modifier = GlanceModifier
+                                        .defaultWeight()
+                                        .clickable(
+                                            actionRunCallback<OpenTaskActionCallback>(
+                                                actionParametersOf(taskIdParam to item.id)
+                                            )
+                                        ),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    if (itemHighPriority || itemOverdue) {
+                                        Box(
+                                            modifier = GlanceModifier
+                                                .size(6.dp)
+                                                .cornerRadius(3.dp)
+                                                .background(WidgetColors.urgentProvider)
+                                        ) {}
+                                        Spacer(modifier = GlanceModifier.width(5.dp))
+                                    }
+                                    Text(
+                                        text = item.title.ifBlank { "Việc cần làm" },
+                                        style = TextStyle(
+                                            color = WidgetColors.textProvider,
+                                            fontWeight = FontWeight.Medium,
+                                            fontSize = 13.sp
+                                        ),
+                                        maxLines = 1,
+                                        modifier = GlanceModifier.defaultWeight()
+                                    )
+                                }
                             }
                         }
                     }

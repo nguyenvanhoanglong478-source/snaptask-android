@@ -59,6 +59,7 @@ import com.snaptask.app.ui.components.DockTab
 import com.snaptask.app.ui.components.FloatingBottomDock
 import com.snaptask.app.ui.components.SnapDateHelper
 import com.snaptask.app.ui.components.SnapSegmentedControl
+import com.snaptask.app.ui.components.rememberLifecycleTickerMillis
 import com.snaptask.app.ui.theme.SnapTaskIcons
 import com.snaptask.app.ui.theme.snapColors
 import java.io.File
@@ -87,7 +88,8 @@ fun HeatmapScreen(
 ) {
     val colors = MaterialTheme.snapColors
     val context = LocalContext.current
-    val todayKey = remember { SnapDateHelper.dayKey(System.currentTimeMillis()) }
+    val nowTickerMillis = rememberLifecycleTickerMillis(intervalMs = 60_000L)
+    val todayKey = remember(nowTickerMillis) { SnapDateHelper.dayKey(nowTickerMillis) }
     val currentYear = remember(todayKey) {
         Calendar.getInstance().apply { timeInMillis = todayKey }.get(Calendar.YEAR)
     }
@@ -628,6 +630,7 @@ fun HeatmapScreen(
                                 AsyncImage(
                                     model = ImageRequest.Builder(context)
                                         .data(file)
+                                        .size(160)
                                         .crossfade(true)
                                         .build(),
                                     contentDescription = null,

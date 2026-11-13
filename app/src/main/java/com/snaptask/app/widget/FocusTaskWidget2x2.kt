@@ -137,7 +137,7 @@ fun FocusContent2x2(
                 if (statusText != null) {
                     Box(
                         modifier = GlanceModifier
-                            .background(if (isUrgentBadge) WidgetColors.urgentProvider else ColorProvider(Color(0xAD0F0F0E)))
+                            .background(if (isUrgentBadge) WidgetColors.urgentProvider else ColorProvider(Color(0xCC0F0F0E)))
                             .cornerRadius(9.dp)
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
@@ -169,7 +169,7 @@ fun FocusContent2x2(
                 if (totalTasks > 1) {
                     Box(
                         modifier = GlanceModifier
-                            .background(ColorProvider(Color(0xAD0F0F0E)))
+                            .background(ColorProvider(Color(0xCC0F0F0E)))
                             .cornerRadius(9.dp)
                             .padding(horizontal = 9.dp, vertical = 4.dp)
                             .clickable(actionRunCallback<NextTaskActionCallback>())
@@ -220,8 +220,8 @@ fun FocusContent2x2(
                             Text(
                                 text = subLabel,
                                 style = TextStyle(
-                                    color = if (isDueOverdue && remaining == 0) WidgetColors.urgentProvider else WidgetColors.textSecondaryProvider,
-                                    fontWeight = FontWeight.Normal,
+                                    color = if (isDueOverdue && remaining == 0) ColorProvider(Color(0xFFFF7A6E)) else ColorProvider(Color(0xFFD6D5CD)),
+                                    fontWeight = FontWeight.Medium,
                                     fontSize = 11.sp
                                 ),
                                 maxLines = 1

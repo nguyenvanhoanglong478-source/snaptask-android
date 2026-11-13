@@ -57,11 +57,13 @@ import coil.request.ImageRequest
 import com.snaptask.app.data.preferences.CustomFolder
 import com.snaptask.app.data.preferences.FolderPreferencesRepository
 import com.snaptask.app.domain.model.Task
+import com.snaptask.app.domain.model.TaskPriority
 import com.snaptask.app.ui.components.DockTab
 import com.snaptask.app.ui.components.FloatingBottomDock
 import com.snaptask.app.ui.components.SnapCheckbox
 import com.snaptask.app.ui.components.SnapDateHelper
 import com.snaptask.app.ui.components.SnapSegmentedControl
+import com.snaptask.app.ui.components.rememberLifecycleTickerMillis
 import com.snaptask.app.ui.theme.SnapTaskIcons
 import com.snaptask.app.ui.theme.snapColors
 import com.snaptask.app.util.DateTimeUtils
@@ -91,10 +93,10 @@ fun BoardScreen(
     modifier: Modifier = Modifier
 ) {
     val colors = MaterialTheme.snapColors
-    val now = System.currentTimeMillis()
+    val nowMillis = rememberLifecycleTickerMillis(intervalMs = 30_000L)
     var groupMode by rememberSaveable { mutableIntStateOf(0) }
 
-    val columns = remember(groupMode, tasks, folders, now / 30_000L, colors.hm4, colors.urgent, colors.textMuted) {
+    val columns = remember(groupMode, tasks, folders, nowMillis, colors.hm4, colors.urgent, colors.textMuted) {
         if (groupMode == 0) {
             val openGeneral = tasks.filter {
                 !it.isCompleted &&
@@ -109,8 +111,8 @@ fun BoardScreen(
             val doneList = tasks.filter { it.isCompleted }
                 .sortedByDescending { it.completedAt ?: it.createdAt }
             val hasOverdue = openScheduled.any {
-                (it.reminderTime != null && it.reminderTime < now) ||
-                    DateTimeUtils.isOverdue(it.dueDate?.takeIf { d -> d > 0L }, it.isCompleted, now)
+                (it.reminderTime != null && it.reminderTime < nowMillis) ||
+                    DateTimeUtils.isOverdue(it.dueDate?.takeIf { d -> d > 0L }, it.isCompleted, nowMillis)
             }
 
             listOf(
@@ -233,7 +235,7 @@ fun BoardScreen(
                     BoardKanbanColumn(
                         column = column,
                         isLoading = isLoading,
-                        nowMillis = now,
+                        nowMillis = nowMillis,
                         onTaskClick = onTaskClick,
                         onToggleTaskStatus = onToggleTaskStatus,
                         onOpenCamera = onOpenCamera
@@ -508,8 +510,10 @@ private fun BoardTaskCard(
     }
     val hasBefore = beforeFile != null && beforeFile.exists()
     val hasAfter = afterFile != null && afterFile.exists()
+    val hasPhoto = hasBefore || hasAfter
     val validReminder = task.reminderTime?.takeIf { it > 0L }
     val validDue = task.dueDate?.takeIf { it > 0L }
+    val isHighPriority = !task.isCompleted && task.priorityEnum == TaskPriority.HIGH
     val isReminderOverdue = !task.isCompleted && validReminder != null && validReminder < nowMillis
     val isDueOverdue = DateTimeUtils.isOverdue(validDue, task.isCompleted, nowMillis)
     val isOverdue = isReminderOverdue || isDueOverdue
@@ -528,13 +532,18 @@ private fun BoardTaskCard(
         )
         validReminder != null -> Triple(
             timeFormat.format(Date(validReminder)),
-            colors.bubble,
-            Color(0xFFFAFAF6)
+            if (hasPhoto) Color(0xC20F0F0E) else colors.surface,
+            if (hasPhoto) Color(0xFFFAFAF6) else colors.text
         )
         validDue != null -> Triple(
             "Hạn ${DateTimeUtils.formatDueLabel(validDue, nowMillis)}",
-            colors.bubble,
-            Color(0xFFFAFAF6)
+            if (hasPhoto) Color(0xC20F0F0E) else colors.surface,
+            if (hasPhoto) Color(0xFFFAFAF6) else colors.text
+        )
+        isHighPriority -> Triple(
+            "Gấp",
+            colors.urgent,
+            colors.onUrgent
         )
         else -> null
     }
@@ -547,7 +556,7 @@ private fun BoardTaskCard(
             .border(1.dp, colors.border, RoundedCornerShape(20.dp))
             .clickable(onClick = onClick)
     ) {
-        if (hasBefore || hasAfter) {
+        if (hasPhoto) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -556,7 +565,11 @@ private fun BoardTaskCard(
                 if (hasBefore && hasAfter) {
                     Row(modifier = Modifier.fillMaxSize()) {
                         AsyncImage(
-                            model = ImageRequest.Builder(context).data(beforeFile).crossfade(true).build(),
+                            model = ImageRequest.Builder(context)
+                                .data(beforeFile)
+                                .size(480)
+                                .crossfade(true)
+                                .build(),
                             contentDescription = "Trước",
                             modifier = Modifier
                                 .weight(1f)
@@ -570,7 +583,11 @@ private fun BoardTaskCard(
                                 .background(Color(0xFFFAFAF6))
                         )
                         AsyncImage(
-                            model = ImageRequest.Builder(context).data(afterFile).crossfade(true).build(),
+                            model = ImageRequest.Builder(context)
+                                .data(afterFile)
+                                .size(480)
+                                .crossfade(true)
+                                .build(),
                             contentDescription = "Sau",
                             modifier = Modifier
                                 .weight(1f)
@@ -582,6 +599,7 @@ private fun BoardTaskCard(
                     AsyncImage(
                         model = ImageRequest.Builder(context)
                             .data(if (hasAfter) afterFile else beforeFile)
+                            .size(480)
                             .crossfade(true)
                             .build(),
                         contentDescription = task.title,
@@ -621,6 +639,11 @@ private fun BoardTaskCard(
                     .height(22.dp)
                     .clip(CircleShape)
                     .background(bg)
+                    .border(
+                        width = if (isOverdue || task.isCompleted || isHighPriority) 0.dp else 1.dp,
+                        color = colors.border,
+                        shape = CircleShape
+                    )
                     .padding(horizontal = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -640,23 +663,37 @@ private fun BoardTaskCard(
                 .fillMaxWidth()
                 .padding(
                     start = 12.dp,
-                    top = if (!(hasBefore || hasAfter) && badgeInfo != null) 6.dp else 10.dp,
+                    top = if (!hasPhoto && badgeInfo != null) 6.dp else 10.dp,
                     bottom = 10.dp,
                     end = 6.dp
                 ),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = task.title,
-                    color = if (task.isCompleted) colors.textMuted else colors.text,
-                    textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None,
-                    fontSize = 14.sp,
-                    lineHeight = 19.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    if (isHighPriority) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(colors.urgent)
+                        )
+                    }
+                    Text(
+                        text = task.title,
+                        color = if (task.isCompleted) colors.textMuted else colors.text,
+                        textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None,
+                        fontSize = 14.sp,
+                        lineHeight = 19.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                }
                 Spacer(modifier = Modifier.height(2.dp))
                 val metaText = if (validDue != null && !task.isCompleted) {
                     "${task.folderName} · Hạn ${DateTimeUtils.formatDueLabel(validDue, nowMillis)}"

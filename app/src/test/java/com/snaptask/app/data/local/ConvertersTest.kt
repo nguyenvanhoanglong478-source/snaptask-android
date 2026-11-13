@@ -76,4 +76,38 @@ class ConvertersTest {
         assertEquals(SubTask(id = "2", title = "Chỉ có tiêu đề", isDone = false), result[2])
         assertEquals(SubTask(id = "custom-id", title = "", isDone = true), result[3])
     }
+
+    @Test
+    fun `companion decodeSubTaskList handles null blank and malformed JSON safely`() {
+        assertEquals(emptyList<SubTask>(), Converters.decodeSubTaskList(null))
+        assertEquals(emptyList<SubTask>(), Converters.decodeSubTaskList(""))
+        assertEquals(emptyList<SubTask>(), Converters.decodeSubTaskList("   \n\t  "))
+        assertEquals(emptyList<SubTask>(), Converters.decodeSubTaskList("{broken"))
+        assertEquals(emptyList<SubTask>(), Converters.decodeSubTaskList("{\"id\":\"1\"}"))
+        assertEquals(emptyList<SubTask>(), Converters.decodeSubTaskList("[123, \"text\"]"))
+    }
+
+    @Test
+    fun `companion encodeSubTaskList and decodeSubTaskList handle empty and valid round-trip`() {
+        assertEquals("[]", Converters.encodeSubTaskList(null))
+        assertEquals("[]", Converters.encodeSubTaskList(emptyList()))
+
+        val subtasks = listOf(
+            SubTask(id = "a1", title = "Mua cà phê sữa đá", isDone = false),
+            SubTask(id = "a2", title = "Gửi báo cáo tiến độ tuần 2", isDone = true)
+        )
+
+        val json = Converters.encodeSubTaskList(subtasks)
+        assertEquals(subtasks, Converters.decodeSubTaskList(json))
+        assertEquals(subtasks, converters.toSubTaskList(json))
+
+        val partial = Converters.decodeSubTaskList("[{\"title\":\"Thiếu id\"},{\"id\":null,\"isDone\":true}]")
+        assertEquals(
+            listOf(
+                SubTask(id = "0", title = "Thiếu id", isDone = false),
+                SubTask(id = "1", title = "", isDone = true)
+            ),
+            partial
+        )
+    }
 }

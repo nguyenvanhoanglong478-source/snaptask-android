@@ -31,7 +31,7 @@ data class Task(
         }.getOrDefault(TaskPriority.MEDIUM)
 
     val parsedSubtasks: List<SubTask>
-        get() = Converters().toSubTaskList(subTasksJson)
+        get() = Converters.decodeSubTaskList(subTasksJson)
 
     val hasProof: Boolean
         get() = isCompleted && !afterImageUri.isNullOrBlank()

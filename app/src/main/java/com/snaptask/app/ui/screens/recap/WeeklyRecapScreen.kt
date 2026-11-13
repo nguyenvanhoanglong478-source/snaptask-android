@@ -175,10 +175,10 @@ fun WeeklyRecapScreen(
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)) {
                 Text(
                     text = "NHÌN LẠI TUẦN $weekNumber",
-                    color = colors.textMuted,
+                    color = colors.textSecondary,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 0.6.sp
+                    letterSpacing = 0.7.sp
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
@@ -204,6 +204,7 @@ fun WeeklyRecapScreen(
                         .weight(1f)
                         .clip(RoundedCornerShape(22.dp))
                         .background(colors.flash)
+                        .border(1.dp, Color(0x2410120A), RoundedCornerShape(22.dp))
                         .padding(14.dp)
                 ) {
                     Text(
@@ -215,7 +216,7 @@ fun WeeklyRecapScreen(
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = "việc xong",
-                        color = colors.onFlash.copy(alpha = 0.8f),
+                        color = colors.onFlash.copy(alpha = 0.85f),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -255,9 +256,11 @@ fun WeeklyRecapScreen(
                     Text(
                         text = busiestWeekday,
                         color = colors.text,
-                        fontSize = 24.sp,
+                        fontSize = if (busiestWeekday.length > 3) 18.sp else 24.sp,
+                        lineHeight = 28.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        maxLines = 1
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
@@ -273,9 +276,9 @@ fun WeeklyRecapScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = 16.dp, end = 16.dp, top = 12.dp)
-                    .height(46.dp)
+                    .height(48.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(colors.elevated)
+                    .background(colors.surface)
                     .border(1.dp, colors.border, RoundedCornerShape(16.dp))
                     .clickable(role = Role.Button, onClick = onOpenHeatmap)
                     .padding(horizontal = 16.dp),
@@ -317,10 +320,10 @@ fun WeeklyRecapScreen(
             Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 22.dp)) {
                 Text(
                     text = "TRƯỚC / SAU ĐÁNG NHỚ",
-                    color = colors.textMuted,
+                    color = colors.textSecondary,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 0.5.sp,
+                    letterSpacing = 0.7.sp,
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)
                 )
 
@@ -339,7 +342,11 @@ fun WeeklyRecapScreen(
                     ) {
                         Row(modifier = Modifier.fillMaxSize()) {
                             AsyncImage(
-                                model = ImageRequest.Builder(context).data(beforeFile).crossfade(true).build(),
+                                model = ImageRequest.Builder(context)
+                                    .data(beforeFile)
+                                    .size(560)
+                                    .crossfade(true)
+                                    .build(),
                                 contentDescription = "Trước",
                                 modifier = Modifier
                                     .weight(1f)
@@ -353,7 +360,11 @@ fun WeeklyRecapScreen(
                                     .background(Color(0xFFFAFAF6))
                             )
                             AsyncImage(
-                                model = ImageRequest.Builder(context).data(afterFile).crossfade(true).build(),
+                                model = ImageRequest.Builder(context)
+                                    .data(afterFile)
+                                    .size(560)
+                                    .crossfade(true)
+                                    .build(),
                                 contentDescription = "Sau",
                                 modifier = Modifier
                                     .weight(1f)
@@ -380,6 +391,7 @@ fun WeeklyRecapScreen(
                                 .height(26.dp)
                                 .clip(CircleShape)
                                 .background(colors.bubble)
+                                .border(1.dp, Color(0x2EFFFFFF), CircleShape)
                                 .padding(horizontal = 10.dp),
                             contentAlignment = Alignment.Center
                         ) {
@@ -415,6 +427,7 @@ fun WeeklyRecapScreen(
                                 .padding(12.dp)
                                 .clip(CircleShape)
                                 .background(colors.bubble)
+                                .border(1.dp, Color(0x2EFFFFFF), CircleShape)
                                 .padding(horizontal = 14.dp, vertical = 7.dp)
                         ) {
                             Text(
@@ -428,16 +441,23 @@ fun WeeklyRecapScreen(
                         }
                     }
                 } else {
-                    Box(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(24.dp))
                             .background(colors.surface)
                             .border(1.dp, colors.border, RoundedCornerShape(24.dp))
-                            .padding(20.dp)
+                            .padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = "Chưa có cặp ảnh Trước / Sau nào. Khi xong một việc, hãy chọn \"Chụp ảnh kết quả\" để lưu khoảnh khắc thay đổi.",
+                            text = "Chưa có cặp ảnh Trước / Sau",
+                            color = colors.text,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Khi hoàn thành một việc, chọn \"Chụp ảnh kết quả\" để lưu lại thay đổi.",
                             color = colors.textSecondary,
                             fontSize = 13.sp,
                             lineHeight = 19.sp
@@ -451,26 +471,34 @@ fun WeeklyRecapScreen(
             Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 22.dp)) {
                 Text(
                     text = "CẢ TUẦN · ${weekPhotoItems.size} ẢNH",
-                    color = colors.textMuted,
+                    color = colors.textSecondary,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 0.5.sp,
+                    letterSpacing = 0.7.sp,
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)
                 )
 
                 if (weekPhotoItems.isEmpty()) {
-                    Box(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(22.dp))
                             .background(colors.surface)
                             .border(1.dp, colors.border, RoundedCornerShape(22.dp))
-                            .padding(20.dp)
+                            .padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = "Tuần này chưa có ảnh công việc nào hoàn thành.",
+                            text = "Tuần này chưa có ảnh hoàn thành",
+                            color = colors.text,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Chụp ảnh công việc hoàn tất để tổng hợp khoảnh khắc trong tuần.",
                             color = colors.textSecondary,
-                            fontSize = 13.sp
+                            fontSize = 13.sp,
+                            lineHeight = 19.sp
                         )
                     }
                 } else {
@@ -495,6 +523,7 @@ fun WeeklyRecapScreen(
                                             AsyncImage(
                                                 model = ImageRequest.Builder(context)
                                                     .data(file)
+                                                    .size(240)
                                                     .crossfade(true)
                                                     .build(),
                                                 contentDescription = taskItem.title,
@@ -506,7 +535,8 @@ fun WeeklyRecapScreen(
                                                     .align(Alignment.BottomStart)
                                                     .padding(6.dp)
                                                     .clip(CircleShape)
-                                                    .background(Color(0xBF0F0F0E))
+                                                    .background(Color(0xC70F0F0E))
+                                                    .border(1.dp, Color(0x24FFFFFF), CircleShape)
                                                     .padding(horizontal = 8.dp, vertical = 3.dp)
                                             ) {
                                                 Text(

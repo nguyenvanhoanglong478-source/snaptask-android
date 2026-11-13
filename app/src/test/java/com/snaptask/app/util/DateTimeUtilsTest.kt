@@ -91,4 +91,38 @@ class DateTimeUtilsTest {
         assertEquals("Hôm nay ${DateTimeUtils.formatTime(morning)}", DateTimeUtils.formatDueLabel(morning, morning))
         assertTrue(DateTimeUtils.formatDateTime(morning).endsWith(" ${DateTimeUtils.formatTime(morning)}"))
     }
+
+    @Test
+    fun `formatReminderOffsetLabel covers disabled past seconds minutes hours and days`() {
+        val fixedNow = localMillis(2026, Calendar.JUNE, 15, 9, 30)
+
+        // Disabled, null, equal, or past -> empty string
+        assertEquals("", DateTimeUtils.formatReminderOffsetLabel(fixedNow + 60_000L, hasReminder = false, nowMillis = fixedNow))
+        assertEquals("", DateTimeUtils.formatReminderOffsetLabel(null, hasReminder = true, nowMillis = fixedNow))
+        assertEquals("", DateTimeUtils.formatReminderOffsetLabel(fixedNow, hasReminder = true, nowMillis = fixedNow))
+        assertEquals("", DateTimeUtils.formatReminderOffsetLabel(fixedNow - 1_000L, hasReminder = true, nowMillis = fixedNow))
+
+        // Seconds (< 60s), including sub-second rounding up to 1s minimum
+        assertEquals("sau 1 giây", DateTimeUtils.formatReminderOffsetLabel(fixedNow + 500L, hasReminder = true, nowMillis = fixedNow))
+        assertEquals("sau 45 giây", DateTimeUtils.formatReminderOffsetLabel(fixedNow + 45_000L, hasReminder = true, nowMillis = fixedNow))
+
+        // Minutes (< 60m)
+        assertEquals("sau 1 phút", DateTimeUtils.formatReminderOffsetLabel(fixedNow + 60_000L, hasReminder = true, nowMillis = fixedNow))
+        assertEquals("sau 15 phút", DateTimeUtils.formatReminderOffsetLabel(fixedNow + 15 * 60_000L, hasReminder = true, nowMillis = fixedNow))
+
+        // Exact hours (< 24h) and hours + minutes
+        assertEquals("sau 3 giờ", DateTimeUtils.formatReminderOffsetLabel(fixedNow + 3 * 3_600_000L, hasReminder = true, nowMillis = fixedNow))
+        assertEquals(
+            "sau 2 giờ 10 phút",
+            DateTimeUtils.formatReminderOffsetLabel(fixedNow + 2 * 3_600_000L + 10 * 60_000L, hasReminder = true, nowMillis = fixedNow)
+        )
+
+        // >= 24h -> includes formatted target date/time
+        val twoDaysTarget = localMillis(2026, Calendar.JUNE, 17, 9, 30)
+        val twoDaysBase = twoDaysTarget - 2L * 24L * 3_600_000L
+        assertEquals(
+            "sau 2 ngày (17/06/2026 09:30)",
+            DateTimeUtils.formatReminderOffsetLabel(twoDaysTarget, hasReminder = true, nowMillis = twoDaysBase)
+        )
+    }
 }

@@ -54,6 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -167,7 +168,6 @@ fun TaskDetailScreen(
     val colors = MaterialTheme.snapColors
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
-    val converters = remember { Converters() }
     val scrollState = rememberScrollState()
 
     val originalSubtasks = remember(task.id, task.subTasksJson) { task.parsedSubtasks }
@@ -254,7 +254,7 @@ fun TaskDetailScreen(
             dueDate = dueDate,
             reminderTime = remTime,
             reminderType = remType,
-            subTasksJson = converters.fromSubTaskList(subs)
+            subTasksJson = Converters.encodeSubTaskList(subs)
         )
     }
 
@@ -533,7 +533,7 @@ fun TaskDetailScreen(
                             },
                             onClick = {
                                 showMenu = false
-                                onOpenShareCard(buildSnapshot())
+                                onOpenShareCard(if (hasUnsavedChanges) buildSnapshot() else task)
                             }
                         )
                         DropdownMenuItem(
@@ -624,7 +624,7 @@ fun TaskDetailScreen(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     SnapSegmentedControl(
-                        options = listOf("Kéo so sánh", "Lật thẻ", "Cạnh nhau"),
+                        options = listOf("Tách đôi", "Cạnh nhau", "Lật"),
                         selectedIndex = compareMode,
                         onSelect = { compareMode = it }
                     )
@@ -641,7 +641,11 @@ fun TaskDetailScreen(
                             .clickable { fullscreenShowingAfter = false }
                     ) {
                         AsyncImage(
-                            model = ImageRequest.Builder(context).data(beforeFile).crossfade(true).build(),
+                            model = ImageRequest.Builder(context)
+                                .data(beforeFile)
+                                .size(900)
+                                .crossfade(true)
+                                .build(),
                             contentDescription = "Ảnh trước",
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
@@ -701,7 +705,11 @@ fun TaskDetailScreen(
                             .clickable { fullscreenShowingAfter = true }
                     ) {
                         AsyncImage(
-                            model = ImageRequest.Builder(context).data(afterFile).crossfade(true).build(),
+                            model = ImageRequest.Builder(context)
+                                .data(afterFile)
+                                .size(900)
+                                .crossfade(true)
+                                .build(),
                             contentDescription = "Ảnh sau",
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
@@ -789,7 +797,7 @@ fun TaskDetailScreen(
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .height(38.dp)
+                            .height(40.dp)
                             .clip(CircleShape)
                             .background(if (isUrgentPriority) colors.urgent else colors.elevated)
                             .border(
@@ -838,7 +846,7 @@ fun TaskDetailScreen(
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .height(38.dp)
+                            .height(40.dp)
                             .clip(CircleShape)
                             .background(if (reminderTime != null) colors.flash else colors.elevated)
                             .border(
@@ -874,7 +882,7 @@ fun TaskDetailScreen(
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .height(38.dp)
+                            .height(40.dp)
                             .clip(CircleShape)
                             .background(colors.elevated)
                             .border(1.dp, colors.border, CircleShape)
@@ -912,7 +920,7 @@ fun TaskDetailScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 val nowMillis = System.currentTimeMillis()
                 val isTaskOverdue = DateTimeUtils.isOverdue(currentDueDate, isCompleted, nowMillis)
@@ -926,7 +934,7 @@ fun TaskDetailScreen(
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .height(38.dp)
+                            .height(40.dp)
                             .clip(CircleShape)
                             .background(if (isTaskOverdue) colors.urgentSoft else colors.elevated)
                             .border(
@@ -978,7 +986,7 @@ fun TaskDetailScreen(
                     if (currentDueDate != null) {
                         Box(
                             modifier = Modifier
-                                .size(38.dp)
+                                .size(40.dp)
                                 .clip(CircleShape)
                                 .background(colors.elevated)
                                 .border(1.dp, colors.border, CircleShape)
@@ -1000,7 +1008,7 @@ fun TaskDetailScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 Column(
                     modifier = Modifier
@@ -1107,11 +1115,12 @@ fun TaskDetailScreen(
 
                         Box(
                             modifier = Modifier
-                                .size(48.dp)
+                                .size(52.dp)
                                 .clip(RoundedCornerShape(14.dp))
                                 .background(colors.flash)
                                 .clickable(role = Role.Button) {
                                     addSubtask()
+                                    keyboardController?.hide()
                                 },
                             contentAlignment = Alignment.Center
                         ) {
@@ -1185,7 +1194,7 @@ fun TaskDetailScreen(
                         if (showCaptureAfterPrimary) {
                             onOpenAfterCamera(task)
                         } else {
-                            onOpenShareCard(buildSnapshot())
+                            onOpenShareCard(if (hasUnsavedChanges) buildSnapshot() else task)
                         }
                     },
                 contentAlignment = Alignment.Center
@@ -1299,7 +1308,11 @@ private fun BeforeAfterComparisonBox(
                         .clip(SplitLeftClipShape(splitFraction))
                 ) {
                     AsyncImage(
-                        model = ImageRequest.Builder(context).data(beforeFile).crossfade(true).build(),
+                        model = ImageRequest.Builder(context)
+                            .data(beforeFile)
+                            .size(900)
+                            .crossfade(true)
+                            .build(),
                         contentDescription = "Ảnh trước",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
@@ -1312,7 +1325,11 @@ private fun BeforeAfterComparisonBox(
                         .clip(SplitRightClipShape(splitFraction))
                 ) {
                     AsyncImage(
-                        model = ImageRequest.Builder(context).data(afterFile).crossfade(true).build(),
+                        model = ImageRequest.Builder(context)
+                            .data(afterFile)
+                            .size(900)
+                            .crossfade(true)
+                            .build(),
                         contentDescription = "Ảnh sau",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
@@ -1333,8 +1350,10 @@ private fun BeforeAfterComparisonBox(
                         .align(Alignment.CenterStart)
                         .offset(x = splitOffset - 22.dp)
                         .size(44.dp)
+                        .shadow(6.dp, CircleShape)
                         .clip(CircleShape)
-                        .background(Color(0xFFFAFAF6)),
+                        .background(Color(0xFFFAFAF6))
+                        .border(1.5.dp, Color(0x3310120A), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -1371,80 +1390,6 @@ private fun BeforeAfterComparisonBox(
         }
 
         1 -> {
-            val rotation by animateFloatAsState(
-                targetValue = if (isCardFlipped) 180f else 0f,
-                animationSpec = tween(durationMillis = 420),
-                label = "BeforeAfterFlip"
-            )
-            val showingAfter = rotation > 90f
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f)
-                    .graphicsLayer {
-                        rotationY = rotation
-                        cameraDistance = 14f * density
-                    }
-                    .clip(shape)
-                    .background(colors.surface)
-                    .border(1.dp, colors.border, shape)
-                    .clickable(role = Role.Button, onClick = onToggleFlip)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer {
-                            if (showingAfter) rotationY = 180f
-                        }
-                ) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(context)
-                            .data(if (showingAfter) afterFile else beforeFile)
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = if (showingAfter) "Ảnh sau" else "Ảnh trước",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-
-                    CompareBadgeTag(
-                        text = if (showingAfter) "SAU" else "TRƯỚC",
-                        isAfter = showingAfter,
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(14.dp)
-                    )
-
-                    ExpandPhotoButton(
-                        onClick = { onOpenFullscreen(showingAfter) },
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(14.dp)
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = 14.dp)
-                            .height(32.dp)
-                            .clip(CircleShape)
-                            .background(colors.bubble)
-                            .padding(horizontal = 14.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = if (showingAfter) "Chạm để xem ảnh TRƯỚC" else "Chạm để lật sang ảnh SAU",
-                            color = Color(0xFFFAFAF6),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
-        }
-
-        else -> {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1455,7 +1400,11 @@ private fun BeforeAfterComparisonBox(
             ) {
                 Row(modifier = Modifier.fillMaxSize()) {
                     AsyncImage(
-                        model = ImageRequest.Builder(context).data(beforeFile).crossfade(true).build(),
+                        model = ImageRequest.Builder(context)
+                            .data(beforeFile)
+                            .size(900)
+                            .crossfade(true)
+                            .build(),
                         contentDescription = "Ảnh trước",
                         modifier = Modifier
                             .weight(1f)
@@ -1470,7 +1419,11 @@ private fun BeforeAfterComparisonBox(
                             .background(Color(0xFFFAFAF6))
                     )
                     AsyncImage(
-                        model = ImageRequest.Builder(context).data(afterFile).crossfade(true).build(),
+                        model = ImageRequest.Builder(context)
+                            .data(afterFile)
+                            .size(900)
+                            .crossfade(true)
+                            .build(),
                         contentDescription = "Ảnh sau",
                         modifier = Modifier
                             .weight(1f)
@@ -1502,6 +1455,94 @@ private fun BeforeAfterComparisonBox(
                         .align(Alignment.BottomEnd)
                         .padding(14.dp)
                 )
+            }
+        }
+
+        else -> {
+            val rotation by animateFloatAsState(
+                targetValue = if (isCardFlipped) 180f else 0f,
+                animationSpec = tween(durationMillis = 420),
+                label = "BeforeAfterFlip"
+            )
+            val showingAfter = rotation > 90f
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .graphicsLayer {
+                        rotationY = rotation
+                        cameraDistance = 14f * density
+                    }
+                    .clip(shape)
+                    .background(colors.surface)
+                    .border(1.dp, colors.border, shape)
+                    .clickable(role = Role.Button, onClick = onToggleFlip)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            if (showingAfter) rotationY = 180f
+                        }
+                ) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(if (showingAfter) afterFile else beforeFile)
+                            .size(900)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = if (showingAfter) "Ảnh sau" else "Ảnh trước",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(84.dp)
+                            .align(Alignment.BottomCenter)
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(Color.Transparent, Color(0x8A0A0A09))
+                                )
+                            )
+                    )
+
+                    CompareBadgeTag(
+                        text = if (showingAfter) "SAU" else "TRƯỚC",
+                        isAfter = showingAfter,
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(14.dp)
+                    )
+
+                    ExpandPhotoButton(
+                        onClick = { onOpenFullscreen(showingAfter) },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(14.dp)
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 14.dp)
+                            .height(32.dp)
+                            .clip(CircleShape)
+                            .background(colors.bubble)
+                            .border(1.dp, Color(0x2EFFFFFF), CircleShape)
+                            .padding(horizontal = 14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (showingAfter) "Chạm để xem ảnh TRƯỚC" else "Chạm để lật sang ảnh SAU",
+                            color = Color(0xFFFAFAF6),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
         }
     }
@@ -1663,6 +1704,7 @@ private fun FullscreenPhotoDialog(
                 AsyncImage(
                     model = ImageRequest.Builder(context)
                         .data(activeFile)
+                        .size(1440)
                         .crossfade(true)
                         .build(),
                     contentDescription = if (showingAfter) "Ảnh kết quả Sau toàn màn hình" else "Ảnh Trước toàn màn hình",

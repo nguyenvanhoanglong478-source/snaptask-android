@@ -1,5 +1,6 @@
 package com.snaptask.app.ui.screens.folders
 
+import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -36,24 +37,30 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.Coil
 import com.snaptask.app.data.preferences.CustomFolder
 import com.snaptask.app.data.preferences.FolderPreferencesRepository
 import com.snaptask.app.domain.model.Task
@@ -63,8 +70,14 @@ import com.snaptask.app.ui.components.FloatingBottomDock
 import com.snaptask.app.ui.components.RoundIconButton
 import com.snaptask.app.ui.components.SnapSwitch
 import com.snaptask.app.ui.components.SquareIconButton
+import com.snaptask.app.ui.components.rememberLifecycleTickerMillis
 import com.snaptask.app.ui.theme.SnapTaskIcons
 import com.snaptask.app.ui.theme.snapColors
+import com.snaptask.app.util.DateTimeUtils
+import com.snaptask.app.util.FileUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,11 +96,31 @@ fun FolderManagerScreen(
     modifier: Modifier = Modifier
 ) {
     val colors = MaterialTheme.snapColors
-    val now = System.currentTimeMillis()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val nowMillis = rememberLifecycleTickerMillis(intervalMs = 30_000L)
+    var cacheRefreshKey by remember { mutableIntStateOf(0) }
+    var isClearingCache by remember { mutableStateOf(false) }
 
-    val urgentCount = remember(tasks, now / 30_000L) {
+    val storageStats by produceState(
+        initialValue = "0 KB" to "0 KB",
+        key1 = tasks,
+        key2 = cacheRefreshKey
+    ) {
+        value = withContext(Dispatchers.IO) {
+            val photos = runCatching { FileUtils.getStorageUsedFormatted(context) }.getOrDefault("0 KB")
+            val cache = runCatching { FileUtils.getCacheUsedFormatted(context) }.getOrDefault("0 KB")
+            photos to cache
+        }
+    }
+
+    val urgentCount = remember(tasks, nowMillis) {
         tasks.count {
-            !it.isCompleted && (it.priorityEnum == TaskPriority.HIGH || (it.reminderTime != null && it.reminderTime < now))
+            !it.isCompleted && (
+                it.priorityEnum == TaskPriority.HIGH ||
+                    (it.reminderTime != null && it.reminderTime < nowMillis) ||
+                    DateTimeUtils.isOverdue(it.dueDate?.takeIf { d -> d > 0L }, it.isCompleted, nowMillis)
+                )
         }
     }
     val proofCount = remember(tasks) {
@@ -470,6 +503,139 @@ fun FolderManagerScreen(
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
                         )
+                    }
+                }
+            }
+
+            item(key = "storage_cache_section") {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 14.dp, end = 14.dp, top = 16.dp, bottom = 6.dp)
+                ) {
+                    Text(
+                        text = "LƯU TRỮ & BỘ NHỚ ĐỆM",
+                        color = colors.textMuted,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 0.5.sp,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp)
+                    )
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(colors.surface)
+                            .border(1.dp, colors.border, RoundedCornerShape(24.dp))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Ảnh nhiệm vụ",
+                                    color = colors.textSecondary,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = storageStats.first,
+                                    color = colors.text,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .width(1.dp)
+                                    .height(30.dp)
+                                    .background(colors.border)
+                            )
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Bộ nhớ đệm",
+                                    color = colors.textSecondary,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = storageStats.second,
+                                    color = colors.text,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                            }
+                        }
+
+                        HorizontalDivider(color = colors.border, thickness = 1.dp)
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text(
+                                text = "Xóa file tạm và cache ảnh, giữ nguyên toàn bộ ảnh công việc.",
+                                color = colors.textSecondary,
+                                fontSize = 12.sp,
+                                lineHeight = 17.sp,
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            Row(
+                                modifier = Modifier
+                                    .alpha(if (isClearingCache) 0.55f else 1f)
+                                    .clip(CircleShape)
+                                    .background(colors.elevated)
+                                    .border(1.dp, colors.border, CircleShape)
+                                    .clickable(
+                                        enabled = !isClearingCache,
+                                        role = Role.Button
+                                    ) {
+                                        isClearingCache = true
+                                        scope.launch {
+                                            withContext(Dispatchers.IO) {
+                                                runCatching { FileUtils.clearImageAndTempCache(context) }
+                                            }
+                                            runCatching { Coil.imageLoader(context).memoryCache?.clear() }
+                                            cacheRefreshKey++
+                                            isClearingCache = false
+                                            Toast.makeText(
+                                                context,
+                                                "Đã dọn bộ nhớ đệm ảnh!",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    }
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = SnapTaskIcons.Trash,
+                                    contentDescription = null,
+                                    tint = colors.text,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = "Dọn bộ nhớ đệm",
+                                    color = colors.text,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                     }
                 }
             }

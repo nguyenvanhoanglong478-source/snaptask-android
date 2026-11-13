@@ -21,7 +21,7 @@ object WidgetBitmapHelper {
         return sample
     }
 
-    fun loadOptimizedBitmap(path: String?, maxSize: Int = 450): Bitmap? {
+    fun loadOptimizedBitmap(path: String?, maxSize: Int = 360): Bitmap? {
         if (path.isNullOrBlank()) return null
         val file = File(path)
         if (!file.exists()) return null
@@ -47,15 +47,15 @@ object WidgetBitmapHelper {
      * Đồng bộ ảnh Before/After lên Widget màn hình chính bằng Canvas:
      * - Cắt ảnh chính theo tỉ lệ 1:1.
      * - Nếu Task hoàn thành và có cả Before & After: vẽ PiP thu nhỏ đè lên góc phải.
-     * - Trả về duy nhất 1 Bitmap tổng hợp, bảo đảm nhẹ và chống lỗi RemoteViews Binder IPC.
+     * - Trả về duy nhất 1 Bitmap tổng hợp <= 360px (RGB_565), tránh tràn giới hạn RemoteViews Binder IPC.
      */
     fun createWidgetCompositeBitmap(
         mainImageUri: String?,
         miniPipImageUri: String? = null,
         isCompleted: Boolean = false,
-        outputSize: Int = 420
+        outputSize: Int = 360
     ): Bitmap? {
-        val safeOutputSize = outputSize.coerceAtLeast(1)
+        val safeOutputSize = outputSize.coerceIn(1, 360)
         val mainSrc = loadOptimizedBitmap(mainImageUri, safeOutputSize) ?: return null
         if (mainSrc.isRecycled || mainSrc.width <= 0 || mainSrc.height <= 0) {
             if (!mainSrc.isRecycled) mainSrc.recycle()

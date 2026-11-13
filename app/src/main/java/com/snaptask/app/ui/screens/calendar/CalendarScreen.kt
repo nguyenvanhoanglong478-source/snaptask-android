@@ -55,8 +55,10 @@ import com.snaptask.app.ui.components.SnapCheckbox
 import com.snaptask.app.ui.components.SnapDateHelper
 import com.snaptask.app.ui.components.SnapSegmentedControl
 import com.snaptask.app.ui.components.SquareIconButton
+import com.snaptask.app.ui.components.rememberLifecycleTickerMillis
 import com.snaptask.app.ui.theme.SnapTaskIcons
 import com.snaptask.app.ui.theme.snapColors
+import com.snaptask.app.util.DateTimeUtils
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -76,7 +78,8 @@ fun CalendarScreen(
     modifier: Modifier = Modifier
 ) {
     val colors = MaterialTheme.snapColors
-    val todayKey = remember { SnapDateHelper.dayKey(System.currentTimeMillis()) }
+    val nowTickerMillis = rememberLifecycleTickerMillis(intervalMs = 60_000L)
+    val todayKey = remember(nowTickerMillis) { SnapDateHelper.dayKey(nowTickerMillis) }
 
     val initCal = remember(initialSelectedDateMillis) {
         Calendar.getInstance().apply { timeInMillis = initialSelectedDateMillis }
@@ -311,6 +314,7 @@ fun CalendarScreen(
                 SelectedDayAgendaCard(
                     selectedDayKey = selectedDayKey,
                     todayKey = todayKey,
+                    nowMillis = nowTickerMillis,
                     dayTasks = selectedDayTasks,
                     isLoading = isLoading,
                     onAddTask = onOpenCamera,
@@ -394,6 +398,7 @@ private fun CalendarDayCell(
             AsyncImage(
                 model = ImageRequest.Builder(context)
                     .data(bestPhotoFile)
+                    .size(220)
                     .crossfade(true)
                     .build(),
                 contentDescription = "Ngày $dayNumber",
@@ -443,7 +448,8 @@ private fun CalendarDayCell(
                         .padding(5.dp)
                         .size(7.dp)
                         .clip(CircleShape)
-                        .background(colors.urgent)
+                        .background(Color(0xFFFF5C4D))
+                        .border(1.dp, Color(0xFFFAFAF6), CircleShape)
                 )
             }
         } else {
@@ -507,6 +513,7 @@ private fun CalendarDayCell(
 private fun SelectedDayAgendaCard(
     selectedDayKey: Long,
     todayKey: Long,
+    nowMillis: Long,
     dayTasks: List<Task>,
     isLoading: Boolean,
     onAddTask: () -> Unit,
@@ -578,13 +585,22 @@ private fun SelectedDayAgendaCard(
         Spacer(modifier = Modifier.height(14.dp))
 
         if (dayTasks.isEmpty()) {
-            Box(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
                     .background(colors.elevated)
-                    .padding(16.dp)
+                    .border(1.dp, colors.border, RoundedCornerShape(16.dp))
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                Icon(
+                    imageVector = SnapTaskIcons.Calendar,
+                    contentDescription = null,
+                    tint = colors.textMuted,
+                    modifier = Modifier.size(20.dp)
+                )
                 Text(
                     text = "Chưa có ảnh hay lịch nhắc nào trong ngày này. Bấm + Thêm việc để chụp nhanh.",
                     color = colors.textSecondary,
@@ -599,14 +615,18 @@ private fun SelectedDayAgendaCard(
                         val path = if (!task.afterImageUri.isNullOrBlank()) task.afterImageUri else task.beforeImageUri
                         if (!path.isNullOrBlank()) File(path) else null
                     }
+                    val validDue = task.dueDate?.takeIf { it > 0L }
+                    val isDueOverdue = DateTimeUtils.isOverdue(validDue, task.isCompleted, nowMillis)
+                    val isReminderOverdue = !task.isCompleted && task.reminderTime != null && task.reminderTime < nowMillis
+                    val isOverdue = isDueOverdue || isReminderOverdue
                     val anchorTime = timeFormat.format(Date(SnapDateHelper.taskAnchorMillis(task)))
                     val detailSub = buildString {
-                        if (task.isCompleted) {
-                            append("Xong $anchorTime · ${SnapDateHelper.durationMinutes(task)} phút")
-                        } else if (task.reminderTime != null) {
-                            append("Nhắc $anchorTime")
-                        } else {
-                            append("Tạo $anchorTime")
+                        when {
+                            task.isCompleted -> append("Xong $anchorTime · ${SnapDateHelper.durationMinutes(task)} phút")
+                            isDueOverdue && validDue != null -> append("Quá hạn ${DateTimeUtils.formatDueLabel(validDue, nowMillis)}")
+                            task.reminderTime != null -> append("Nhắc $anchorTime")
+                            validDue != null -> append("Hạn ${DateTimeUtils.formatDueLabel(validDue, nowMillis)}")
+                            else -> append("Tạo $anchorTime")
                         }
                         append(" · ${task.folderName}")
                     }
@@ -616,6 +636,7 @@ private fun SelectedDayAgendaCard(
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
                             .background(colors.elevated)
+                            .border(1.dp, colors.border, RoundedCornerShape(16.dp))
                             .clickable { onTaskClick(task) }
                             .padding(start = 10.dp, top = 10.dp, bottom = 10.dp, end = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -624,6 +645,7 @@ private fun SelectedDayAgendaCard(
                             AsyncImage(
                                 model = ImageRequest.Builder(context)
                                     .data(photoFile)
+                                    .size(160)
                                     .crossfade(true)
                                     .build(),
                                 contentDescription = null,
@@ -665,7 +687,7 @@ private fun SelectedDayAgendaCard(
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = detailSub,
-                                color = colors.textSecondary,
+                                color = if (isOverdue) colors.urgent else colors.textSecondary,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium,
                                 maxLines = 1,

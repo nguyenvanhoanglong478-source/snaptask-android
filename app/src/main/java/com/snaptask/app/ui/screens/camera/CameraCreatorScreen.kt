@@ -1,9 +1,9 @@
 package com.snaptask.app.ui.screens.camera
 
-import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
-import android.view.WindowManager
+import android.util.Size as AndroidSize
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.FocusMeteringAction
@@ -11,6 +11,9 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.core.UseCaseGroup
+import androidx.camera.core.resolutionselector.AspectRatioStrategy
+import androidx.camera.core.resolutionselector.ResolutionSelector
+import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.core.Animatable
@@ -57,15 +60,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -128,13 +133,38 @@ enum class CameraState {
     CAPTURED
 }
 
-private fun findActivity(context: Context): Activity? {
-    var ctx = context
-    while (ctx is ContextWrapper) {
-        if (ctx is Activity) return ctx
-        ctx = ctx.baseContext
-    }
-    return null
+private val GalleryPhotoIcon: ImageVector by lazy {
+    ImageVector.Builder(
+        name = "GalleryPhoto",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).path(
+        stroke = SolidColor(Color.White),
+        strokeLineWidth = 2.0f,
+        strokeLineCap = StrokeCap.Round,
+        strokeLineJoin = StrokeJoin.Round
+    ) {
+        moveTo(5.5f, 4f)
+        lineTo(18.5f, 4f)
+        arcTo(2f, 2f, 0f, false, true, 20.5f, 6f)
+        lineTo(20.5f, 18f)
+        arcTo(2f, 2f, 0f, false, true, 18.5f, 20f)
+        lineTo(5.5f, 20f)
+        arcTo(2f, 2f, 0f, false, true, 3.5f, 18f)
+        lineTo(3.5f, 6f)
+        arcTo(2f, 2f, 0f, false, true, 5.5f, 4f)
+        close()
+        moveTo(8.8f, 8.8f)
+        arcTo(1.2f, 1.2f, 0f, true, true, 8.79f, 8.8f)
+        close()
+        moveTo(4f, 16.5f)
+        lineTo(9.2f, 11.8f)
+        lineTo(13.5f, 15.8f)
+        lineTo(16.2f, 13.2f)
+        lineTo(20f, 16.8f)
+    }.build()
 }
 
 // Forced-dark palette keeps the camera viewfinder free of light-mode glare.
@@ -178,8 +208,6 @@ fun CameraCreatorScreen(
     var isCapturing by remember { mutableStateOf(false) }
 
     var showShutterFlash by remember { mutableStateOf(false) }
-    var showScreenFlash by remember { mutableStateOf(false) }
-    var originalScreenBrightness by remember { mutableStateOf<Float?>(null) }
 
     var focusTapOffset by remember { mutableStateOf<Offset?>(null) }
     var focusTapTriggerId by remember { mutableIntStateOf(0) }
@@ -188,6 +216,7 @@ fun CameraCreatorScreen(
 
     var capturedPhotoPath by remember { mutableStateOf<String?>(null) }
     var isPhotoSaved by remember { mutableStateOf(false) }
+    var isFromGallery by remember { mutableStateOf(false) }
     var title by remember { mutableStateOf("") }
     var selectedPriority by remember { mutableStateOf(TaskPriority.MEDIUM) }
     var repeatCadence by remember { mutableStateOf(RepeatCadence.NONE) }
@@ -229,25 +258,8 @@ fun CameraCreatorScreen(
         }
     }
 
-    fun restoreScreenBrightness() {
-        val saved = originalScreenBrightness ?: return
-        originalScreenBrightness = null
-        try {
-            val window = findActivity(context)?.window
-            val layoutParams = window?.attributes
-            if (layoutParams != null) {
-                layoutParams.screenBrightness = saved
-                window.attributes = layoutParams
-            }
-        } catch (_: Exception) {
-        }
-    }
-
     fun cleanupFlashEffects() {
-        showScreenFlash = false
-        restoreScreenBrightness()
-        val isBackCamera = cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA
-        val keepTorch = isBackCamera && hasFlashUnit && flashMode == CameraFlashMode.TORCH
+        val keepTorch = hasFlashUnit && flashMode == CameraFlashMode.TORCH
         if (!keepTorch) {
             try {
                 camera?.cameraControl?.enableTorch(false)
@@ -262,6 +274,43 @@ fun CameraCreatorScreen(
         }
         capturedPhotoPath = null
         isPhotoSaved = false
+        isFromGallery = false
+    }
+
+    val galleryPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri == null || isCapturing) return@rememberLauncherForActivityResult
+        isCapturing = true
+        scope.launch {
+            try {
+                val compressedPath = ImageCompressor.compressUri(context, uri)
+                val previousUnsaved = if (!isPhotoSaved) capturedPhotoPath else null
+                capturedPhotoPath = compressedPath
+                isPhotoSaved = false
+                isFromGallery = true
+                if (previousUnsaved != null && previousUnsaved != compressedPath) {
+                    FileUtils.deleteTaskImages(previousUnsaved)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                showCameraError("Không thể chọn ảnh từ thư viện. Vui lòng thử ảnh khác.")
+            } finally {
+                isCapturing = false
+            }
+        }
+    }
+
+    fun openGalleryPicker() {
+        if (isCapturing) return
+        try {
+            galleryPickerLauncher.launch(
+                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+            )
+        } catch (_: Exception) {
+            showCameraError("Không thể mở thư viện ảnh trên thiết bị này.")
+        }
     }
 
     fun handleGoHome() {
@@ -282,14 +331,38 @@ fun CameraCreatorScreen(
         try {
             provider.unbindAll()
 
-            val preview = Preview.Builder().build().also {
-                it.setSurfaceProvider(previewView.surfaceProvider)
-            }
+            val previewSelector = ResolutionSelector.Builder()
+                .setAspectRatioStrategy(AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
+                .setResolutionStrategy(
+                    ResolutionStrategy(
+                        AndroidSize(1280, 960),
+                        ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER
+                    )
+                )
+                .build()
 
-            // Flash is driven manually via 350ms torch/screen assist so exposure settles before capture.
+            val captureSelector = ResolutionSelector.Builder()
+                .setAspectRatioStrategy(AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
+                .setResolutionStrategy(
+                    ResolutionStrategy(
+                        AndroidSize(1440, 1080),
+                        ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER
+                    )
+                )
+                .build()
+
+            val preview = Preview.Builder()
+                .setResolutionSelector(previewSelector)
+                .build()
+                .also {
+                    it.setSurfaceProvider(previewView.surfaceProvider)
+                }
+
+            // Flash is driven manually via 350ms torch assist so exposure settles before capture.
             val capture = ImageCapture.Builder()
                 .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
                 .setFlashMode(ImageCapture.FLASH_MODE_OFF)
+                .setResolutionSelector(captureSelector)
                 .build()
 
             imageCapture = capture
@@ -311,11 +384,10 @@ fun CameraCreatorScreen(
             val cameraHasFlash = boundCamera.cameraInfo.hasFlashUnit()
             hasFlashUnit = cameraHasFlash
 
-            val isBackCamera = cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA
-            if (isBackCamera && !cameraHasFlash) {
+            if (!cameraHasFlash) {
                 flashMode = CameraFlashMode.OFF
                 boundCamera.cameraControl.enableTorch(false)
-            } else if (flashMode == CameraFlashMode.TORCH && isBackCamera && cameraHasFlash) {
+            } else if (flashMode == CameraFlashMode.TORCH) {
                 boundCamera.cameraControl.enableTorch(true)
             } else {
                 boundCamera.cameraControl.enableTorch(false)
@@ -324,16 +396,13 @@ fun CameraCreatorScreen(
             camera = null
             imageCapture = null
             hasFlashUnit = false
-            if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
-                flashMode = CameraFlashMode.OFF
-            }
+            flashMode = CameraFlashMode.OFF
             showCameraError("Không thể khởi tạo máy ảnh. Vui lòng thử lại.")
         }
     }
 
     fun applyFlashMode(newMode: CameraFlashMode) {
-        val isBackCamera = cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA
-        if (isBackCamera && !hasFlashUnit) {
+        if (!hasFlashUnit) {
             flashMode = CameraFlashMode.OFF
             try {
                 camera?.cameraControl?.enableTorch(false)
@@ -343,7 +412,7 @@ fun CameraCreatorScreen(
         }
         flashMode = newMode
         try {
-            if (newMode == CameraFlashMode.TORCH && isBackCamera && hasFlashUnit) {
+            if (newMode == CameraFlashMode.TORCH) {
                 camera?.cameraControl?.enableTorch(true)
             } else {
                 camera?.cameraControl?.enableTorch(false)
@@ -387,7 +456,6 @@ fun CameraCreatorScreen(
                 cameraProvider?.unbindAll()
             } catch (_: Exception) {
             }
-            restoreScreenBrightness()
             if (!isPhotoSaved) {
                 FileUtils.deleteTaskImages(capturedPhotoPath)
             }
@@ -414,7 +482,6 @@ fun CameraCreatorScreen(
         if (isCapturing) return
         isCapturing = true
 
-        val isFrontCamera = cameraSelector == CameraSelector.DEFAULT_FRONT_CAMERA
         val isFlashActive = flashMode != CameraFlashMode.OFF
 
         scope.launch {
@@ -422,19 +489,7 @@ fun CameraCreatorScreen(
             var rawFile: File? = null
 
             try {
-                if (isFrontCamera && isFlashActive) {
-                    val window = findActivity(context)?.window
-                    val layoutParams = window?.attributes
-                    if (layoutParams != null) {
-                        if (originalScreenBrightness == null) {
-                            originalScreenBrightness = layoutParams.screenBrightness
-                        }
-                        layoutParams.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_FULL
-                        window.attributes = layoutParams
-                    }
-                    showScreenFlash = true
-                    delay(350L)
-                } else if (!isFrontCamera && hasFlashUnit && isFlashActive) {
+                if (hasFlashUnit && isFlashActive) {
                     try {
                         camera?.cameraControl?.enableTorch(true)
                     } catch (_: Exception) {
@@ -466,6 +521,7 @@ fun CameraCreatorScreen(
                                     val previousUnsaved = if (!isPhotoSaved) capturedPhotoPath else null
                                     capturedPhotoPath = compressedPath
                                     isPhotoSaved = false
+                                    isFromGallery = false
                                     if (previousUnsaved != null && previousUnsaved != compressedPath) {
                                         FileUtils.deleteTaskImages(previousUnsaved)
                                     }
@@ -527,85 +583,136 @@ fun CameraCreatorScreen(
                 .navigationBarsPadding(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Top Bar: [146dp Today Progress Pill] ... [44dp Flash] [44dp Folders]
+            // Uncluttered Top Bar: [Status Pill + Active Folder Chip] ... [Flash?] [Manage Folders]
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 20.dp, end = 20.dp, top = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
-                    modifier = Modifier
-                        .width(148.dp)
-                        .height(44.dp)
-                        .clip(CircleShape)
-                        .background(CamElevated)
-                        .clickable(role = Role.Button) { handleGoHome() }
-                        .padding(horizontal = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val progressFraction = if (totalToday <= 0) 0f else (doneToday.toFloat() / totalToday).coerceIn(0f, 1f)
-                    Canvas(modifier = Modifier.size(18.dp)) {
-                        val stroke = 2.6.dp.toPx()
-                        drawCircle(color = CamBorder, style = Stroke(width = stroke))
-                        if (progressFraction > 0f) {
-                            drawArc(
-                                color = CamFlash,
-                                startAngle = -90f,
-                                sweepAngle = 360f * progressFraction,
-                                useCenter = false,
-                                style = Stroke(width = stroke, cap = StrokeCap.Round)
-                            )
+                    Row(
+                        modifier = Modifier
+                            .height(40.dp)
+                            .clip(CircleShape)
+                            .background(CamElevated)
+                            .border(1.dp, CamBorder, CircleShape)
+                            .clickable(role = Role.Button) { handleGoHome() }
+                            .padding(horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        val progressFraction = if (totalToday <= 0) 0f else (doneToday.toFloat() / totalToday).coerceIn(0f, 1f)
+                        Canvas(modifier = Modifier.size(16.dp)) {
+                            val stroke = 2.4.dp.toPx()
+                            drawCircle(color = CamBorder, style = Stroke(width = stroke))
+                            if (progressFraction > 0f) {
+                                drawArc(
+                                    color = CamFlash,
+                                    startAngle = -90f,
+                                    sweepAngle = 360f * progressFraction,
+                                    useCenter = false,
+                                    style = Stroke(width = stroke, cap = StrokeCap.Round)
+                                )
+                            }
                         }
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "$doneToday/$totalToday xong",
+                            color = CamText,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1
+                        )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "$doneToday/$totalToday hôm nay",
-                        color = CamText,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+
+                    val folderColor = Color(activeFolder?.colorHex ?: 0xFFB0AFA7)
+                    val folderIcon = SnapTaskIcons.folderIconByKey(activeFolder?.iconKey ?: "folder")
+                    val folderLabel = activeFolder?.name ?: "Không mục"
+
+                    Row(
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .height(40.dp)
+                            .clip(CircleShape)
+                            .background(CamSurface)
+                            .border(1.dp, CamBorder, CircleShape)
+                            .clickable(role = Role.Button) { cycleFolder() }
+                            .padding(horizontal = 11.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(7.dp)
+                                .clip(CircleShape)
+                                .background(folderColor)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Icon(
+                            imageVector = folderIcon,
+                            contentDescription = null,
+                            tint = CamText,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        Text(
+                            text = folderLabel,
+                            color = CamText,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
 
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val isBackCamera = cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA
-                    val isFlashSupported = hasCameraPermission && (!isBackCamera || hasFlashUnit)
-                    val isFlashActive = flashMode != CameraFlashMode.OFF && isFlashSupported
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .alpha(if (isFlashSupported) 1f else 0.35f)
-                            .clip(CircleShape)
-                            .background(if (isFlashActive) CamFlash else CamElevated)
-                            .clickable(enabled = isFlashSupported, role = Role.Button) {
-                                applyFlashMode(flashMode.next())
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = when (flashMode) {
-                                CameraFlashMode.OFF -> SnapTaskIcons.FlashOff
-                                CameraFlashMode.AUTO -> SnapTaskIcons.FlashAuto
-                                CameraFlashMode.ON, CameraFlashMode.TORCH -> SnapTaskIcons.FlashOn
-                            },
-                            contentDescription = "Bật tắt đèn flash",
-                            tint = if (isFlashActive) CamOnFlash else CamText,
-                            modifier = Modifier.size(22.dp)
-                        )
+                    val isFlashSupported = cameraState == CameraState.PREVIEWING && hasCameraPermission && hasFlashUnit
+                    if (isFlashSupported) {
+                        val isFlashActive = flashMode != CameraFlashMode.OFF
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(if (isFlashActive) CamFlash else CamElevated)
+                                .border(
+                                    width = 1.dp,
+                                    color = if (isFlashActive) Color.Transparent else CamBorder,
+                                    shape = CircleShape
+                                )
+                                .clickable(role = Role.Button) {
+                                    applyFlashMode(flashMode.next())
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = when (flashMode) {
+                                    CameraFlashMode.OFF -> SnapTaskIcons.FlashOff
+                                    CameraFlashMode.AUTO -> SnapTaskIcons.FlashAuto
+                                    CameraFlashMode.ON, CameraFlashMode.TORCH -> SnapTaskIcons.FlashOn
+                                },
+                                contentDescription = "Bật tắt đèn flash",
+                                tint = if (isFlashActive) CamOnFlash else CamText,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
 
                     Box(
                         modifier = Modifier
-                            .size(44.dp)
+                            .size(40.dp)
                             .clip(CircleShape)
                             .background(CamElevated)
+                            .border(1.dp, CamBorder, CircleShape)
                             .clickable(role = Role.Button) { handleOpenFolders() },
                         contentAlignment = Alignment.Center
                     ) {
@@ -613,21 +720,21 @@ fun CameraCreatorScreen(
                             imageVector = SnapTaskIcons.Folder,
                             contentDescription = "Quản lý thư mục",
                             tint = CamText,
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
             }
 
-            // Rounded 44dp Viewfinder Frame
+            // Rounded 40dp Viewfinder Frame
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .padding(horizontal = 12.dp, vertical = 14.dp)
-                    .clip(RoundedCornerShape(44.dp))
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .clip(RoundedCornerShape(40.dp))
                     .background(CamSurface)
-                    .border(1.dp, CamBorder, RoundedCornerShape(44.dp))
+                    .border(1.dp, CamBorder, RoundedCornerShape(40.dp))
             ) {
                 if (cameraState == CameraState.PREVIEWING) {
                     if (hasCameraPermission) {
@@ -723,7 +830,7 @@ fun CameraCreatorScreen(
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Cho phép máy ảnh để chụp việc trong 1 chạm, hoặc bấm nút Aa bên dưới để ghi chú chữ.",
+                                text = "Cho phép máy ảnh để chụp việc trong 1 chạm, chọn từ thư viện hoặc bấm Ghi chú bên dưới.",
                                 color = CamTextSec,
                                 fontSize = 13.sp,
                                 lineHeight = 18.sp,
@@ -753,6 +860,7 @@ fun CameraCreatorScreen(
                         AsyncImage(
                             model = ImageRequest.Builder(context)
                                 .data(File(path))
+                                .size(960)
                                 .crossfade(true)
                                 .build(),
                             contentDescription = "Ảnh việc vừa chụp",
@@ -766,7 +874,7 @@ fun CameraCreatorScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(110.dp)
+                        .height(104.dp)
                         .align(Alignment.BottomCenter)
                         .background(
                             Brush.verticalGradient(
@@ -775,62 +883,20 @@ fun CameraCreatorScreen(
                         )
                 )
 
-                // Top-left fixed-width (132dp) folder pill
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(16.dp)
-                        .width(132.dp)
-                        .height(30.dp)
-                        .clip(CircleShape)
-                        .background(CamBubble)
-                        .clickable(role = Role.Button) { cycleFolder() }
-                        .padding(horizontal = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    val folderColor = Color(activeFolder?.colorHex ?: 0xFFB0AFA7)
-                    val folderIcon = SnapTaskIcons.folderIconByKey(activeFolder?.iconKey ?: "folder")
-                    val folderLabel = activeFolder?.name ?: "Không mục"
-
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .clip(CircleShape)
-                            .background(folderColor)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Icon(
-                        imageVector = folderIcon,
-                        contentDescription = null,
-                        tint = CamText,
-                        modifier = Modifier.size(15.dp)
-                    )
-                    Spacer(modifier = Modifier.width(5.dp))
-                    Text(
-                        text = folderLabel,
-                        color = CamText,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-                // Top-right fixed-width (84dp) captured status pill
+                // Top-right captured status pill
                 if (cameraState == CameraState.CAPTURED) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(16.dp)
-                            .width(84.dp)
                             .height(30.dp)
                             .clip(CircleShape)
-                            .background(CamFlash),
+                            .background(CamFlash)
+                            .padding(horizontal = 14.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Đã chụp",
+                            text = if (isFromGallery) "Từ thư viện" else "Đã chụp",
                             color = CamOnFlash,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.ExtraBold
@@ -990,30 +1056,33 @@ fun CameraCreatorScreen(
                 }
             }
 
-            // Fixed 88dp-height Shutter / Save Row (zero vertical jump between preview & captured)
+            // Compact Ergonomic One-Handed Shutter / Save Row (82dp height)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 12.dp)
-                    .height(88.dp),
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
+                    .height(82.dp),
                 contentAlignment = Alignment.Center
             ) {
                 if (cameraState == CameraState.PREVIEWING) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(36.dp),
+                        horizontalArrangement = Arrangement.spacedBy(32.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(52.dp)
+                                .size(50.dp)
                                 .clip(CircleShape)
                                 .background(CamElevated)
-                                .clickable(role = Role.Button) { showQuickNoteSheet = true },
+                                .border(1.dp, CamBorder, CircleShape)
+                                .clickable(enabled = !isCapturing, role = Role.Button) {
+                                    openGalleryPicker()
+                                },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = SnapTaskIcons.TextAa,
-                                contentDescription = "Ghi chú chữ",
+                                imageVector = GalleryPhotoIcon,
+                                contentDescription = "Chọn ảnh từ thư viện",
                                 tint = CamText,
                                 modifier = Modifier.size(22.dp)
                             )
@@ -1021,7 +1090,7 @@ fun CameraCreatorScreen(
 
                         Box(
                             modifier = Modifier
-                                .size(84.dp)
+                                .size(78.dp)
                                 .clip(CircleShape)
                                 .border(4.dp, CamFlash, CircleShape)
                                 .clickable(enabled = !isCapturing, role = Role.Button) { takePhoto() },
@@ -1030,13 +1099,13 @@ fun CameraCreatorScreen(
                             if (isCapturing) {
                                 CircularProgressIndicator(
                                     color = CamFlash,
-                                    modifier = Modifier.size(32.dp),
+                                    modifier = Modifier.size(30.dp),
                                     strokeWidth = 3.dp
                                 )
                             } else {
                                 Box(
                                     modifier = Modifier
-                                        .size(64.dp)
+                                        .size(60.dp)
                                         .clip(CircleShape)
                                         .background(CamFlash)
                                 )
@@ -1045,9 +1114,10 @@ fun CameraCreatorScreen(
 
                         Box(
                             modifier = Modifier
-                                .size(52.dp)
+                                .size(50.dp)
                                 .clip(CircleShape)
                                 .background(CamElevated)
+                                .border(1.dp, CamBorder, CircleShape)
                                 .clickable(enabled = !isCapturing && hasCameraPermission, role = Role.Button) {
                                     try {
                                         camera?.cameraControl?.enableTorch(false)
@@ -1064,7 +1134,7 @@ fun CameraCreatorScreen(
                             Icon(
                                 imageVector = SnapTaskIcons.CameraFlip,
                                 contentDescription = "Đổi camera",
-                                tint = CamText,
+                                tint = if (hasCameraPermission) CamText else CamTextSec,
                                 modifier = Modifier.size(22.dp)
                             )
                         }
@@ -1072,21 +1142,22 @@ fun CameraCreatorScreen(
                 } else {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(56.dp)
+                                .size(54.dp)
                                 .clip(CircleShape)
                                 .background(CamElevated)
-                                .clickable(role = Role.Button) {
+                                .border(1.dp, CamBorder, CircleShape)
+                                .clickable(enabled = !isCapturing, role = Role.Button) {
                                     discardUnsavedPhoto()
                                 },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = SnapTaskIcons.Close,
+                                imageVector = SnapTaskIcons.Retake,
                                 contentDescription = "Chụp lại",
                                 tint = CamText,
                                 modifier = Modifier.size(22.dp)
@@ -1096,10 +1167,10 @@ fun CameraCreatorScreen(
                         Row(
                             modifier = Modifier
                                 .weight(1f)
-                                .height(56.dp)
+                                .height(54.dp)
                                 .clip(CircleShape)
                                 .background(CamFlash)
-                                .clickable(role = Role.Button) {
+                                .clickable(enabled = !isCapturing, role = Role.Button) {
                                     val finalPath = capturedPhotoPath ?: return@clickable
                                     isPhotoSaved = true
                                     val createdTime = System.currentTimeMillis()
@@ -1141,15 +1212,18 @@ fun CameraCreatorScreen(
 
                         Box(
                             modifier = Modifier
-                                .size(56.dp)
+                                .size(54.dp)
                                 .clip(CircleShape)
                                 .background(CamElevated)
-                                .clickable(role = Role.Button) { cycleFolder() },
+                                .border(1.dp, CamBorder, CircleShape)
+                                .clickable(enabled = !isCapturing, role = Role.Button) {
+                                    openGalleryPicker()
+                                },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = SnapTaskIcons.Folder,
-                                contentDescription = "Đổi thư mục",
+                                imageVector = GalleryPhotoIcon,
+                                contentDescription = "Đổi ảnh thư viện",
                                 tint = CamText,
                                 modifier = Modifier.size(22.dp)
                             )
@@ -1158,68 +1232,98 @@ fun CameraCreatorScreen(
                 }
             }
 
-            // Bottom "Việc của tôi" Pill
+            // Bottom One-Handed Dock: ["Việc của tôi · N" Pill] + [Aa "Ghi chú" Pill]
             Row(
                 modifier = Modifier
-                    .padding(bottom = 14.dp)
-                    .width(218.dp)
-                    .height(44.dp)
-                    .clip(CircleShape)
-                    .background(CamSurface)
-                    .border(1.dp, CamBorder, CircleShape)
-                    .clickable(role = Role.Button) { handleGoHome() }
-                    .padding(horizontal = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                if (pendingThumbFiles.isNotEmpty()) {
-                    val stackWidth = (26 + (pendingThumbFiles.size - 1) * 16).dp
-                    Box(
-                        modifier = Modifier
-                            .width(stackWidth)
-                            .height(26.dp),
-                        contentAlignment = Alignment.CenterStart
-                    ) {
-                        pendingThumbFiles.forEachIndexed { idx, file ->
-                            AsyncImage(
-                                model = ImageRequest.Builder(context).data(file).crossfade(true).build(),
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .offset(x = (idx * 16).dp)
-                                    .size(26.dp)
-                                    .clip(CircleShape)
-                                    .border(2.dp, CamSurface, CircleShape)
-                            )
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(44.dp)
+                        .clip(CircleShape)
+                        .background(CamSurface)
+                        .border(1.dp, CamBorder, CircleShape)
+                        .clickable(role = Role.Button) { handleGoHome() }
+                        .padding(horizontal = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    if (pendingThumbFiles.isNotEmpty()) {
+                        val stackWidth = (26 + (pendingThumbFiles.size - 1) * 16).dp
+                        Box(
+                            modifier = Modifier
+                                .width(stackWidth)
+                                .height(26.dp),
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            pendingThumbFiles.forEachIndexed { idx, file ->
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context)
+                                        .data(file)
+                                        .size(120)
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .offset(x = (idx * 16).dp)
+                                        .size(26.dp)
+                                        .clip(CircleShape)
+                                        .border(2.dp, CamSurface, CircleShape)
+                                )
+                            }
                         }
+                        Spacer(modifier = Modifier.width(8.dp))
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Text(
+                        text = "Việc của tôi · $openCount",
+                        color = CamText,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Icon(
+                        imageVector = SnapTaskIcons.ChevronUp,
+                        contentDescription = null,
+                        tint = CamText,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
 
-                Text(
-                    text = "Việc của tôi · $openCount",
-                    color = CamText,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Icon(
-                    imageVector = SnapTaskIcons.ChevronUp,
-                    contentDescription = null,
-                    tint = CamText,
-                    modifier = Modifier.size(16.dp)
-                )
+                Row(
+                    modifier = Modifier
+                        .height(44.dp)
+                        .clip(CircleShape)
+                        .background(CamElevated)
+                        .border(1.dp, CamBorder, CircleShape)
+                        .clickable(role = Role.Button) { showQuickNoteSheet = true }
+                        .padding(horizontal = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = SnapTaskIcons.TextAa,
+                        contentDescription = null,
+                        tint = CamText,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Ghi chú",
+                        color = CamText,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
+                    )
+                }
             }
-        }
-
-        // Front-camera full-screen illumination assist
-        if (showScreenFlash) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.White.copy(alpha = 0.96f))
-            )
         }
 
         SnackbarHost(

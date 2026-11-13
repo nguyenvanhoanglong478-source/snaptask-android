@@ -18,19 +18,22 @@ class TaskRepositoryImpl internal constructor(
     private val scheduleReminder: (Task) -> Unit = {},
     private val cancelReminder: (Long) -> Unit = {},
     private val deleteImages: (Array<out String?>) -> Unit = { paths -> FileUtils.deleteTaskImages(*paths) },
-    private val onTasksChanged: () -> Unit = {}
+    private val onTasksChanged: () -> Unit = {},
+    private val onTaskDeleted: (Long) -> Unit = {}
 ) : TaskRepository {
 
     constructor(
         context: Context,
         taskDao: TaskDao,
-        onTasksChanged: () -> Unit = {}
+        onTasksChanged: () -> Unit = {},
+        onTaskDeleted: (Long) -> Unit = {}
     ) : this(
         taskDao = taskDao,
         scheduleReminder = { task -> TaskReminderScheduler.scheduleReminder(context, task) },
         cancelReminder = { taskId -> TaskReminderScheduler.cancelReminder(context, taskId) },
         deleteImages = { paths -> FileUtils.deleteTaskImages(*paths) },
-        onTasksChanged = onTasksChanged
+        onTasksChanged = onTasksChanged,
+        onTaskDeleted = onTaskDeleted
     )
 
     private val writeMutex = Mutex()
@@ -150,6 +153,7 @@ class TaskRepositoryImpl internal constructor(
         if (pathsToDelete.isNotEmpty()) {
             deleteImages(pathsToDelete.toTypedArray())
         }
+        onTaskDeleted(task.id)
         onTasksChanged()
     }
 }

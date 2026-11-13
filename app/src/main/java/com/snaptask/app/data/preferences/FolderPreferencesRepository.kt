@@ -310,4 +310,14 @@ class FolderPreferencesRepository(context: Context) {
         persistRepeats(next)
         _configFlow.value = _configFlow.value.copy(repeatByTaskId = next)
     }
+
+    @Synchronized
+    fun removeTaskRepeat(taskId: Long) {
+        if (taskId <= 0L) return
+        val current = _configFlow.value.repeatByTaskId
+        if (!current.containsKey(taskId)) return
+        val next = current.toMutableMap().apply { remove(taskId) }
+        persistRepeats(next)
+        _configFlow.value = _configFlow.value.copy(repeatByTaskId = next)
+    }
 }

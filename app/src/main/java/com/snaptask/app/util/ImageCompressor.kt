@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.media.ExifInterface
+import android.net.Uri
 import android.os.Build
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -22,6 +23,42 @@ object ImageCompressor {
      * Guarantees max edge <= 1280px in ARGB_8888.
      */
     suspend fun compressPhoto(context: Context, rawFile: File): String = withContext(Dispatchers.IO) {
+        try {
+            val orientation = readExifOrientation(rawFile.absolutePath)
+            processAndSaveBitmap(
+                context = context,
+                orientation = orientation,
+                errorMessage = "Không thể giải mã file ảnh từ máy ảnh: ${rawFile.name}"
+            ) {
+                decodeSampledBitmap(rawFile.absolutePath, MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION)
+            }
+        } finally {
+            // Raw camera file is always cleaned up even on corrupt/null decode
+            rawFile.delete()
+        }
+    }
+
+    /**
+     * Compresses and optimizes a content/gallery URI without copying the raw file to cache.
+     * Guarantees max edge <= 1280px in ARGB_8888 and safe stream/bitmap cleanup.
+     */
+    suspend fun compressUri(context: Context, uri: Uri): String = withContext(Dispatchers.IO) {
+        val orientation = readExifOrientation(context, uri)
+        processAndSaveBitmap(
+            context = context,
+            orientation = orientation,
+            errorMessage = "Không thể giải mã ảnh đã chọn"
+        ) {
+            decodeSampledBitmap(context, uri, MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION)
+        }
+    }
+
+    private fun processAndSaveBitmap(
+        context: Context,
+        orientation: Int,
+        errorMessage: String,
+        decodeSampled: () -> Bitmap?
+    ): String {
         val snapsDir = FileUtils.getSnapsDirectory(context)
         val timestamp = System.currentTimeMillis()
         var targetFullFile = File(snapsDir, "snap_$timestamp.webp")
@@ -33,15 +70,11 @@ object ImageCompressor {
         var scaledBitmap: Bitmap? = null
         var finalFullBitmap: Bitmap? = null
 
-        try {
-            // 1. Read EXIF orientation
-            val orientation = readExifOrientation(rawFile.absolutePath)
+        return try {
+            // 1. Decode sampled image to save RAM (ARGB_8888)
+            sampledBitmap = decodeSampled() ?: throw IllegalArgumentException(errorMessage)
 
-            // 2. Decode full image with inSampleSize to save RAM (ARGB_8888)
-            sampledBitmap = decodeSampledBitmap(rawFile.absolutePath, MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION)
-                ?: throw IllegalArgumentException("Không thể giải mã file ảnh từ máy ảnh: ${rawFile.name}")
-
-            // 3. Clamp long edge to exactly 1280px before rotation to minimize RAM peak
+            // 2. Clamp long edge to <= 1280px before rotation to minimize RAM peak
             val maxEdge = max(sampledBitmap.width, sampledBitmap.height)
             scaledBitmap = if (maxEdge > MAX_IMAGE_DIMENSION) {
                 val scale = MAX_IMAGE_DIMENSION.toFloat() / maxEdge
@@ -52,10 +85,10 @@ object ImageCompressor {
                 sampledBitmap
             }
 
-            // 4. Rotate/flip clamped image according to EXIF
+            // 3. Rotate/flip clamped image according to EXIF
             finalFullBitmap = rotateBitmapIfRequired(scaledBitmap, orientation)
 
-            // 5. Compress full image to WebP
+            // 4. Compress full image to WebP
             saveBitmapAsWebp(finalFullBitmap, targetFullFile, WEBP_QUALITY)
 
             targetFullFile.absolutePath
@@ -73,8 +106,6 @@ object ImageCompressor {
                     bmp.recycle()
                 }
             }
-            // Raw camera file is always cleaned up even on corrupt/null decode
-            rawFile.delete()
         }
     }
 
@@ -118,6 +149,34 @@ object ImageCompressor {
         return BitmapFactory.decodeFile(filePath, options)
     }
 
+    private fun decodeSampledBitmap(
+        context: Context,
+        uri: Uri,
+        reqWidth: Int,
+        reqHeight: Int
+    ): Bitmap? {
+        val boundsOptions = BitmapFactory.Options().apply {
+            inJustDecodeBounds = true
+        }
+        context.contentResolver.openInputStream(uri)?.use { stream ->
+            BitmapFactory.decodeStream(stream, null, boundsOptions)
+        } ?: return null
+
+        if (boundsOptions.outWidth <= 0 || boundsOptions.outHeight <= 0) {
+            return null
+        }
+
+        val decodeOptions = BitmapFactory.Options().apply {
+            inSampleSize = calculateInSampleSize(boundsOptions, reqWidth, reqHeight)
+            inJustDecodeBounds = false
+            inPreferredConfig = Bitmap.Config.ARGB_8888
+        }
+
+        return context.contentResolver.openInputStream(uri)?.use { stream ->
+            BitmapFactory.decodeStream(stream, null, decodeOptions)
+        }
+    }
+
     private fun calculateInSampleSize(
         options: BitmapFactory.Options,
         reqWidth: Int,
@@ -130,6 +189,19 @@ object ImageCompressor {
         return try {
             val exif = ExifInterface(path)
             exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+        } catch (_: Exception) {
+            ExifInterface.ORIENTATION_NORMAL
+        }
+    }
+
+    private fun readExifOrientation(context: Context, uri: Uri): Int {
+        return try {
+            context.contentResolver.openInputStream(uri)?.use { stream ->
+                ExifInterface(stream).getAttributeInt(
+                    ExifInterface.TAG_ORIENTATION,
+                    ExifInterface.ORIENTATION_NORMAL
+                )
+            } ?: ExifInterface.ORIENTATION_NORMAL
         } catch (_: Exception) {
             ExifInterface.ORIENTATION_NORMAL
         }

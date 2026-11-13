@@ -1,5 +1,6 @@
 package com.snaptask.app
 
+import android.app.ActivityManager
 import android.app.Application
 import coil.Coil
 import coil.ImageLoader
@@ -33,15 +34,18 @@ class SnapTaskApplication : Application() {
         super.onCreate()
 
         database = AppDatabase.getInstance(this)
+        folderPreferences = FolderPreferencesRepository(this)
         taskRepository = TaskRepositoryImpl(
             context = this,
             taskDao = database.taskDao(),
-            onTasksChanged = { SnapTaskWidgetUpdater.requestUpdate(this) }
+            onTasksChanged = { SnapTaskWidgetUpdater.requestUpdate(this) },
+            onTaskDeleted = { id -> folderPreferences.removeTaskRepeat(id) }
         )
-        folderPreferences = FolderPreferencesRepository(this)
+
+        val isLowRamDevice = (getSystemService(ACTIVITY_SERVICE) as? ActivityManager)?.isLowRamDevice == true
 
         // Low-End RAM Tuning for Coil Image Loader:
-        // Set maximum memory cache to 15% of total available RAM
+        // Set maximum memory cache to 15% of total available RAM and prefer RGB_565
         val imageLoader = ImageLoader.Builder(this)
             .memoryCache {
                 MemoryCache.Builder(this)
@@ -54,7 +58,8 @@ class SnapTaskApplication : Application() {
                     .maxSizeBytes(50L * 1024 * 1024) // Cap disk cache at 50MB
                     .build()
             }
-            .crossfade(true)
+            .allowRgb565(true)
+            .crossfade(!isLowRamDevice)
             .build()
         Coil.setImageLoader(imageLoader)
 

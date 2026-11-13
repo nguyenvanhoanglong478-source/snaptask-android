@@ -8,6 +8,7 @@ object FileUtils {
 
     private const val ONE_DAY_MILLIS = 86_400_000L
     private const val COIL_CACHE_DIR = "image_cache"
+    private const val SHARED_CARDS_DIR = "shared_cards"
     private val CAMERA_TEMP_PREFIXES = listOf("raw_", "temp_", "snap_", "proof_")
 
     fun getSnapsDirectory(context: Context): File {
@@ -82,18 +83,38 @@ object FileUtils {
     }
 
     fun getStorageUsedBytes(context: Context): Long {
-        return try {
-            val snapsDir = getSnapsDirectory(context)
-            snapsDir.walkTopDown()
-                .filter { it.isFile }
-                .sumOf { it.length() }
-        } catch (_: Exception) {
-            0L
-        }
+        return directorySizeBytes(getSnapsDirectory(context))
     }
 
     fun getStorageUsedFormatted(context: Context): String {
         return formatStorageBytes(getStorageUsedBytes(context))
+    }
+
+    fun getCacheUsedBytes(context: Context): Long {
+        return directorySizeBytes(context.cacheDir)
+    }
+
+    fun getCacheUsedFormatted(context: Context): String {
+        return formatStorageBytes(getCacheUsedBytes(context))
+    }
+
+    fun clearImageAndTempCache(context: Context) {
+        try {
+            clearTempCache(context)
+            val cacheDir = context.cacheDir
+            listOf(SHARED_CARDS_DIR, COIL_CACHE_DIR).forEach { dirName ->
+                val dir = File(cacheDir, dirName)
+                if (dir.exists()) {
+                    dir.deleteRecursively()
+                }
+            }
+            val legacyThumbs = File(context.filesDir, "thumbnails")
+            if (legacyThumbs.exists()) {
+                legacyThumbs.deleteRecursively()
+            }
+        } catch (_: Exception) {
+            // Ignore failure on cleanup
+        }
     }
 
     fun formatStorageBytes(bytes: Long): String {
@@ -104,6 +125,17 @@ object FileUtils {
             bytes < kb -> "$bytes B"
             bytes < mb -> "${bytes / kb} KB"
             else -> String.format(Locale.US, "%.1f MB", bytes.toDouble() / mb.toDouble())
+        }
+    }
+
+    private fun directorySizeBytes(dir: File): Long {
+        return try {
+            if (!dir.exists()) return 0L
+            dir.walkTopDown()
+                .filter { it.isFile }
+                .sumOf { it.length() }
+        } catch (_: Exception) {
+            0L
         }
     }
 
