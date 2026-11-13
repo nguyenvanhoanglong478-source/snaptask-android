@@ -6,110 +6,115 @@ import android.content.ContextWrapper
 import android.view.WindowManager
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
+import androidx.camera.core.UseCaseGroup
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Alarm
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.Cameraswitch
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.FlashAuto
-import androidx.compose.material.icons.filled.FlashOff
-import androidx.compose.material.icons.filled.FlashOn
-import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview as ComposePreview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.snaptask.app.data.preferences.CustomFolder
+import com.snaptask.app.data.preferences.FolderPreferencesRepository
+import com.snaptask.app.data.preferences.RepeatCadence
 import com.snaptask.app.domain.model.Task
 import com.snaptask.app.domain.model.TaskPriority
-import com.snaptask.app.domain.model.TaskTag
+import com.snaptask.app.ui.components.SnapDateHelper
 import com.snaptask.app.ui.screens.editor.ReminderPickerDialog
-import androidx.compose.material.icons.filled.Folder
-import com.snaptask.app.ui.theme.AccentPrimary
-import com.snaptask.app.ui.theme.AccentSecondary
-import com.snaptask.app.ui.theme.AuroraGradient
-import com.snaptask.app.ui.theme.BgElevated
-import com.snaptask.app.ui.theme.BgPrimary
-import com.snaptask.app.ui.theme.BgSurface
-import com.snaptask.app.ui.theme.BorderHighlight
-import com.snaptask.app.ui.theme.BorderSubtle
+import com.snaptask.app.ui.screens.home.components.QuickNoteBottomSheet
 import com.snaptask.app.ui.theme.SnapTaskIcons
-import com.snaptask.app.ui.theme.StatusUrgent
-import com.snaptask.app.ui.theme.ChipActiveBg
-import com.snaptask.app.ui.theme.ChipActiveText
-import com.snaptask.app.ui.theme.ChipInactiveBg
-import com.snaptask.app.ui.theme.ChipInactiveBorder
-import com.snaptask.app.ui.theme.LocketAccent
-import com.snaptask.app.ui.theme.NotionBorder
-import com.snaptask.app.ui.theme.NotionCardSurface
-import com.snaptask.app.ui.theme.NotionDarkBg
-import com.snaptask.app.ui.theme.StatusAmber
-import com.snaptask.app.ui.theme.StatusDanger
-import com.snaptask.app.ui.theme.StatusSuccess
-import com.snaptask.app.ui.theme.TextMuted
-import com.snaptask.app.ui.theme.TextPrimary
-import com.snaptask.app.ui.theme.TextSecondary
+import com.snaptask.app.ui.theme.SnapTaskTheme
 import com.snaptask.app.util.DateTimeUtils
+import com.snaptask.app.util.FileUtils
 import com.snaptask.app.util.ImageCompressor
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.concurrent.TimeUnit
+import kotlin.math.roundToInt
 
 enum class CameraFlashMode {
-    OFF, ON, AUTO, TORCH;
+    OFF,
+    ON,
+    AUTO,
+    TORCH;
+
     fun next(): CameraFlashMode = when (this) {
         OFF -> ON
         ON -> AUTO
@@ -132,18 +137,36 @@ private fun findActivity(context: Context): Activity? {
     return null
 }
 
+// Forced-dark palette keeps the camera viewfinder free of light-mode glare.
+private val CamBg = Color(0xFF0F0F0E)
+private val CamSurface = Color(0xFF1A1A18)
+private val CamElevated = Color(0xFF252522)
+private val CamBorder = Color(0xFF34342F)
+private val CamText = Color(0xFFFAFAF6)
+private val CamTextSec = Color(0xFFB0AFA7)
+private val CamFlash = Color(0xFFD4FF3A)
+private val CamOnFlash = Color(0xFF10120A)
+private val CamHot = Color(0xFFFF5C4D)
+private val CamBubble = Color(0xAD0F0F0E)
+
 @Composable
 fun CameraCreatorScreen(
-    onSaveTask: (Task) -> Unit,
-    onClose: () -> Unit,
+    tasks: List<Task>,
+    folders: List<CustomFolder>,
+    hasCameraPermission: Boolean,
+    onRequestCameraPermission: () -> Unit,
+    onSaveTask: (Task, RepeatCadence) -> Unit,
+    onSaveQuickNote: (Task) -> Unit,
+    onGoHome: () -> Unit,
+    onOpenFolders: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    // Camera Hardware References & State
     var cameraProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
     var previewViewRef by remember { mutableStateOf<PreviewView?>(null) }
     var camera by remember { mutableStateOf<Camera?>(null) }
@@ -151,30 +174,108 @@ fun CameraCreatorScreen(
 
     var cameraSelector by remember { mutableStateOf(CameraSelector.DEFAULT_BACK_CAMERA) }
     var flashMode by remember { mutableStateOf(CameraFlashMode.OFF) }
+    var hasFlashUnit by remember { mutableStateOf(false) }
     var isCapturing by remember { mutableStateOf(false) }
 
-    // Instant Feedback & Screen Flash States
     var showShutterFlash by remember { mutableStateOf(false) }
     var showScreenFlash by remember { mutableStateOf(false) }
     var originalScreenBrightness by remember { mutableStateOf<Float?>(null) }
 
-    // Task & Form States
-    var capturedPhotoPath by remember { mutableStateOf<String?>(null) }
-    var title by remember { mutableStateOf("") }
-    var selectedFolder by remember { mutableStateOf("Cá nhân") }
-    var selectedTag by remember { mutableStateOf(TaskTag.PERSONAL) }
-    var selectedPriority by remember { mutableStateOf(TaskPriority.MEDIUM) }
-    var isPinned by remember { mutableStateOf(true) }
+    var focusTapOffset by remember { mutableStateOf<Offset?>(null) }
+    var focusTapTriggerId by remember { mutableIntStateOf(0) }
+    val focusRingAlpha = remember { Animatable(0f) }
+    val focusRingScale = remember { Animatable(1.25f) }
 
-    // Reminder States
+    var capturedPhotoPath by remember { mutableStateOf<String?>(null) }
+    var isPhotoSaved by remember { mutableStateOf(false) }
+    var title by remember { mutableStateOf("") }
+    var selectedPriority by remember { mutableStateOf(TaskPriority.MEDIUM) }
+    var repeatCadence by remember { mutableStateOf(RepeatCadence.NONE) }
     var reminderTime by remember { mutableStateOf<Long?>(null) }
     var reminderType by remember { mutableStateOf("NOTIFICATION") }
     var showReminderPicker by remember { mutableStateOf(false) }
+    var showQuickNoteSheet by remember { mutableStateOf(false) }
+
+    val defaultFolderIdx = remember(folders) {
+        folders.indexOfFirst { it.isDefault }.let { if (it >= 0) it else 0 }
+    }
+    var selectedFolderIdx by remember(folders.size) { mutableIntStateOf(defaultFolderIdx) }
+    val activeFolder = folders.getOrNull(selectedFolderIdx.coerceIn(0, (folders.size - 1).coerceAtLeast(0)))
 
     val cameraState = if (capturedPhotoPath != null) CameraState.CAPTURED else CameraState.PREVIEWING
 
-    // Rebind Camera whenever cameraSelector changes
+    val nowMillis = System.currentTimeMillis()
+    val doneToday = remember(tasks) {
+        tasks.count { it.isCompleted && SnapDateHelper.isSameDay(it.completedAt ?: it.createdAt, nowMillis) }
+    }
+    val openTasks = remember(tasks) {
+        tasks.filter { !it.isCompleted }.sortedByDescending { it.createdAt }
+    }
+    val openCount = openTasks.size
+    val totalToday = doneToday + openCount
+    val pendingThumbFiles = remember(openTasks) {
+        openTasks.mapNotNull { t ->
+            if (t.hasImage) File(t.beforeImageUri).takeIf { it.exists() } else null
+        }.take(3)
+    }
+
+    fun showCameraError(message: String) {
+        scope.launch {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            snackbarHostState.showSnackbar(
+                message = message,
+                duration = SnackbarDuration.Short
+            )
+        }
+    }
+
+    fun restoreScreenBrightness() {
+        val saved = originalScreenBrightness ?: return
+        originalScreenBrightness = null
+        try {
+            val window = findActivity(context)?.window
+            val layoutParams = window?.attributes
+            if (layoutParams != null) {
+                layoutParams.screenBrightness = saved
+                window.attributes = layoutParams
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    fun cleanupFlashEffects() {
+        showScreenFlash = false
+        restoreScreenBrightness()
+        val isBackCamera = cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA
+        val keepTorch = isBackCamera && hasFlashUnit && flashMode == CameraFlashMode.TORCH
+        if (!keepTorch) {
+            try {
+                camera?.cameraControl?.enableTorch(false)
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    fun discardUnsavedPhoto() {
+        if (!isPhotoSaved) {
+            FileUtils.deleteTaskImages(capturedPhotoPath)
+        }
+        capturedPhotoPath = null
+        isPhotoSaved = false
+    }
+
+    fun handleGoHome() {
+        discardUnsavedPhoto()
+        onGoHome()
+    }
+
+    fun handleOpenFolders() {
+        discardUnsavedPhoto()
+        onOpenFolders()
+    }
+
     fun bindCameraInternal() {
+        if (!hasCameraPermission) return
         val provider = cameraProvider ?: return
         val previewView = previewViewRef ?: return
 
@@ -185,44 +286,98 @@ fun CameraCreatorScreen(
                 it.setSurfaceProvider(previewView.surfaceProvider)
             }
 
+            // Flash is driven manually via 350ms torch/screen assist so exposure settles before capture.
             val capture = ImageCapture.Builder()
                 .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-                .setFlashMode(ImageCapture.FLASH_MODE_OFF) // Flash is controlled via Torch-Assisted sync to prevent de-sync
+                .setFlashMode(ImageCapture.FLASH_MODE_OFF)
                 .build()
 
             imageCapture = capture
+
+            val groupBuilder = UseCaseGroup.Builder()
+                .addUseCase(preview)
+                .addUseCase(capture)
+
+            previewView.viewPort?.let { vp ->
+                groupBuilder.setViewPort(vp)
+            }
+
             val boundCamera = provider.bindToLifecycle(
                 lifecycleOwner,
                 cameraSelector,
-                preview,
-                capture
+                groupBuilder.build()
             )
             camera = boundCamera
+            val cameraHasFlash = boundCamera.cameraInfo.hasFlashUnit()
+            hasFlashUnit = cameraHasFlash
 
-            if (flashMode == CameraFlashMode.TORCH && cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
+            val isBackCamera = cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA
+            if (isBackCamera && !cameraHasFlash) {
+                flashMode = CameraFlashMode.OFF
+                boundCamera.cameraControl.enableTorch(false)
+            } else if (flashMode == CameraFlashMode.TORCH && isBackCamera && cameraHasFlash) {
                 boundCamera.cameraControl.enableTorch(true)
             } else {
                 boundCamera.cameraControl.enableTorch(false)
             }
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+            camera = null
+            imageCapture = null
+            hasFlashUnit = false
+            if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
+                flashMode = CameraFlashMode.OFF
+            }
+            showCameraError("Không thể khởi tạo máy ảnh. Vui lòng thử lại.")
+        }
     }
 
     fun applyFlashMode(newMode: CameraFlashMode) {
-        flashMode = newMode
-        when (newMode) {
-            CameraFlashMode.TORCH -> {
-                if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
-                    camera?.cameraControl?.enableTorch(true)
-                }
-            }
-            CameraFlashMode.ON, CameraFlashMode.AUTO, CameraFlashMode.OFF -> {
+        val isBackCamera = cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA
+        if (isBackCamera && !hasFlashUnit) {
+            flashMode = CameraFlashMode.OFF
+            try {
                 camera?.cameraControl?.enableTorch(false)
+            } catch (_: Exception) {
+            }
+            return
+        }
+        flashMode = newMode
+        try {
+            if (newMode == CameraFlashMode.TORCH && isBackCamera && hasFlashUnit) {
+                camera?.cameraControl?.enableTorch(true)
+            } else {
+                camera?.cameraControl?.enableTorch(false)
+            }
+        } catch (_: Exception) {
+            showCameraError("Không thể bật đèn flash trên thiết bị này.")
+        }
+    }
+
+    LaunchedEffect(cameraSelector, hasCameraPermission) {
+        focusTapOffset = null
+        bindCameraInternal()
+    }
+
+    LaunchedEffect(cameraState) {
+        if (cameraState == CameraState.CAPTURED) {
+            focusTapOffset = null
+            try {
+                camera?.cameraControl?.enableTorch(false)
+                cameraProvider?.unbindAll()
+            } catch (_: Exception) {
             }
         }
     }
 
-    LaunchedEffect(cameraSelector) {
-        bindCameraInternal()
+    LaunchedEffect(focusTapTriggerId) {
+        if (focusTapTriggerId > 0 && focusTapOffset != null) {
+            focusRingAlpha.snapTo(1f)
+            focusRingScale.snapTo(1.28f)
+            focusRingScale.animateTo(1f, tween(durationMillis = 180))
+            delay(650L)
+            focusRingAlpha.animateTo(0f, tween(durationMillis = 200))
+            focusTapOffset = null
+        }
     }
 
     DisposableEffect(Unit) {
@@ -230,245 +385,494 @@ fun CameraCreatorScreen(
             try {
                 camera?.cameraControl?.enableTorch(false)
                 cameraProvider?.unbindAll()
-            } catch (_: Exception) {}
-
-            // Restore screen brightness if modified by front camera screen flash
-            val activity = findActivity(context)
-            originalScreenBrightness?.let { orig ->
-                try {
-                    val window = activity?.window
-                    val layoutParams = window?.attributes
-                    if (layoutParams != null) {
-                        layoutParams.screenBrightness = orig
-                        window.attributes = layoutParams
-                    }
-                } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
+            restoreScreenBrightness()
+            if (!isPhotoSaved) {
+                FileUtils.deleteTaskImages(capturedPhotoPath)
             }
         }
     }
 
+    fun cycleFolder() {
+        if (folders.isEmpty()) {
+            handleOpenFolders()
+        } else {
+            selectedFolderIdx = (selectedFolderIdx + 1) % folders.size
+        }
+    }
+
     fun takePhoto() {
-        val capture = imageCapture ?: return
+        if (!hasCameraPermission) {
+            onRequestCameraPermission()
+            return
+        }
+        val capture = imageCapture ?: run {
+            showCameraError("Máy ảnh chưa sẵn sàng. Vui lòng thử lại.")
+            return
+        }
         if (isCapturing) return
         isCapturing = true
 
         val isFrontCamera = cameraSelector == CameraSelector.DEFAULT_FRONT_CAMERA
-        val isFlashActive = flashMode == CameraFlashMode.ON || flashMode == CameraFlashMode.AUTO || flashMode == CameraFlashMode.TORCH
+        val isFlashActive = flashMode != CameraFlashMode.OFF
 
         scope.launch {
-            val activity = findActivity(context)
-            var originalBrightness: Float? = null
+            var captureSubmitted = false
+            var rawFile: File? = null
 
             try {
                 if (isFrontCamera && isFlashActive) {
-                    // 1. FRONT CAMERA SCREEN FLASH: Set 100% full screen brightness
-                    val window = activity?.window
+                    val window = findActivity(context)?.window
                     val layoutParams = window?.attributes
                     if (layoutParams != null) {
-                        originalBrightness = layoutParams.screenBrightness
-                        originalScreenBrightness = originalBrightness
+                        if (originalScreenBrightness == null) {
+                            originalScreenBrightness = layoutParams.screenBrightness
+                        }
                         layoutParams.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_FULL
                         window.attributes = layoutParams
                     }
                     showScreenFlash = true
-                    // Wait 350ms for display to reach peak illumination & sensor AE/AF to converge
                     delay(350L)
-                } else if (!isFrontCamera && isFlashActive) {
-                    // 2. REAR CAMERA TORCH-ASSISTED FLASH: Turn on physical LED
+                } else if (!isFrontCamera && hasFlashUnit && isFlashActive) {
                     try {
                         camera?.cameraControl?.enableTorch(true)
-                    } catch (_: Exception) {}
-                    // Wait 350ms for physical LED to reach full brightness & sensor AE/AF convergence
+                    } catch (_: Exception) {
+                    }
                     delay(350L)
                 }
 
-                // Shutter feedback: Haptic vibration + 120ms Shutter Flash
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 showShutterFlash = true
-                launch {
+                scope.launch {
                     delay(120L)
                     showShutterFlash = false
                 }
 
-                val rawFile = File(context.cacheDir, "snap_${System.currentTimeMillis()}.jpg")
-                val outputOptions = ImageCapture.OutputFileOptions.Builder(rawFile).build()
+                val tempFile = File(context.cacheDir, "raw_snap_${System.currentTimeMillis()}.jpg")
+                rawFile = tempFile
+                val outputOptions = ImageCapture.OutputFileOptions.Builder(tempFile).build()
 
+                captureSubmitted = true
                 capture.takePicture(
                     outputOptions,
                     ContextCompat.getMainExecutor(context),
                     object : ImageCapture.OnImageSavedCallback {
                         override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                            // Turn off Rear Torch ONLY here inside callback after sensor has captured the frame
-                            try {
-                                if (flashMode != CameraFlashMode.TORCH) {
-                                    camera?.cameraControl?.enableTorch(false)
-                                }
-                            } catch (_: Exception) {}
-
-                            // Dismiss Front Screen Flash & restore original brightness ONLY here inside callback
-                            if (showScreenFlash) {
-                                showScreenFlash = false
-                                originalBrightness?.let { orig ->
-                                    try {
-                                        val window = activity?.window
-                                        val layoutParams = window?.attributes
-                                        if (layoutParams != null) {
-                                            layoutParams.screenBrightness = orig
-                                            window.attributes = layoutParams
-                                        }
-                                    } catch (_: Exception) {}
-                                }
-                            }
-
-                            // Compress and display the illuminated photo
-                            scope.launch {
+                            cleanupFlashEffects()
+                            val compressJob = scope.launch {
                                 try {
-                                    val compressed = ImageCompressor.compressPhoto(context, rawFile)
-                                    capturedPhotoPath = compressed.fullImagePath
+                                    val compressedPath = ImageCompressor.compressPhoto(context, tempFile)
+                                    val previousUnsaved = if (!isPhotoSaved) capturedPhotoPath else null
+                                    capturedPhotoPath = compressedPath
+                                    isPhotoSaved = false
+                                    if (previousUnsaved != null && previousUnsaved != compressedPath) {
+                                        FileUtils.deleteTaskImages(previousUnsaved)
+                                    }
+                                } catch (e: CancellationException) {
+                                    FileUtils.deleteTaskImages(tempFile.absolutePath)
+                                    throw e
                                 } catch (_: Exception) {
+                                    FileUtils.deleteTaskImages(tempFile.absolutePath)
+                                    showCameraError("Không thể xử lý ảnh vừa chụp. Vui lòng thử lại.")
                                 } finally {
                                     isCapturing = false
                                 }
                             }
+                            if (compressJob.isCancelled) {
+                                FileUtils.deleteTaskImages(tempFile.absolutePath)
+                                isCapturing = false
+                            }
                         }
 
                         override fun onError(exception: ImageCaptureException) {
-                            // Cleanup on error
-                            try {
-                                if (flashMode != CameraFlashMode.TORCH) {
-                                    camera?.cameraControl?.enableTorch(false)
-                                }
-                            } catch (_: Exception) {}
-
-                            if (showScreenFlash) {
-                                showScreenFlash = false
-                                originalBrightness?.let { orig ->
-                                    try {
-                                        val window = activity?.window
-                                        val layoutParams = window?.attributes
-                                        if (layoutParams != null) {
-                                            layoutParams.screenBrightness = orig
-                                            window.attributes = layoutParams
-                                        }
-                                    } catch (_: Exception) {}
-                                }
-                            }
+                            cleanupFlashEffects()
+                            FileUtils.deleteTaskImages(tempFile.absolutePath)
                             isCapturing = false
+                            showCameraError("Chụp ảnh thất bại. Vui lòng thử lại.")
                         }
                     }
                 )
-            } catch (_: Exception) {
+            } catch (e: CancellationException) {
+                captureSubmitted = false
+                FileUtils.deleteTaskImages(rawFile?.absolutePath)
+                cleanupFlashEffects()
                 isCapturing = false
-                showScreenFlash = false
-                try {
-                    if (flashMode != CameraFlashMode.TORCH) {
-                        camera?.cameraControl?.enableTorch(false)
-                    }
-                } catch (_: Exception) {}
+                throw e
+            } catch (_: Exception) {
+                captureSubmitted = false
+                FileUtils.deleteTaskImages(rawFile?.absolutePath)
+                cleanupFlashEffects()
+                isCapturing = false
+                showCameraError("Không thể chụp ảnh. Vui lòng thử lại.")
+            } finally {
+                if (!captureSubmitted) {
+                    cleanupFlashEffects()
+                    isCapturing = false
+                }
             }
         }
     }
 
-    val folderOptions = remember { listOf("Cá nhân", "Công việc", "Học tập", "Mua sắm") }
-
-    Box(modifier = modifier.fillMaxSize().background(BgPrimary)) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(CamBg)
+            .imePadding()
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .statusBarsPadding()
+                .navigationBarsPadding(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Top Bar
+            // Top Bar: [146dp Today Progress Pill] ... [44dp Flash] [44dp Folders]
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 4.dp),
+                    .padding(start = 20.dp, end = 20.dp, top = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = onClose,
+                Row(
                     modifier = Modifier
-                        .size(40.dp)
-                        .background(BgSurface, CircleShape)
-                        .border(1.dp, BorderSubtle, CircleShape)
+                        .width(148.dp)
+                        .height(44.dp)
+                        .clip(CircleShape)
+                        .background(CamElevated)
+                        .clickable(role = Role.Button) { handleGoHome() }
+                        .padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
                 ) {
-                    Icon(Icons.Filled.Close, contentDescription = "Đóng", tint = TextPrimary)
+                    val progressFraction = if (totalToday <= 0) 0f else (doneToday.toFloat() / totalToday).coerceIn(0f, 1f)
+                    Canvas(modifier = Modifier.size(18.dp)) {
+                        val stroke = 2.6.dp.toPx()
+                        drawCircle(color = CamBorder, style = Stroke(width = stroke))
+                        if (progressFraction > 0f) {
+                            drawArc(
+                                color = CamFlash,
+                                startAngle = -90f,
+                                sweepAngle = 360f * progressFraction,
+                                useCenter = false,
+                                style = Stroke(width = stroke, cap = StrokeCap.Round)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "$doneToday/$totalToday hôm nay",
+                        color = CamText,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
 
-                Text(
-                    text = "Tạo Task Mới",
-                    color = TextPrimary,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 17.sp
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val isBackCamera = cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA
+                    val isFlashSupported = hasCameraPermission && (!isBackCamera || hasFlashUnit)
+                    val isFlashActive = flashMode != CameraFlashMode.OFF && isFlashSupported
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .alpha(if (isFlashSupported) 1f else 0.35f)
+                            .clip(CircleShape)
+                            .background(if (isFlashActive) CamFlash else CamElevated)
+                            .clickable(enabled = isFlashSupported, role = Role.Button) {
+                                applyFlashMode(flashMode.next())
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = when (flashMode) {
+                                CameraFlashMode.OFF -> SnapTaskIcons.FlashOff
+                                CameraFlashMode.AUTO -> SnapTaskIcons.FlashAuto
+                                CameraFlashMode.ON, CameraFlashMode.TORCH -> SnapTaskIcons.FlashOn
+                            },
+                            contentDescription = "Bật tắt đèn flash",
+                            tint = if (isFlashActive) CamOnFlash else CamText,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
 
-                // Placeholder to keep title balanced center
-                Spacer(modifier = Modifier.size(40.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(CamElevated)
+                            .clickable(role = Role.Button) { handleOpenFolders() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = SnapTaskIcons.Folder,
+                            contentDescription = "Quản lý thư mục",
+                            tint = CamText,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // 1. Camera Viewfinder 1:1 Aspect Ratio with HUD Controls
+            // Rounded 44dp Viewfinder Frame
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1f)
-                    .clip(RoundedCornerShape(32.dp))
-                    .border(2.dp, if (cameraState == CameraState.CAPTURED) AccentPrimary else BorderSubtle, RoundedCornerShape(32.dp))
-                    .background(Color.Black),
-                contentAlignment = Alignment.Center
+                    .weight(1f)
+                    .padding(horizontal = 12.dp, vertical = 14.dp)
+                    .clip(RoundedCornerShape(44.dp))
+                    .background(CamSurface)
+                    .border(1.dp, CamBorder, RoundedCornerShape(44.dp))
             ) {
                 if (cameraState == CameraState.PREVIEWING) {
-                    AndroidView(
-                        factory = { ctx ->
-                            val previewView = PreviewView(ctx).apply {
-                                scaleType = PreviewView.ScaleType.FILL_CENTER
+                    if (hasCameraPermission) {
+                        AndroidView(
+                            factory = { ctx ->
+                                val previewView = PreviewView(ctx).apply {
+                                    scaleType = PreviewView.ScaleType.FILL_CENTER
+                                }
+                                previewViewRef = previewView
+
+                                val providerFuture = ProcessCameraProvider.getInstance(ctx)
+                                providerFuture.addListener({
+                                    try {
+                                        cameraProvider = providerFuture.get()
+                                        bindCameraInternal()
+                                    } catch (_: Exception) {
+                                        showCameraError("Không thể khởi động máy ảnh. Vui lòng thử lại.")
+                                    }
+                                }, ContextCompat.getMainExecutor(ctx))
+
+                                previewView
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .pointerInput(camera, previewViewRef, hasCameraPermission) {
+                                    detectTapGestures { tapOffset ->
+                                        val boundCamera = camera ?: return@detectTapGestures
+                                        val pv = previewViewRef ?: return@detectTapGestures
+                                        try {
+                                            val point = pv.meteringPointFactory.createPoint(tapOffset.x, tapOffset.y)
+                                            val action = FocusMeteringAction.Builder(
+                                                point,
+                                                FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE
+                                            )
+                                                .setAutoCancelDuration(3, TimeUnit.SECONDS)
+                                                .build()
+                                            focusTapOffset = tapOffset
+                                            focusTapTriggerId++
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            boundCamera.cameraControl.startFocusAndMetering(action)
+                                        } catch (_: Exception) {
+                                        }
+                                    }
+                                }
+                        )
+
+                        focusTapOffset?.let { tap ->
+                            val ringSizeDp = 64.dp
+                            val ringPx = with(LocalDensity.current) { ringSizeDp.toPx() }
+                            Box(
+                                modifier = Modifier
+                                    .offset {
+                                        IntOffset(
+                                            x = (tap.x - ringPx / 2f).roundToInt(),
+                                            y = (tap.y - ringPx / 2f).roundToInt()
+                                        )
+                                    }
+                                    .size(ringSizeDp)
+                                    .graphicsLayer {
+                                        scaleX = focusRingScale.value
+                                        scaleY = focusRingScale.value
+                                        alpha = focusRingAlpha.value
+                                    }
+                                    .border(2.dp, CamFlash, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(CamFlash)
+                                )
                             }
-                            previewViewRef = previewView
-
-                            val providerFuture = ProcessCameraProvider.getInstance(ctx)
-                            providerFuture.addListener({
-                                cameraProvider = providerFuture.get()
-                                bindCameraInternal()
-                            }, ContextCompat.getMainExecutor(ctx))
-
-                            previewView
-                        },
-                        modifier = Modifier.fillMaxSize()
-                    )
+                        }
+                    } else {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 28.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "Chưa cấp quyền máy ảnh",
+                                color = CamText,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Cho phép máy ảnh để chụp việc trong 1 chạm, hoặc bấm nút Aa bên dưới để ghi chú chữ.",
+                                color = CamTextSec,
+                                fontSize = 13.sp,
+                                lineHeight = 18.sp,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Box(
+                                modifier = Modifier
+                                    .height(44.dp)
+                                    .clip(CircleShape)
+                                    .background(CamFlash)
+                                    .clickable(role = Role.Button, onClick = onRequestCameraPermission)
+                                    .padding(horizontal = 20.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Cho phép máy ảnh",
+                                    color = CamOnFlash,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                            }
+                        }
+                    }
                 } else {
-                    // Instantly display captured image in 1:1 squircle
-                    AsyncImage(
-                        model = ImageRequest.Builder(context)
-                            .data(File(capturedPhotoPath!!))
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = "Captured Photo Preview",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-
-                    // Top Badge: "ĐÃ CHỤP"
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(14.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xCC000000))
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                    ) {
-                        Text(
-                            text = "ĐÃ CHỤP",
-                            color = AccentPrimary,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
+                    capturedPhotoPath?.let { path ->
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(File(path))
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "Ảnh việc vừa chụp",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
                         )
                     }
                 }
 
-                // Shutter Flash Feedback Overlay (120ms)
+                // Bottom scrim so the caption input stays high-contrast over bright subjects
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(110.dp)
+                        .align(Alignment.BottomCenter)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, Color(0x990F0F0E))
+                            )
+                        )
+                )
+
+                // Top-left fixed-width (132dp) folder pill
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(16.dp)
+                        .width(132.dp)
+                        .height(30.dp)
+                        .clip(CircleShape)
+                        .background(CamBubble)
+                        .clickable(role = Role.Button) { cycleFolder() }
+                        .padding(horizontal = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    val folderColor = Color(activeFolder?.colorHex ?: 0xFFB0AFA7)
+                    val folderIcon = SnapTaskIcons.folderIconByKey(activeFolder?.iconKey ?: "folder")
+                    val folderLabel = activeFolder?.name ?: "Không mục"
+
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(folderColor)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Icon(
+                        imageVector = folderIcon,
+                        contentDescription = null,
+                        tint = CamText,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(modifier = Modifier.width(5.dp))
+                    Text(
+                        text = folderLabel,
+                        color = CamText,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                // Top-right fixed-width (84dp) captured status pill
+                if (cameraState == CameraState.CAPTURED) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(16.dp)
+                            .width(84.dp)
+                            .height(30.dp)
+                            .clip(CircleShape)
+                            .background(CamFlash),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Đã chụp",
+                            color = CamOnFlash,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                }
+
+                // Bottom-center frosted caption bubble
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(horizontal = 20.dp, vertical = 18.dp)
+                        .widthIn(min = 184.dp, max = 316.dp)
+                        .clip(CircleShape)
+                        .background(CamBubble)
+                        .padding(horizontal = 18.dp, vertical = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (title.isEmpty()) {
+                        Text(
+                            text = "Thêm tên việc…",
+                            color = Color(0xD9FAFAF6),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                    BasicTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        textStyle = TextStyle(
+                            color = CamText,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center
+                        ),
+                        cursorBrush = SolidColor(CamFlash),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
                 if (showShutterFlash) {
                     Box(
                         modifier = Modifier
@@ -478,314 +882,403 @@ fun CameraCreatorScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // 2. Camera Controls: 3 Circular Buttons (Flash - Shutter/Retake - Flip) spaced by 32dp
+            // 3 Fixed Equal-Width Metadata Chips: Reminder | Priority | Repeat
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(32.dp, Alignment.CenterHorizontally),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Left: Flash Button (46x46 circular)
-                Box(
+                val hasReminder = reminderTime != null
+                val remLabel = reminderTime?.let {
+                    SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(it))
+                } ?: "Nhắc giờ"
+
+                Row(
                     modifier = Modifier
-                        .size(46.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF15171E))
-                        .border(1.dp, if (flashMode != CameraFlashMode.OFF) AccentPrimary else BorderSubtle, CircleShape)
-                        .clickable { applyFlashMode(flashMode.next()) },
-                    contentAlignment = Alignment.Center
+                        .weight(1f)
+                        .height(36.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (hasReminder) CamFlash else CamElevated)
+                        .clickable(role = Role.Button) { showReminderPicker = true }
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
                 ) {
                     Icon(
-                        imageVector = when (flashMode) {
-                            CameraFlashMode.OFF -> SnapTaskIcons.FlashOff
-                            CameraFlashMode.ON, CameraFlashMode.TORCH -> SnapTaskIcons.FlashOn
-                            CameraFlashMode.AUTO -> SnapTaskIcons.FlashAuto
-                        },
-                        contentDescription = "Flash: ${flashMode.name}",
-                        tint = if (flashMode != CameraFlashMode.OFF) AccentPrimary else Color.White,
-                        modifier = Modifier.size(20.dp)
+                        imageVector = SnapTaskIcons.Clock,
+                        contentDescription = null,
+                        tint = if (hasReminder) CamOnFlash else CamText,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(5.dp))
+                    Text(
+                        text = remLabel,
+                        color = if (hasReminder) CamOnFlash else CamText,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                // Center: Shutter (72x72) or Retake (56x56)
+                val isHighPrio = selectedPriority == TaskPriority.HIGH
+                val prioText = when (selectedPriority) {
+                    TaskPriority.LOW -> "Thấp"
+                    TaskPriority.MEDIUM -> "Vừa"
+                    TaskPriority.HIGH -> "Cao"
+                }
+
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(36.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (isHighPrio) CamHot else CamElevated)
+                        .clickable(role = Role.Button) {
+                            val nextIdx = (selectedPriority.ordinal + 1) % TaskPriority.entries.size
+                            selectedPriority = TaskPriority.entries[nextIdx]
+                        }
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = SnapTaskIcons.FlagPriority,
+                        contentDescription = null,
+                        tint = if (isHighPrio) CamOnFlash else CamText,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(5.dp))
+                    Text(
+                        text = prioText,
+                        color = if (isHighPrio) CamOnFlash else CamText,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
+                    )
+                }
+
+                val hasRepeat = repeatCadence != RepeatCadence.NONE
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(36.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (hasRepeat) CamFlash else CamElevated)
+                        .clickable(role = Role.Button) { repeatCadence = repeatCadence.next() }
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = SnapTaskIcons.Repeat,
+                        contentDescription = null,
+                        tint = if (hasRepeat) CamOnFlash else CamText,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(5.dp))
+                    Text(
+                        text = repeatCadence.chipLabel,
+                        color = if (hasRepeat) CamOnFlash else CamText,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            // Fixed 88dp-height Shutter / Save Row (zero vertical jump between preview & captured)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
+                    .height(88.dp),
+                contentAlignment = Alignment.Center
+            ) {
                 if (cameraState == CameraState.PREVIEWING) {
-                    Box(
-                        modifier = Modifier
-                            .size(72.dp)
-                            .clip(CircleShape)
-                            .background(Color.Transparent)
-                            .border(2.5.dp, Color.White.copy(alpha = 0.9f), CircleShape)
-                            .padding(5.dp)
-                            .clip(CircleShape)
-                            .background(AuroraGradient)
-                            .clickable(enabled = !isCapturing) {
-                                takePhoto()
-                            },
-                        contentAlignment = Alignment.Center
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(36.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (isCapturing) {
-                            CircularProgressIndicator(
-                                color = Color.White,
-                                modifier = Modifier.size(26.dp),
-                                strokeWidth = 3.dp
+                        Box(
+                            modifier = Modifier
+                                .size(52.dp)
+                                .clip(CircleShape)
+                                .background(CamElevated)
+                                .clickable(role = Role.Button) { showQuickNoteSheet = true },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = SnapTaskIcons.TextAa,
+                                contentDescription = "Ghi chú chữ",
+                                tint = CamText,
+                                modifier = Modifier.size(22.dp)
                             )
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .size(22.dp)
-                                    .background(Color.White, CircleShape)
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(84.dp)
+                                .clip(CircleShape)
+                                .border(4.dp, CamFlash, CircleShape)
+                                .clickable(enabled = !isCapturing, role = Role.Button) { takePhoto() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isCapturing) {
+                                CircularProgressIndicator(
+                                    color = CamFlash,
+                                    modifier = Modifier.size(32.dp),
+                                    strokeWidth = 3.dp
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .size(64.dp)
+                                        .clip(CircleShape)
+                                        .background(CamFlash)
+                                )
+                            }
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(52.dp)
+                                .clip(CircleShape)
+                                .background(CamElevated)
+                                .clickable(enabled = !isCapturing && hasCameraPermission, role = Role.Button) {
+                                    try {
+                                        camera?.cameraControl?.enableTorch(false)
+                                    } catch (_: Exception) {
+                                    }
+                                    cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
+                                        CameraSelector.DEFAULT_FRONT_CAMERA
+                                    } else {
+                                        CameraSelector.DEFAULT_BACK_CAMERA
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = SnapTaskIcons.CameraFlip,
+                                contentDescription = "Đổi camera",
+                                tint = CamText,
+                                modifier = Modifier.size(22.dp)
                             )
                         }
                     }
                 } else {
-                    Box(
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF15171E))
-                            .border(1.5.dp, StatusUrgent, CircleShape)
-                            .clickable {
-                                capturedPhotoPath?.let { File(it).delete() }
-                                capturedPhotoPath = null
-                            },
-                        contentAlignment = Alignment.Center
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = SnapTaskIcons.Retake,
-                            contentDescription = "Chụp lại",
-                            tint = StatusUrgent,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
-
-                // Right: Flip Camera Button (46x46 circular)
-                Box(
-                    modifier = Modifier
-                        .size(46.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF15171E))
-                        .border(1.dp, BorderSubtle, CircleShape)
-                        .clickable(enabled = !isCapturing && cameraState == CameraState.PREVIEWING) {
-                            camera?.cameraControl?.enableTorch(false)
-                            cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
-                                CameraSelector.DEFAULT_FRONT_CAMERA
-                            } else {
-                                CameraSelector.DEFAULT_BACK_CAMERA
-                            }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = SnapTaskIcons.CameraFlip,
-                        contentDescription = "Đổi camera",
-                        tint = if (cameraState == CameraState.PREVIEWING) Color.White else TextMuted,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // 3. Properties & Details Card
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(BgSurface, RoundedCornerShape(24.dp))
-                    .border(1.dp, BorderSubtle, RoundedCornerShape(24.dp))
-                    .padding(16.dp)
-            ) {
-                // Task Title Input
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    placeholder = { Text("Bạn cần làm gì với bức ảnh này?", color = TextMuted, fontSize = 14.sp) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(14.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary,
-                        focusedContainerColor = BgElevated,
-                        unfocusedContainerColor = BgElevated,
-                        focusedBorderColor = AccentPrimary,
-                        unfocusedBorderColor = BorderSubtle
-                    )
-                )
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Quick Property Chips (1 single horizontal row of height 44.dp, fillMaxWidth, spacedBy 10.dp)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(44.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // 1. Folder selector chip (weight 1f, height 44dp, rounded 12dp)
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(BgElevated)
-                            .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
-                            .clickable {
-                                val nextIdx = (folderOptions.indexOf(selectedFolder) + 1) % folderOptions.size
-                                selectedFolder = folderOptions[nextIdx]
-                            }
-                            .padding(horizontal = 12.dp),
-                        contentAlignment = Alignment.CenterStart
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(CircleShape)
+                                .background(CamElevated)
+                                .clickable(role = Role.Button) {
+                                    discardUnsavedPhoto()
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
                             Icon(
-                                imageVector = SnapTaskIcons.Folder,
-                                contentDescription = "Thư mục",
-                                tint = AccentPrimary,
-                                modifier = Modifier.size(16.dp)
+                                imageVector = SnapTaskIcons.Close,
+                                contentDescription = "Chụp lại",
+                                tint = CamText,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(56.dp)
+                                .clip(CircleShape)
+                                .background(CamFlash)
+                                .clickable(role = Role.Button) {
+                                    val finalPath = capturedPhotoPath ?: return@clickable
+                                    isPhotoSaved = true
+                                    val createdTime = System.currentTimeMillis()
+                                    val cleanTitle = title.trim().ifBlank {
+                                        "Việc mới ${DateTimeUtils.formatTime(createdTime)}"
+                                    }
+                                    val folderName = activeFolder?.name
+                                        ?: FolderPreferencesRepository.UNASSIGNED_FOLDER_NAME
+                                    val newTask = Task(
+                                        id = 0,
+                                        title = cleanTitle,
+                                        beforeImageUri = finalPath,
+                                        folderName = folderName,
+                                        priority = selectedPriority.name,
+                                        tag = repeatCadence.toTaskTag(),
+                                        reminderTime = reminderTime,
+                                        reminderType = if (reminderTime != null) reminderType else "NONE",
+                                        createdAt = createdTime
+                                    )
+                                    onSaveTask(newTask, repeatCadence)
+                                },
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "Lưu việc",
+                                color = CamOnFlash,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.ExtraBold
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = selectedFolder,
-                                color = TextPrimary,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1
+                            Icon(
+                                imageVector = SnapTaskIcons.Check,
+                                contentDescription = null,
+                                tint = CamOnFlash,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(CircleShape)
+                                .background(CamElevated)
+                                .clickable(role = Role.Button) { cycleFolder() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = SnapTaskIcons.Folder,
+                                contentDescription = "Đổi thư mục",
+                                tint = CamText,
+                                modifier = Modifier.size(22.dp)
                             )
                         }
                     }
-
-                    // 2. Priority button (Icon-only 44.dp x 44.dp)
-                    val priorityColor = when (selectedPriority) {
-                        TaskPriority.LOW -> TextMuted
-                        TaskPriority.MEDIUM -> Color(0xFFF59E0B)
-                        TaskPriority.HIGH -> Color(0xFFF43F5E)
-                    }
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF15171E))
-                            .border(1.dp, if (selectedPriority != TaskPriority.LOW) priorityColor else BorderSubtle, RoundedCornerShape(12.dp))
-                            .clickable {
-                                val nextIndex = (selectedPriority.ordinal + 1) % TaskPriority.entries.size
-                                selectedPriority = TaskPriority.entries[nextIndex]
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = SnapTaskIcons.FlagPriority,
-                            contentDescription = "Mức độ ưu tiên",
-                            tint = priorityColor,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    // 3. Reminder button (Icon-only 44.dp x 44.dp)
-                    val hasReminder = reminderTime != null
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (hasReminder) AccentPrimary.copy(alpha = 0.2f) else Color(0xFF15171E))
-                            .border(1.dp, if (hasReminder) AccentPrimary else BorderSubtle, RoundedCornerShape(12.dp))
-                            .clickable { showReminderPicker = true },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = SnapTaskIcons.AlarmClock,
-                            contentDescription = "Nhắc nhở",
-                            tint = if (hasReminder) AccentPrimary else TextSecondary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    // 4. Pin button (Icon-only 44.dp x 44.dp)
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (isPinned) AccentPrimary.copy(alpha = 0.2f) else Color(0xFF15171E))
-                            .border(1.dp, if (isPinned) AccentPrimary else BorderSubtle, RoundedCornerShape(12.dp))
-                            .clickable { isPinned = !isPinned },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = SnapTaskIcons.Pin,
-                            contentDescription = "Ghim widget",
-                            tint = if (isPinned) AccentPrimary else TextSecondary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
                 }
+            }
 
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Primary Action Button: "Lưu Task" (52dp, rounded 16dp, Aurora gradient)
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(AuroraGradient)
-                        .clickable {
-                            val finalPhoto = capturedPhotoPath ?: ""
-                            val task = Task(
-                                title = title.ifBlank { "Việc cần làm" },
-                                beforeImageUri = finalPhoto,
-                                tag = selectedTag.name,
-                                folderName = selectedFolder,
-                                priority = selectedPriority.name,
-                                isPinnedToWidget = isPinned,
-                                reminderTime = reminderTime,
-                                reminderType = reminderType
+            // Bottom "Việc của tôi" Pill
+            Row(
+                modifier = Modifier
+                    .padding(bottom = 14.dp)
+                    .width(218.dp)
+                    .height(44.dp)
+                    .clip(CircleShape)
+                    .background(CamSurface)
+                    .border(1.dp, CamBorder, CircleShape)
+                    .clickable(role = Role.Button) { handleGoHome() }
+                    .padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                if (pendingThumbFiles.isNotEmpty()) {
+                    val stackWidth = (26 + (pendingThumbFiles.size - 1) * 16).dp
+                    Box(
+                        modifier = Modifier
+                            .width(stackWidth)
+                            .height(26.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        pendingThumbFiles.forEachIndexed { idx, file ->
+                            AsyncImage(
+                                model = ImageRequest.Builder(context).data(file).crossfade(true).build(),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .offset(x = (idx * 16).dp)
+                                    .size(26.dp)
+                                    .clip(CircleShape)
+                                    .border(2.dp, CamSurface, CircleShape)
                             )
-                            onSaveTask(task)
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = SnapTaskIcons.Check,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Lưu Task",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp
-                        )
+                        }
                     }
+                    Spacer(modifier = Modifier.width(8.dp))
                 }
+
+                Text(
+                    text = "Việc của tôi · $openCount",
+                    color = CamText,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Icon(
+                    imageVector = SnapTaskIcons.ChevronUp,
+                    contentDescription = null,
+                    tint = CamText,
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
 
-        // Full Screen White Flash Overlay for Front Camera Screen Flash
+        // Front-camera full-screen illumination assist
         if (showScreenFlash) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.White)
+                    .background(Color.White.copy(alpha = 0.96f))
+            )
+        }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 16.dp)
+        ) { data ->
+            Snackbar(
+                snackbarData = data,
+                containerColor = CamElevated,
+                contentColor = CamText,
+                actionColor = CamFlash,
+                shape = RoundedCornerShape(16.dp)
             )
         }
     }
 
-    // Reminder Picker Bottom Sheet
     if (showReminderPicker) {
         ReminderPickerDialog(
             initialReminderTime = reminderTime,
             initialReminderType = reminderType,
-            onConfirm = { time, type ->
-                reminderTime = time
-                reminderType = type
+            onConfirm = { pickedTime, pickedType ->
+                reminderTime = pickedTime
+                reminderType = pickedType
                 showReminderPicker = false
             },
             onDismiss = { showReminderPicker = false }
+        )
+    }
+
+    if (showQuickNoteSheet) {
+        QuickNoteBottomSheet(
+            onDismissRequest = { showQuickNoteSheet = false },
+            onSave = { newTask ->
+                showQuickNoteSheet = false
+                onSaveQuickNote(newTask)
+            },
+            existingFolders = folders.map { it.name }.ifEmpty { listOf("Nhà", "Công việc", "Cá nhân") }
+        )
+    }
+}
+
+@ComposePreview(widthDp = 390, heightDp = 844)
+@Composable
+private fun PreviewCameraCreatorScreen() {
+    SnapTaskTheme(darkTheme = true) {
+        CameraCreatorScreen(
+            tasks = emptyList(),
+            folders = listOf(
+                CustomFolder("nha", "Nhà", "home", 0xFFD4FF3A, true)
+            ),
+            hasCameraPermission = false,
+            onRequestCameraPermission = {},
+            onSaveTask = { _, _ -> },
+            onSaveQuickNote = {},
+            onGoHome = {},
+            onOpenFolders = {}
         )
     }
 }

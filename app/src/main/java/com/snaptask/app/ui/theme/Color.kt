@@ -1,91 +1,94 @@
 package com.snaptask.app.ui.theme
 
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
-// ==========================================
-// MIDNIGHT GLASS & AURORA DESIGN SYSTEM
-// Inspired by Linear, Craft & MyMind
-// ==========================================
-
-// 1. Core Background & Surface Hierarchy (Deep Obsidian)
-val BgPrimary       = Color(0xFF0B0C10) // Main Screen Background
-val BgSurface       = Color(0xFF14161F) // Cards, Sheets & Modal Containers
-val BgElevated      = Color(0xFF1E212D) // Chips, Input fields, Secondary elements
-val BorderSubtle    = Color(0xFF282C3A) // Crisp 1dp Architectural Borders
-val BorderHighlight = Color(0xFF3B4154) // Focus & Active Borders
-
-// 2. Aurora & Electric Indigo Accents
-val AccentPrimary   = Color(0xFF6366F1) // Electric Indigo (Primary Brand Color)
-val AccentSecondary = Color(0xFF8B5CF6) // Violet (Gradient Partner)
-val AccentSubtle    = Color(0x336366F1) // 20% Indigo Tint for Active Chips
-
-// Gradients
-val AuroraGradient = Brush.linearGradient(
-    colors = listOf(AccentPrimary, AccentSecondary)
+data class SnapTaskColors(
+    val bg: Color,
+    val surface: Color,
+    val elevated: Color,
+    val border: Color,
+    val borderHighlight: Color,
+    val text: Color,
+    val textSecondary: Color,
+    val textMuted: Color,
+    val flash: Color,
+    val onFlash: Color,
+    val done: Color,
+    val urgent: Color,
+    val onUrgent: Color,
+    val urgentSoft: Color,
+    val warning: Color,
+    val bubble: Color,
+    val dock: Color,
+    val hm0: Color,
+    val hm1: Color,
+    val hm2: Color,
+    val hm3: Color,
+    val hm4: Color,
+    val hmBorder: Color
 )
 
-val AuroraDockGradient = Brush.linearGradient(
-    colors = listOf(Color(0xFF6366F1), Color(0xFF9333EA))
+// WCAG AA verified tokens for Snap Pop dark theme (#0F0F0E base, #D4FF3A Electric Lime accent).
+val DarkSnapTaskColors = SnapTaskColors(
+    bg = Color(0xFF0F0F0E),
+    surface = Color(0xFF1A1A18),
+    elevated = Color(0xFF252522),
+    border = Color(0xFF34342F),
+    borderHighlight = Color(0xFF484842),
+    text = Color(0xFFFAFAF6),
+    textSecondary = Color(0xFFB0AFA7),
+    textMuted = Color(0xFF8E8D85),
+    flash = Color(0xFFD4FF3A),
+    onFlash = Color(0xFF10120A),
+    done = Color(0xFFD4FF3A),
+    urgent = Color(0xFFFF5C4D),
+    onUrgent = Color(0xFF10120A),
+    urgentSoft = Color(0x29FF5C4D),
+    warning = Color(0xFFD4FF3A),
+    bubble = Color(0xAD0F0F0E),
+    dock = Color(0xEB181816),
+    hm0 = Color(0xFF242420),
+    hm1 = Color(0xFF3E4B19),
+    hm2 = Color(0xFF6C851E),
+    hm3 = Color(0xFFA2CB2B),
+    hm4 = Color(0xFFD4FF3A),
+    hmBorder = Color(0x12FFFFFF)
 )
 
-val CardBottomScrim = Brush.verticalGradient(
-    colors = listOf(
-        Color.Transparent,
-        Color(0x660B0C10),
-        Color(0xF20B0C10)
-    )
+// WCAG AA verified tokens for Snap Pop light theme (#F3F2EC warm paper, dark ink heatmap ramp).
+val LightSnapTaskColors = SnapTaskColors(
+    bg = Color(0xFFF3F2EC),
+    surface = Color(0xFFFFFFFF),
+    elevated = Color(0xFFE8E6DE),
+    border = Color(0xFFD5D2C7),
+    borderHighlight = Color(0xFFC2BEB2),
+    text = Color(0xFF141413),
+    textSecondary = Color(0xFF575650),
+    textMuted = Color(0xFF66655E),
+    flash = Color(0xFFD4FF3A),
+    onFlash = Color(0xFF10120A),
+    done = Color(0xFF3D5E00),
+    urgent = Color(0xFFC93223),
+    onUrgent = Color(0xFFFFFFFF),
+    urgentSoft = Color(0x1FC93223),
+    warning = Color(0xFF5C4700),
+    bubble = Color(0xAD0F0F0E),
+    dock = Color(0xF0FFFFFF),
+    hm0 = Color(0xFFEFECE3),
+    hm1 = Color(0xFFD8F07A),
+    hm2 = Color(0xFFAEE02B),
+    hm3 = Color(0xFF73A600),
+    hm4 = Color(0xFF3D5E00),
+    hmBorder = Color(0x24141413)
 )
 
-val GlassmorphismDark = Color(0xE614161F) // 90% Opacity #14161F
+val LocalSnapTaskColors = staticCompositionLocalOf { DarkSnapTaskColors }
 
-// 3. High-Contrast Typography
-val TextPrimary   = Color(0xFFF8FAFC) // 18.5:1 Contrast on #0B0C10
-val TextSecondary = Color(0xFF94A3B8) // 7.8:1 Contrast on #0B0C10
-val TextMuted     = Color(0xFF64748B) // 4.8:1 Contrast on #0B0C10
-
-// 4. Semantic Status Accents
-val StatusSuccess = Color(0xFF10B981) // Emerald Mint (Completed & After proof)
-val StatusWarning = Color(0xFFF59E0B) // Amber Gold (Medium Priority & Reminders)
-val StatusAmber   = StatusWarning
-val StatusUrgent  = Color(0xFFF43F5E) // Rose Crimson (High Priority & Alarms)
-val StatusDanger  = StatusUrgent
-
-// 5. Chips & Interactive States
-val ChipActiveBg       = AccentPrimary
-val ChipActiveText     = Color(0xFFFFFFFF)
-val ChipInactiveBg     = BgElevated
-val ChipInactiveBorder = BorderSubtle
-val ChipInactiveText   = TextSecondary
-
-// ==========================================
-// BACKWARD COMPATIBILITY ALIASES
-// (Ensures legacy screens compile smoothly)
-// ==========================================
-val NotionDarkBg           = BgPrimary
-val NotionCardSurface      = BgSurface
-val NotionBorder           = BorderSubtle
-val LocketAccent           = AccentPrimary
-val LocketAccentMuted      = AccentSecondary
-val ObsidianInk            = BgPrimary
-val ObsidianElevated       = BgSurface
-val VelvetCurfew           = BgSurface
-val VelvetCurfewLight      = BgElevated
-val AlmondHearth           = AccentPrimary
-val TextHighContrast       = TextPrimary
-val TextMediumContrast     = TextSecondary
-val Neutral900             = TextPrimary
-val Neutral800             = BgSurface
-val Neutral700             = TextSecondary
-val Neutral500             = TextMuted
-val Neutral100             = BgElevated
-val Neutral50              = AccentPrimary
-val BrandAmber             = StatusWarning
-val BrandGreen             = StatusSuccess
-val BrandRed               = StatusUrgent
-val ChipActiveBackground   = ChipActiveBg
-val ChipActiveContent      = ChipActiveText
-val ChipInactiveBackground = ChipInactiveBg
-val ChipInactiveContent    = ChipInactiveText
-val NotionLocketGradient   = AuroraGradient
-val SnapTaskVerticalGradient = AuroraGradient
+val MaterialTheme.snapColors: SnapTaskColors
+    @Composable
+    @ReadOnlyComposable
+    get() = LocalSnapTaskColors.current

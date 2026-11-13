@@ -21,8 +21,8 @@
 
 1. **Chống tràn RAM (OOM) khi chụp ảnh:**
    * CameraX được cấu hình chế độ `CAPTURE_MODE_MINIMIZE_LATENCY`.
-   * Sử dụng thuật toán `inSampleSize` giảm độ phân giải cảm biến thô (48MP/64MP) xuống tối đa 1280px ngay trong bộ nhớ trước khi xử lý Bitmap.
-   * Định dạng màu `RGB_565` (16-bit) giúp tiết kiệm 50% RAM so với `ARGB_8888`.
+   * Sử dụng thuật toán `inSampleSize` kết hợp scale chính xác cạnh dài về tối đa 1280px (giữ nguyên tỷ lệ) trước khi xoay EXIF để hạ thấp đỉnh tiêu thụ RAM.
+   * Định dạng màu `ARGB_8888` đảm bảo chất lượng hình ảnh sắc nét, trung thực sau khi đã giới hạn kích thước về 1280px.
 2. **Nén ảnh chuẩn WebP:**
    * Tự động nén ảnh chụp sang WebP chất lượng 78%, giảm dung lượng tệp từ ~5MB xuống chỉ còn **120KB - 250KB** (tiết kiệm 90% bộ nhớ trong).
    * Tự động sinh thêm ảnh Thumbnail (360px WebP, ~20KB) riêng cho Widget và Grid View.
@@ -42,25 +42,27 @@ snaptask-android/
 ├── .github/workflows/
 │   └── build_apk.yml           # CI/CD tự động build APK trên GitHub Actions
 ├── app/
+│   ├── schemas/                # Room schema JSON (version 3) cho migration an toàn
 │   ├── src/main/
 │   │   ├── java/com/snaptask/app/
-│   │   │   ├── SnapTaskApplication.kt    # Khởi tạo DB, Coil cache, xử lý Low Memory
+│   │   │   ├── SnapTaskApplication.kt    # Khởi tạo DB, Coil cache, dọn cache ở nền
 │   │   │   ├── data/
 │   │   │   │   ├── local/               # Room Entity, DAO, AppDatabase, Converters
 │   │   │   │   └── repository/          # TaskRepository, TaskRepositoryImpl (Offline-first)
 │   │   │   ├── domain/model/            # Task, TaskPriority, TaskStatus, TaskTag, SubTask
+│   │   │   ├── reminder/                # AlarmSoundPlayer, BootReceiver, NotificationActionReceiver, TaskReminderReceiver, TaskReminderScheduler
 │   │   │   ├── ui/
-│   │   │   │   ├── MainActivity.kt      # Điều hướng Compose, cấp quyền Camera
-│   │   │   │   ├── theme/               # Design System: Color, Type, Theme (Anti-Slop)
+│   │   │   │   ├── MainActivity.kt      # Điều hướng Compose, BackHandler, Deep link
+│   │   │   │   ├── theme/               # Design System: Color, Type, Theme, SnapTaskIcons
 │   │   │   │   └── screens/
-│   │   │   │       ├── home/            # Grid View, Tag Filter, Locket Camera FAB
-│   │   │   │       ├── camera/          # CameraX Viewfinder độ trễ thấp
-│   │   │   │       ├── editor/          # Quick Snap Modal Bottom Sheet
-│   │   │   │       └── board/           # Kanban Board View (To-Do / In Progress / Done)
-│   │   │   ├── widget/                  # Jetpack Glance Home Screen Widget & Action Callback
-│   │   │   └── util/                    # ImageCompressor, FileUtils
-│   │   └── res/                         # Strings, Colors, Themes, AppWidgetProvider XML
-│   ├── build.gradle.kts                 # Cấu hình ABI splits, R8, Jetpack Compose
+│   │   │   │       ├── home/            # Grid & Bento Feed, Tag Filter, Floating Dock
+│   │   │   │       ├── camera/          # CameraCreatorScreen, CameraAfterProofScreen
+│   │   │   │       ├── detail/          # TaskDetailScreen
+│   │   │   │       └── board/           # Kanban Board View
+│   │   │   ├── widget/                  # Jetpack Glance Home Screen Widgets (SnapTask, Locket, Notion)
+│   │   │   └── util/                    # ImageCompressor, FileUtils, NotificationPermissionHelper
+│   │   └── res/                         # Strings, Colors, Themes, AppWidgetProvider XML, AVD Splash
+│   ├── build.gradle.kts                 # Cấu hình ABI splits, R8, Jetpack Compose, Kapt
 │   └── proguard-rules.pro               # Quy tắc tối ưu hóa ProGuard/R8
 ├── build_apk.ps1                        # Script kiểm tra môi trường và build tự động
 └── README.md
@@ -73,7 +75,7 @@ snaptask-android/
 ### Cách 1: Tự động hoàn toàn qua GitHub Actions (Khuyên dùng - Không cần cài gì trên máy)
 1. Đẩy mã nguồn dự án lên một kho lưu trữ GitHub bất kỳ (Private hoặc Public).
 2. GitHub Actions sẽ tự động kích hoạt workflow `.github/workflows/build_apk.yml`.
-3. Sau khoảng 2-3 phút, truy cập tab **Actions** $\rightarrow$ Click vào bản build mới nhất $\rightarrow$ Tải trực tiếp file `SnapTask-Release-APK` hoặc `SnapTask-Debug-APK` về điện thoại để cài đặt.
+3. Sau khoảng 2-3 phút, truy cập tab **Actions** $\rightarrow$ Click vào bản build mới nhất $\rightarrow$ Tải trực tiếp artifact `SnapTask-Debug-APK` về điện thoại để cài đặt.
 
 ### Cách 2: Build bằng Android Studio trên máy
 1. Mở thư mục `snaptask-android` bằng **Android Studio**.

@@ -7,16 +7,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.Button
+import androidx.glance.ButtonDefaults
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
+import androidx.glance.LocalSize
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.actionStartActivity
+import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
@@ -32,15 +36,20 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
+import androidx.glance.layout.size
 import androidx.glance.layout.width
-import androidx.glance.layout.*
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import com.snaptask.app.R
 import com.snaptask.app.data.local.AppDatabase
 import com.snaptask.app.data.local.TaskEntity
+import com.snaptask.app.domain.model.TaskPriority
 import com.snaptask.app.ui.MainActivity
+import com.snaptask.app.util.DateTimeUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class NotionStackWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = NotionStackWidget()
@@ -48,19 +57,22 @@ class NotionStackWidgetReceiver : GlanceAppWidgetReceiver() {
 
 class NotionStackWidget : GlanceAppWidget() {
 
-    private val bgDarkProvider       = ColorProvider(Color(0xFF14161F))
-    private val surfaceDarkProvider  = ColorProvider(Color(0xFF1E212D))
-    private val overlayGlassProvider = ColorProvider(Color(0xE614161F))
-    private val whiteProvider        = ColorProvider(Color(0xFFF8FAFC))
-    private val secondaryProvider    = ColorProvider(Color(0xFF94A3B8))
-    private val accentProvider       = ColorProvider(Color(0xFF6366F1))
-    private val pillDarkProvider     = ColorProvider(Color(0xCC0B0C10))
+    override val sizeMode: SizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val database = AppDatabase.getInstance(context)
-        val pendingTasks = database.taskDao().getPendingTasksForWidget()
-        val completedCount = database.taskDao().getCompletedCount()
-        val totalCount = database.taskDao().getTotalCount()
+        val widgetData = withContext(Dispatchers.IO) {
+            runCatching {
+                val dao = AppDatabase.getInstance(context).taskDao()
+                Triple(
+                    dao.getPendingTasksForWidget(),
+                    dao.getCompletedCount(),
+                    dao.getTotalCount()
+                )
+            }.getOrDefault(Triple(emptyList(), 0, 0))
+        }
+        val pendingTasks = widgetData.first
+        val completedCount = widgetData.second
+        val totalCount = widgetData.third
 
         val topTask: TaskEntity? = pendingTasks.firstOrNull()
         val nextTasks: List<TaskEntity> = if (pendingTasks.size > 1) {
@@ -69,15 +81,17 @@ class NotionStackWidget : GlanceAppWidget() {
             emptyList()
         }
 
-        val bitmap: Bitmap? = topTask?.let {
-            val mainUri = if (it.isCompleted && !it.afterImageUri.isNullOrBlank()) it.afterImageUri else it.beforeImageUri
-            val pipUri = if (it.isCompleted && !it.afterImageUri.isNullOrBlank()) it.beforeImageUri else null
-            WidgetBitmapHelper.createWidgetCompositeBitmap(
-                mainImageUri = mainUri,
-                miniPipImageUri = pipUri,
-                isCompleted = it.isCompleted,
-                outputSize = 380
-            )
+        val bitmap: Bitmap? = withContext(Dispatchers.IO) {
+            topTask?.let {
+                val mainUri = if (it.isCompleted && !it.afterImageUri.isNullOrBlank()) it.afterImageUri else it.beforeImageUri
+                val pipUri = if (it.isCompleted && !it.afterImageUri.isNullOrBlank()) it.beforeImageUri else null
+                WidgetBitmapHelper.createWidgetCompositeBitmap(
+                    mainImageUri = mainUri,
+                    miniPipImageUri = pipUri,
+                    isCompleted = it.isCompleted,
+                    outputSize = 380
+                )
+            }
         }
 
         provideContent {
@@ -101,100 +115,152 @@ class NotionStackWidget : GlanceAppWidget() {
         completedCount: Int,
         totalCount: Int
     ) {
+        val widgetSize = LocalSize.current
+        val availableWidth = (widgetSize.width - 30.dp).coerceAtLeast(100.dp)
+        val leftColumnWidth = availableWidth * 0.42f
+        val rightColumnWidth = availableWidth * 0.58f
+        val taskIdParam = ActionParameters.Key<Long>("taskId")
+        val now = System.currentTimeMillis()
+
+        val featuredClickAction = if (topTask != null) {
+            actionRunCallback<OpenTaskActionCallback>(
+                actionParametersOf(taskIdParam to topTask.id)
+            )
+        } else {
+            actionStartActivity<MainActivity>()
+        }
+
         Row(
             modifier = GlanceModifier
                 .fillMaxSize()
-                .background(bgDarkProvider)
-                .cornerRadius(24.dp)
-                .padding(10.dp)
+                .background(WidgetColors.bgProvider)
+                .cornerRadius(26.dp)
+                .padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // LEFT COLUMN (~45%): 1:1 Photo + Top Task Action + Daily Progress
-            Column(
+            Box(
                 modifier = GlanceModifier
-                    .defaultWeight()
-                    .fillMaxHeight(),
-                verticalAlignment = Alignment.CenterVertically
+                    .width(leftColumnWidth)
+                    .fillMaxHeight()
+                    .cornerRadius(20.dp)
+                    .background(WidgetColors.elevatedProvider)
+                    .clickable(featuredClickAction)
             ) {
                 if (topTask != null) {
-                    Box(
-                        modifier = GlanceModifier
-                            .fillMaxWidth()
-                            .defaultWeight()
-                            .cornerRadius(18.dp)
-                            .background(surfaceDarkProvider)
-                    ) {
-                        if (bitmap != null) {
-                            Image(
-                                provider = ImageProvider(bitmap),
-                                contentDescription = topTask.title,
-                                contentScale = ContentScale.Crop,
-                                modifier = GlanceModifier.fillMaxSize()
-                            )
-                        }
-
-                        // Top Pill on photo: Progress Done/Total
-                        Box(
-                            modifier = GlanceModifier
-                                .padding(6.dp)
-                                .background(pillDarkProvider)
-                                .cornerRadius(8.dp)
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "$completedCount/$totalCount xong",
-                                style = TextStyle(
-                                    color = accentProvider,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 9.sp
-                                )
-                            )
-                        }
-
-                        // Bottom Title Bar
-                        Column(
-                            modifier = GlanceModifier
-                                .fillMaxWidth()
-                                .background(overlayGlassProvider)
-                                .padding(horizontal = 6.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = topTask.title,
-                                style = TextStyle(
-                                    color = whiteProvider,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 11.sp
-                                ),
-                                maxLines = 1
-                            )
-                        }
+                    if (bitmap != null) {
+                        Image(
+                            provider = ImageProvider(bitmap),
+                            contentDescription = topTask.title,
+                            contentScale = ContentScale.Crop,
+                            modifier = GlanceModifier.fillMaxSize()
+                        )
                     }
 
-                    Spacer(modifier = GlanceModifier.height(6.dp))
+                    val validReminder = topTask.reminderTime?.takeIf { it > 0L }
+                    val validDue = topTask.dueDate?.takeIf { it > 0L }
+                    val isHighPriority = runCatching {
+                        TaskPriority.valueOf(topTask.priority) == TaskPriority.HIGH
+                    }.getOrDefault(false)
+                    val isReminderOverdue = validReminder != null && validReminder < now
+                    val isDueOverdue = DateTimeUtils.isOverdue(validDue, isCompleted = false, nowMillis = now)
+                    val isOverdue = isReminderOverdue || isDueOverdue
+                    val badgeText: String? = when {
+                        isReminderOverdue -> "Trễ"
+                        isDueOverdue -> "Quá hạn"
+                        validReminder != null -> DateTimeUtils.formatTime(validReminder)
+                        validDue != null -> DateTimeUtils.formatDueLabel(validDue, now)
+                        isHighPriority -> "Gấp"
+                        else -> null
+                    }
+                    val isUrgentBadge = isOverdue || badgeText == "Gấp"
 
-                    // 1-Tap Done Button for Priority Task
-                    val taskIdParam = ActionParameters.Key<Long>("taskId")
-                    Button(
-                        text = "Hoàn thành",
-                        onClick = actionRunCallback<CompleteTaskActionCallback>(
-                            actionParametersOf(taskIdParam to topTask.id)
-                        ),
-                        modifier = GlanceModifier.fillMaxWidth()
-                    )
+                    Column(modifier = GlanceModifier.fillMaxSize()) {
+                        if (badgeText != null) {
+                            Row(
+                                modifier = GlanceModifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp)
+                            ) {
+                                Box(
+                                    modifier = GlanceModifier
+                                        .background(if (isUrgentBadge) WidgetColors.urgentProvider else ColorProvider(Color(0xAD0F0F0E)))
+                                        .cornerRadius(8.dp)
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        if (isHighPriority && !isUrgentBadge) {
+                                            Box(
+                                                modifier = GlanceModifier
+                                                    .size(6.dp)
+                                                    .cornerRadius(3.dp)
+                                                    .background(WidgetColors.urgentProvider)
+                                            ) {}
+                                            Spacer(modifier = GlanceModifier.width(4.dp))
+                                        }
+                                        Text(
+                                            text = badgeText,
+                                            style = TextStyle(
+                                                color = if (isUrgentBadge) WidgetColors.onUrgentProvider else WidgetColors.textProvider,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 11.sp
+                                            ),
+                                            maxLines = 1
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = GlanceModifier.defaultWeight())
+
+                        Box(
+                            modifier = GlanceModifier
+                                .fillMaxWidth()
+                                .background(ImageProvider(R.drawable.widget_scrim))
+                                .padding(top = 24.dp, start = 9.dp, end = 8.dp, bottom = 8.dp)
+                        ) {
+                            Row(
+                                modifier = GlanceModifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = topTask.title.ifBlank { "Việc cần làm" },
+                                    style = TextStyle(
+                                        color = WidgetColors.textProvider,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp
+                                    ),
+                                    maxLines = 1,
+                                    modifier = GlanceModifier.defaultWeight()
+                                )
+
+                                Spacer(modifier = GlanceModifier.width(6.dp))
+
+                                Image(
+                                    provider = ImageProvider(R.drawable.ic_widget_check_done),
+                                    contentDescription = "Hoàn thành",
+                                    modifier = GlanceModifier
+                                        .size(32.dp)
+                                        .clickable(
+                                            actionRunCallback<CompleteTaskActionCallback>(
+                                                actionParametersOf(taskIdParam to topTask.id)
+                                            )
+                                        )
+                                )
+                            }
+                        }
+                    }
                 } else {
                     Box(
-                        modifier = GlanceModifier
-                            .fillMaxSize()
-                            .background(surfaceDarkProvider)
-                            .cornerRadius(18.dp)
-                            .padding(8.dp),
+                        modifier = GlanceModifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Hết việc!",
+                            text = "Hết việc",
                             style = TextStyle(
-                                color = whiteProvider,
+                                color = WidgetColors.textProvider,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp
+                                fontSize = 13.sp
                             )
                         )
                     }
@@ -203,30 +269,36 @@ class NotionStackWidget : GlanceAppWidget() {
 
             Spacer(modifier = GlanceModifier.width(10.dp))
 
-            // RIGHT COLUMN (~55%): Notion-style Checklist + Camera Shortcut
             Column(
                 modifier = GlanceModifier
-                    .defaultWeight()
+                    .width(rightColumnWidth)
                     .fillMaxHeight()
             ) {
-                // Header
                 Row(
                     modifier = GlanceModifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "CHECKLIST TIẾP",
+                        text = "TIẾP THEO",
                         style = TextStyle(
-                            color = secondaryProvider,
+                            color = WidgetColors.textSecondaryProvider,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 10.sp
+                            fontSize = 12.sp
+                        )
+                    )
+                    Spacer(modifier = GlanceModifier.defaultWeight())
+                    Text(
+                        text = "$completedCount/$totalCount",
+                        style = TextStyle(
+                            color = WidgetColors.accentProvider,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
                         )
                     )
                 }
 
-                Spacer(modifier = GlanceModifier.height(4.dp))
+                Spacer(modifier = GlanceModifier.height(6.dp))
 
-                // Checklist Items (Up to 3)
                 if (nextTasks.isEmpty()) {
                     Box(
                         modifier = GlanceModifier
@@ -235,10 +307,10 @@ class NotionStackWidget : GlanceAppWidget() {
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = if (topTask == null) "Đã hoàn thành mọi việc!" else "Không có việc chờ tiếp theo",
+                            text = "Không có việc chờ tiếp theo",
                             style = TextStyle(
-                                color = secondaryProvider,
-                                fontSize = 11.sp
+                                color = WidgetColors.textMutedProvider,
+                                fontSize = 12.sp
                             )
                         )
                     }
@@ -249,28 +321,47 @@ class NotionStackWidget : GlanceAppWidget() {
                             .defaultWeight()
                     ) {
                         nextTasks.forEach { item ->
+                            val itemHighPriority = runCatching {
+                                TaskPriority.valueOf(item.priority) == TaskPriority.HIGH
+                            }.getOrDefault(false)
+                            val itemOverdue = (item.reminderTime != null && item.reminderTime in 1 until now) ||
+                                DateTimeUtils.isOverdue(item.dueDate?.takeIf { it > 0L }, isCompleted = false, nowMillis = now)
+
                             Row(
                                 modifier = GlanceModifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 2.dp),
+                                    .padding(vertical = 3.dp)
+                                    .clickable(
+                                        actionRunCallback<CompleteTaskActionCallback>(
+                                            actionParametersOf(taskIdParam to item.id)
+                                        )
+                                    ),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = "- ",
-                                    style = TextStyle(
-                                        color = accentProvider,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 11.sp
-                                    )
+                                Image(
+                                    provider = ImageProvider(R.drawable.widget_checkbox_empty),
+                                    contentDescription = "Chọn hoàn thành",
+                                    modifier = GlanceModifier.size(20.dp)
                                 )
+                                Spacer(modifier = GlanceModifier.width(8.dp))
+                                if (itemHighPriority || itemOverdue) {
+                                    Box(
+                                        modifier = GlanceModifier
+                                            .size(6.dp)
+                                            .cornerRadius(3.dp)
+                                            .background(WidgetColors.urgentProvider)
+                                    ) {}
+                                    Spacer(modifier = GlanceModifier.width(5.dp))
+                                }
                                 Text(
                                     text = item.title,
                                     style = TextStyle(
-                                        color = whiteProvider,
-                                        fontWeight = FontWeight.Normal,
-                                        fontSize = 11.sp
+                                        color = WidgetColors.textProvider,
+                                        fontWeight = FontWeight.Medium,
+                                        fontSize = 13.sp
                                     ),
-                                    maxLines = 1
+                                    maxLines = 1,
+                                    modifier = GlanceModifier.defaultWeight()
                                 )
                             }
                         }
@@ -279,11 +370,17 @@ class NotionStackWidget : GlanceAppWidget() {
 
                 Spacer(modifier = GlanceModifier.height(4.dp))
 
-                // Quick Add Photo Button
                 Button(
-                    text = "Chụp việc mới",
+                    text = "+ Chụp việc mới",
                     onClick = actionStartActivity<MainActivity>(),
-                    modifier = GlanceModifier.fillMaxWidth()
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = WidgetColors.accentProvider,
+                        contentColor = WidgetColors.onAccentProvider
+                    ),
+                    modifier = GlanceModifier
+                        .fillMaxWidth()
+                        .height(36.dp)
+                        .cornerRadius(12.dp)
                 )
             }
         }

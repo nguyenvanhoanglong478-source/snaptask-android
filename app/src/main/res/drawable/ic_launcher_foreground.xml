@@ -1,31 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- 4 Viewfinder Brackets in Safe Zone (33..75) -->
     <path
-        android:strokeColor="#F8FAFC"
-        android:strokeWidth="3.5"
+        android:strokeColor="#D4FF3A"
+        android:strokeWidth="4.7"
+        android:strokeLineCap="round"
+        android:pathData="M54,34.3 A19.7,19.7 0 1,1 53.99,34.3" />
+
+    <path
+        android:fillColor="#D4FF3A"
+        android:pathData="M54,41.3 A12.7,12.7 0 1,1 53.99,41.3 Z" />
+
+    <path
+        android:strokeColor="#10120A"
+        android:strokeWidth="4.3"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M33,45 L33,37 A4,4 0 0 1 37,33 L45,33 M63,33 L71,33 A4,4 0 0 1 75,37 L75,45 M75,63 L75,71 A4,4 0 0 1 71,75 L63,75 M45,75 L37,75 A4,4 0 0 1 33,71 L33,63" />
-
-    <!-- Center Camera Lens Ring (Electric Indigo) -->
-    <path
-        android:strokeColor="#6366F1"
-        android:strokeWidth="3.2"
-        android:strokeLineCap="round"
-        android:fillColor="#00000000"
-        android:pathData="M54,40 A14,14 0 1 1 53.99,40" />
-
-    <!-- Center Task Checkmark (Emerald Mint) -->
-    <path
-        android:strokeColor="#10B981"
-        android:strokeWidth="3.8"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M46,54.5 L51.5,60 L63,47.5" />
+        android:pathData="M48,54.7 L52.3,59 L60.3,49.3" />
 
 </vector>

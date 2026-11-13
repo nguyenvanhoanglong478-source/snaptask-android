@@ -6,5 +6,4 @@
     <string name="widget_locket_focus_desc">Hiển thị ảnh Locket của task đang ghim, hoàn thành hoặc chuyển task ngay trên màn hình chính.</string>
     <string name="widget_notion_stack_name">SnapTask - Notion Stack (4x2)</string>
     <string name="widget_notion_stack_desc">Bảng tiến độ trực quan: ảnh task ưu tiên kèm danh sách checklist 3 việc tiếp theo.</string>
-    <string name="camera_permission_required">SnapTask cần quyền truy cập máy ảnh để chụp nhanh việc cần làm.</string>
 </resources>

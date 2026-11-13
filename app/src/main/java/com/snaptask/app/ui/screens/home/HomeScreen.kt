@@ -1,11 +1,8 @@
 package com.snaptask.app.ui.screens.home
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,963 +13,961 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Alarm
-import androidx.compose.material.icons.filled.AllInclusive
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.EditNote
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.GridOn
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.filled.Sort
-import androidx.compose.material.icons.filled.ViewAgenda
-import androidx.compose.material.icons.outlined.Circle
-import androidx.compose.material.icons.outlined.PushPin
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.snaptask.app.data.preferences.CustomFolder
+import com.snaptask.app.data.preferences.RepeatCadence
 import com.snaptask.app.domain.model.Task
 import com.snaptask.app.domain.model.TaskPriority
-import com.snaptask.app.ui.components.SnapTaskLogo
+import com.snaptask.app.ui.components.DockTab
+import com.snaptask.app.ui.components.FloatingBottomDock
+import com.snaptask.app.ui.components.RoundIconButton
+import com.snaptask.app.ui.components.SnapDateHelper
 import com.snaptask.app.ui.screens.home.components.CompletionProofBottomSheet
-import com.snaptask.app.ui.screens.home.components.FlipTaskCard3D
 import com.snaptask.app.ui.screens.home.components.QuickNoteBottomSheet
-import com.snaptask.app.ui.theme.AccentPrimary
-import com.snaptask.app.ui.theme.AccentSecondary
-import com.snaptask.app.ui.theme.AuroraDockGradient
-import com.snaptask.app.ui.theme.AuroraGradient
-import com.snaptask.app.ui.theme.BgElevated
-import com.snaptask.app.ui.theme.BgPrimary
-import com.snaptask.app.ui.theme.BgSurface
-import com.snaptask.app.ui.theme.BorderHighlight
-import com.snaptask.app.ui.theme.BorderSubtle
-import com.snaptask.app.ui.theme.CardBottomScrim
 import com.snaptask.app.ui.theme.SnapTaskIcons
-import com.snaptask.app.ui.theme.StatusAmber
-import com.snaptask.app.ui.theme.StatusSuccess
-import com.snaptask.app.ui.theme.StatusUrgent
-import com.snaptask.app.ui.theme.TextMuted
-import com.snaptask.app.ui.theme.TextPrimary
-import com.snaptask.app.ui.theme.TextSecondary
+import com.snaptask.app.ui.theme.snapColors
+import com.snaptask.app.util.DateTimeUtils
+import com.snaptask.app.util.FileUtils
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
-enum class ViewMode {
-    BENTO_GRID,
-    FEED_FULL
-}
+private data class FeedFilterChip(
+    val key: String,
+    val label: String,
+    val folderColorHex: Long? = null,
+    val folderIconKey: String? = null
+)
 
-enum class SmartFolderType {
-    ALL,
-    SCHEDULED,
-    GALLERY,
-    PINNED
-}
-
-enum class SortOption(val displayName: String) {
-    NEWEST("Mới nhất"),
-    HIGH_PRIORITY("Ưu tiên cao"),
-    UPCOMING("Sắp đến giờ"),
-    UNCOMPLETED("Chưa xong")
-}
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     tasks: List<Task>,
-    onOpenLiveCamera: () -> Unit,
+    isLoading: Boolean,
+    folders: List<CustomFolder>,
+    smartUrgentEnabled: Boolean,
+    smartProofEnabled: Boolean,
+    repeatByTaskId: Map<Long, RepeatCadence>,
+    isDarkTheme: Boolean,
+    onToggleTheme: () -> Unit,
+    onOpenCamera: () -> Unit,
     onOpenProofCamera: (Task) -> Unit,
     onQuickComplete: (Task) -> Unit,
     onToggleTaskStatus: (Task) -> Unit,
-    onTogglePin: (Task) -> Unit,
     onTaskClick: (Task) -> Unit,
-    onSaveQuickNote: (Task) -> Unit = {},
+    onSaveQuickNote: (Task) -> Unit,
+    onOpenCalendar: (Long) -> Unit,
+    onOpenRecap: () -> Unit,
+    onOpenFolders: () -> Unit,
+    onSelectDockTab: (DockTab) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = MaterialTheme.snapColors
+    val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
-    var viewMode by remember { mutableStateOf(ViewMode.FEED_FULL) }
-    var selectedSmartFolder by remember { mutableStateOf<SmartFolderType?>(SmartFolderType.ALL) }
-    var selectedCustomFolder by remember { mutableStateOf<String?>(null) }
-    var sortOption by remember { mutableStateOf(SortOption.NEWEST) }
-    var showSortMenu by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val now = System.currentTimeMillis()
+    val todayKey = remember(now / 60_000L) { SnapDateHelper.dayKey(now) }
 
-    var searchQuery by remember { mutableStateOf("") }
-    var isSearchActive by remember { mutableStateOf(false) }
-
-    var pendingCompleteTask by remember { mutableStateOf<Task?>(null) }
-    var flippedMap by remember { mutableStateOf(mapOf<Long, Boolean>()) }
-
-    var showQuickNoteSheet by remember { mutableStateOf(false) }
-    var showNewFolderDialog by remember { mutableStateOf(false) }
-    var newFolderNameInput by remember { mutableStateOf("") }
-    var customFoldersList by remember { mutableStateOf(listOf("Cá nhân", "Công việc", "Học tập", "Mua sắm")) }
-
-    // Aggregate custom folders with existing tasks
-    val allFolders = remember(tasks, customFoldersList) {
-        val taskFolders = tasks.map { it.folderName }.filter { it.isNotBlank() }
-        (customFoldersList + taskFolders).distinct()
+    val storageUsed by produceState(initialValue = "", key1 = tasks) {
+        value = withContext(Dispatchers.IO) {
+            runCatching { FileUtils.getStorageUsedFormatted(context) }.getOrDefault("")
+        }
     }
 
-    val handleCheckboxClick: (Task) -> Unit = { task ->
+    var activeFilter by rememberSaveable { mutableStateOf("all") }
+    var proofTargetTask by remember { mutableStateOf<Task?>(null) }
+    var showQuickNoteSheet by rememberSaveable { mutableStateOf(false) }
+
+    var stampedTaskId by remember { mutableLongStateOf(-1L) }
+    val stampScale = remember { Animatable(0f) }
+
+    val folderByName = remember(folders) {
+        folders.associateBy { it.name.lowercase(Locale.getDefault()) }
+    }
+
+    val openTasks = remember(tasks, now / 30_000L) {
+        tasks.filter { !it.isCompleted }.sortedWith(
+            compareByDescending<Task> {
+                (it.reminderTime != null && it.reminderTime < now) ||
+                    DateTimeUtils.isOverdue(it.dueDate?.takeIf { d -> d > 0L }, it.isCompleted, now)
+            }
+                .thenByDescending { it.priorityEnum == TaskPriority.HIGH }
+                .thenBy { it.dueDate?.takeIf { d -> d > 0L } ?: it.reminderTime ?: Long.MAX_VALUE }
+                .thenBy { it.reminderTime ?: Long.MAX_VALUE }
+                .thenByDescending { it.createdAt }
+        )
+    }
+    val completedTasks = remember(tasks) {
+        tasks.filter { it.isCompleted }.sortedByDescending { it.completedAt ?: it.createdAt }
+    }
+    val urgentTasks = remember(openTasks, now / 30_000L) {
+        openTasks.filter {
+            it.priorityEnum == TaskPriority.HIGH ||
+                (it.reminderTime != null && it.reminderTime < now) ||
+                DateTimeUtils.isOverdue(it.dueDate?.takeIf { d -> d > 0L }, it.isCompleted, now)
+        }
+    }
+    val proofTasks = remember(completedTasks) {
+        completedTasks.filter { it.hasProof }
+    }
+    val completedToday = remember(completedTasks, todayKey) {
+        completedTasks.filter {
+            SnapDateHelper.dayKey(it.completedAt ?: it.createdAt) == todayKey
+        }
+    }
+
+    val filterChips = remember(
+        openTasks.size,
+        completedTasks.size,
+        urgentTasks.size,
+        proofTasks.size,
+        smartUrgentEnabled,
+        smartProofEnabled,
+        folders
+    ) {
+        buildList {
+            add(FeedFilterChip("all", "Cần làm · ${openTasks.size}"))
+            add(FeedFilterChip("done", "Đã xong · ${completedTasks.size}"))
+            if (smartUrgentEnabled) {
+                add(FeedFilterChip("urgent", "Gấp & Trễ · ${urgentTasks.size}"))
+            }
+            if (smartProofEnabled) {
+                add(FeedFilterChip("proof", "Trước / Sau · ${proofTasks.size}"))
+            }
+            folders.forEach { f ->
+                val folderOpen = openTasks.count { it.folderName.equals(f.name, ignoreCase = true) }
+                val label = if (folderOpen > 0) "${f.name} · $folderOpen" else f.name
+                add(
+                    FeedFilterChip(
+                        key = "folder:${f.name}",
+                        label = label,
+                        folderColorHex = f.colorHex,
+                        folderIconKey = f.iconKey
+                    )
+                )
+            }
+        }
+    }
+
+    val effectiveFilter = remember(activeFilter, filterChips) {
+        if (filterChips.any { it.key == activeFilter }) activeFilter else "all"
+    }
+
+    val visibleOpenTasks = remember(effectiveFilter, openTasks, urgentTasks) {
+        when {
+            effectiveFilter == "all" -> openTasks
+            effectiveFilter == "urgent" -> urgentTasks
+            effectiveFilter == "done" || effectiveFilter == "proof" -> emptyList()
+            effectiveFilter.startsWith("folder:") -> {
+                val targetFolder = effectiveFilter.removePrefix("folder:")
+                openTasks.filter { it.folderName.equals(targetFolder, ignoreCase = true) }
+            }
+            else -> openTasks
+        }
+    }
+
+    val visibleCompletedGrid = remember(effectiveFilter, completedToday, completedTasks, proofTasks) {
+        when {
+            effectiveFilter == "all" -> completedToday
+            effectiveFilter == "done" -> completedTasks
+            effectiveFilter == "proof" -> proofTasks
+            effectiveFilter.startsWith("folder:") -> {
+                val targetFolder = effectiveFilter.removePrefix("folder:")
+                completedTasks.filter { it.folderName.equals(targetFolder, ignoreCase = true) }
+            }
+            else -> emptyList()
+        }
+    }
+
+    val completedSectionTitle = remember(effectiveFilter, visibleCompletedGrid.size) {
+        when {
+            effectiveFilter == "done" -> "TẤT CẢ ĐÃ XONG · ${visibleCompletedGrid.size}"
+            effectiveFilter == "proof" -> "BỘ SƯU TẬP TRƯỚC / SAU · ${visibleCompletedGrid.size}"
+            effectiveFilter.startsWith("folder:") -> "ĐÃ XONG TRONG THƯ MỤC · ${visibleCompletedGrid.size}"
+            else -> "ĐÃ XONG HÔM NAY · ${visibleCompletedGrid.size}"
+        }
+    }
+
+    fun triggerDoneStamp(task: Task) {
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-        if (task.isCompleted) {
-            onToggleTaskStatus(task)
-        } else {
-            pendingCompleteTask = task
+        scope.launch {
+            stampedTaskId = task.id
+            stampScale.snapTo(0.45f)
+            stampScale.animateTo(
+                targetValue = 1f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                )
+            )
+            delay(220)
+            stampedTaskId = -1L
+            if (task.hasImage) {
+                proofTargetTask = task
+            } else {
+                onQuickComplete(task)
+            }
         }
     }
 
-    // Filter & Sort pipeline
-    val processedTasks = remember(tasks, selectedSmartFolder, selectedCustomFolder, searchQuery, sortOption) {
-        var list = tasks
-
-        // 1. Filter by Smart Folder
-        list = when (selectedSmartFolder) {
-            SmartFolderType.SCHEDULED -> list.filter { it.hasReminder }
-            SmartFolderType.GALLERY -> list.filter { it.hasImage }
-            SmartFolderType.PINNED -> list.filter { it.isPinnedToWidget }
-            SmartFolderType.ALL, null -> list
-        }
-
-        // 2. Filter by Custom Folder
-        if (selectedCustomFolder != null) {
-            list = list.filter { it.folderName.equals(selectedCustomFolder, ignoreCase = true) }
-        }
-
-        // 3. Filter by Search Query
-        if (searchQuery.isNotBlank()) {
-            list = list.filter {
-                it.title.contains(searchQuery, ignoreCase = true) ||
-                    it.description.contains(searchQuery, ignoreCase = true) ||
-                    it.folderName.contains(searchQuery, ignoreCase = true)
-            }
-        }
-
-        // 4. Sort
-        when (sortOption) {
-            SortOption.NEWEST -> list.sortedByDescending { it.createdAt }
-            SortOption.HIGH_PRIORITY -> list.sortedWith(
-                compareByDescending<Task> { it.priority == TaskPriority.HIGH.name }
-                    .thenByDescending { it.priority == TaskPriority.MEDIUM.name }
-                    .thenByDescending { it.createdAt }
-            )
-            SortOption.UPCOMING -> list.sortedWith(
-                compareBy<Task> { it.reminderTime ?: Long.MAX_VALUE }
-                    .thenByDescending { it.createdAt }
-            )
-            SortOption.UNCOMPLETED -> list.sortedWith(
-                compareBy<Task> { it.isCompleted }
-                    .thenByDescending { it.createdAt }
-            )
-        }
-    }
-
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        containerColor = BgPrimary,
-        topBar = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp, start = 18.dp, end = 18.dp, bottom = 6.dp)
-            ) {
-                // Header Bar: App Name + View Switcher + Search + Sort
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        SnapTaskLogo(size = 28.dp)
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "SnapTask",
-                                    color = TextPrimary,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 22.sp,
-                                    letterSpacing = (-0.5).sp
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(AccentPrimary.copy(alpha = 0.2f))
-                                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                                ) {
-                                    Text(
-                                        text = "3.0",
-                                        color = AccentPrimary,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                            Text(
-                                text = "${tasks.count { !it.isCompleted }} việc cần làm • ${tasks.size} tổng",
-                                color = TextSecondary,
-                                fontSize = 11.sp
-                            )
-                        }
-                    }
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        // 1. Search Button (42x42 square)
-                        Box(
-                            modifier = Modifier
-                                .size(42.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFF15171E))
-                                .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
-                                .clickable { isSearchActive = !isSearchActive },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = SnapTaskIcons.Search,
-                                contentDescription = "Tìm kiếm",
-                                tint = if (isSearchActive) AccentPrimary else TextPrimary,
-                                modifier = Modifier.size(19.dp)
-                            )
-                        }
-
-                        // 2. View Mode Switcher Button (42x42 square, Icon-Only)
-                        Box(
-                            modifier = Modifier
-                                .size(42.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFF15171E))
-                                .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
-                                .clickable {
-                                    viewMode = if (viewMode == ViewMode.BENTO_GRID) ViewMode.FEED_FULL else ViewMode.BENTO_GRID
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = if (viewMode == ViewMode.BENTO_GRID) SnapTaskIcons.ListFeed else SnapTaskIcons.GridBento,
-                                contentDescription = "Chuyển chế độ xem",
-                                tint = AccentPrimary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-
-                        // 3. Sort Button (42x42 square)
-                        Box {
-                            Box(
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(Color(0xFF15171E))
-                                    .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
-                                    .clickable { showSortMenu = true },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = SnapTaskIcons.Sort,
-                                    contentDescription = "Sắp xếp",
-                                    tint = TextPrimary,
-                                    modifier = Modifier.size(19.dp)
-                                )
-                            }
-
-                            DropdownMenu(
-                                expanded = showSortMenu,
-                                onDismissRequest = { showSortMenu = false },
-                                modifier = Modifier
-                                    .background(BgSurface)
-                                    .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
-                            ) {
-                                SortOption.entries.forEach { opt ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                text = opt.displayName,
-                                                color = if (sortOption == opt) AccentPrimary else TextPrimary,
-                                                fontWeight = if (sortOption == opt) FontWeight.Bold else FontWeight.Normal
-                                            )
-                                        },
-                                        onClick = {
-                                            sortOption = opt
-                                            showSortMenu = false
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    ) { innerPadding ->
-        Box(
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(colors.bg)
+    ) {
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .statusBarsPadding(),
+            contentPadding = PaddingValues(bottom = 136.dp)
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                // Search Input Box
-                AnimatedVisibility(
-                    visible = isSearchActive,
-                    enter = fadeIn() + expandVertically(),
-                    exit = fadeOut() + shrinkVertically()
-                ) {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        placeholder = { Text("Tìm theo tên, ghi chú, thư mục...", color = TextMuted) },
+            item(key = "header") {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 18.dp, vertical = 6.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary,
-                            focusedContainerColor = BgSurface,
-                            unfocusedContainerColor = BgSurface,
-                            focusedBorderColor = AccentPrimary,
-                            unfocusedBorderColor = BorderSubtle
-                        ),
-                        singleLine = true,
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { searchQuery = "" }) {
-                                    Icon(Icons.Filled.Close, contentDescription = "Xoá", tint = TextSecondary, modifier = Modifier.size(16.dp))
+                            .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable(role = Role.Button) { onOpenCalendar(now) }
+                                    .padding(vertical = 4.dp, horizontal = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = SnapDateHelper.formatVietnameseDate(now),
+                                    color = colors.textSecondary,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Icon(
+                                    imageVector = SnapTaskIcons.ChevronRight,
+                                    contentDescription = "Mở lịch tháng",
+                                    tint = colors.textSecondary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            Text(
+                                text = "Hôm nay",
+                                color = colors.text,
+                                fontSize = 32.sp,
+                                lineHeight = 36.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = (-0.8).sp
+                            )
+                        }
+
+                        Column(
+                            horizontalAlignment = Alignment.End,
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RoundIconButton(
+                                    icon = if (isDarkTheme) SnapTaskIcons.Sun else SnapTaskIcons.Moon,
+                                    contentDescription = if (isDarkTheme) "Chuyển giao diện sáng" else "Chuyển giao diện tối",
+                                    onClick = onToggleTheme
+                                )
+                                RoundIconButton(
+                                    icon = SnapTaskIcons.Flame,
+                                    contentDescription = "Nhìn lại tuần",
+                                    onClick = onOpenRecap
+                                )
+                            }
+
+                            if (storageUsed.isNotBlank()) {
+                                Row(
+                                    modifier = Modifier
+                                        .height(22.dp)
+                                        .clip(CircleShape)
+                                        .background(colors.elevated)
+                                        .border(1.dp, colors.border, CircleShape)
+                                        .padding(horizontal = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = SnapTaskIcons.Camera,
+                                        contentDescription = "Dung lượng ảnh",
+                                        tint = colors.textMuted,
+                                        modifier = Modifier.size(11.dp)
+                                    )
+                                    Text(
+                                        text = storageUsed,
+                                        color = colors.textMuted,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1
+                                    )
                                 }
                             }
                         }
-                    )
-                }
-
-                // 1. Smart Folders Bento Row (2x2 Grid / Quick Segmented Row)
-                SmartFoldersSection(
-                    tasks = tasks,
-                    selectedFolder = selectedSmartFolder,
-                    onSelectFolder = { selected ->
-                        selectedSmartFolder = if (selectedSmartFolder == selected) null else selected
                     }
-                )
 
-                // 2. Custom Folders Row + "+ Thư mục"
-                CustomFoldersRow(
-                    folders = allFolders,
-                    selectedFolder = selectedCustomFolder,
-                    tasks = tasks,
-                    onSelectFolder = { folder ->
-                        selectedCustomFolder = if (selectedCustomFolder == folder) null else folder
-                    },
-                    onAddNewFolder = { showNewFolderDialog = true }
-                )
+                    WeekStripRow(
+                        tasks = tasks,
+                        todayKey = todayKey,
+                        onSelectDay = onOpenCalendar
+                    )
 
-                // 3. Feed Content
-                if (processedTasks.isEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(filterChips, key = { it.key }) { chip ->
+                            val selected = chip.key == effectiveFilter
+                            Box(
+                                modifier = Modifier
+                                    .widthIn(min = 104.dp)
+                                    .height(38.dp)
+                                    .clip(CircleShape)
+                                    .background(if (selected) colors.text else colors.elevated)
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (selected) colors.text else colors.border,
+                                        shape = CircleShape
+                                    )
+                                    .clickable(role = Role.Tab) { activeFilter = chip.key }
+                                    .padding(horizontal = 14.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    if (chip.folderColorHex != null) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(8.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(chip.folderColorHex))
+                                        )
+                                    }
+                                    if (chip.folderIconKey != null) {
+                                        Icon(
+                                            imageVector = SnapTaskIcons.folderIconByKey(chip.folderIconKey),
+                                            contentDescription = null,
+                                            tint = if (selected) colors.bg else colors.text,
+                                            modifier = Modifier.size(15.dp)
+                                        )
+                                    }
+                                    Text(
+                                        text = chip.label,
+                                        color = if (selected) colors.bg else colors.text,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+                }
+            }
+
+            if (isLoading) {
+                item(key = "loading_state") {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(1f)
-                            .padding(24.dp),
+                            .padding(horizontal = 16.dp, vertical = 24.dp)
+                            .clip(RoundedCornerShape(28.dp))
+                            .background(colors.surface)
+                            .border(1.dp, colors.border, RoundedCornerShape(28.dp))
+                            .padding(vertical = 44.dp, horizontal = 24.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Box(
-                                modifier = Modifier
-                                    .size(60.dp)
-                                    .background(BgSurface, CircleShape)
-                                    .border(1.dp, BorderSubtle, CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(Icons.Filled.CameraAlt, contentDescription = null, tint = AccentPrimary, modifier = Modifier.size(28.dp))
-                            }
-                            Spacer(modifier = Modifier.height(14.dp))
-                            Text(text = "Chưa có nhiệm vụ nào", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            Spacer(modifier = Modifier.height(4.dp))
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            CircularProgressIndicator(
+                                color = colors.hm4,
+                                strokeWidth = 3.dp,
+                                modifier = Modifier.size(32.dp)
+                            )
                             Text(
-                                text = "Bấm nút Camera để chụp task hoặc Ghi chú nhanh bên dưới",
-                                color = TextSecondary,
-                                fontSize = 12.sp,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                text = "Đang tải danh sách việc…",
+                                color = colors.textSecondary,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
                     }
-                } else {
-                    Crossfade(
-                        targetState = viewMode,
-                        label = "ViewModeCrossfade",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                    ) { mode ->
-                        when (mode) {
-                            ViewMode.BENTO_GRID -> {
-                                LazyVerticalGrid(
-                                    columns = GridCells.Fixed(2),
-                                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 100.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                                    modifier = Modifier.fillMaxSize()
-                                ) {
-                                    items(processedTasks, key = { it.id }) { task ->
-                                        BentoTaskCard(
-                                            task = task,
-                                            onToggleStatus = { handleCheckboxClick(task) },
-                                            onTogglePin = { onTogglePin(task) },
-                                            onClick = { onTaskClick(task) }
-                                        )
-                                    }
-                                }
+                }
+            } else if (visibleOpenTasks.isEmpty() && visibleCompletedGrid.isEmpty()) {
+                item(key = "empty_state") {
+                    FeedEmptyCard(
+                        isFirstRun = tasks.isEmpty(),
+                        filterKey = effectiveFilter,
+                        onClearFilter = { activeFilter = "all" },
+                        onOpenCamera = onOpenCamera,
+                        onOpenQuickNote = { showQuickNoteSheet = true }
+                    )
+                }
+            } else {
+                items(visibleOpenTasks, key = { "open_${it.id}" }) { task ->
+                    val folderMatch = folderByName[task.folderName.lowercase(Locale.getDefault())]
+                    val cadence = repeatByTaskId[task.id] ?: RepeatCadence.fromKeyOrTag(task.tag)
+                    Box(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                        if (task.hasImage) {
+                            PhotoFeedTaskCard(
+                                task = task,
+                                folder = folderMatch,
+                                repeatCadence = cadence,
+                                nowMillis = now,
+                                isStamped = stampedTaskId == task.id,
+                                stampScale = if (stampedTaskId == task.id) stampScale.value else 0f,
+                                onCardClick = { onTaskClick(task) },
+                                onCompleteClick = { triggerDoneStamp(task) }
+                            )
+                        } else {
+                            QuickNoteFeedCard(
+                                task = task,
+                                folder = folderMatch,
+                                nowMillis = now,
+                                onCardClick = { onTaskClick(task) },
+                                onFolderClick = onOpenFolders,
+                                onCompleteClick = { triggerDoneStamp(task) }
+                            )
+                        }
+                    }
+                }
+
+                if (visibleCompletedGrid.isNotEmpty()) {
+                    item(key = "completed_header") {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 10.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = completedSectionTitle,
+                                color = colors.textMuted,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = 0.6.sp
+                            )
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable(role = Role.Button, onClick = onOpenRecap)
+                                    .padding(horizontal = 6.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Text(
+                                    text = "Nhìn lại tuần",
+                                    color = colors.text,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Icon(
+                                    imageVector = SnapTaskIcons.ChevronRight,
+                                    contentDescription = null,
+                                    tint = colors.text,
+                                    modifier = Modifier.size(15.dp)
+                                )
                             }
-                            ViewMode.FEED_FULL -> {
-                                LazyColumn(
-                                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 100.dp),
-                                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                                    modifier = Modifier.fillMaxSize()
-                                ) {
-                                    items(processedTasks, key = { it.id }) { task ->
-                                        val isFlipped = flippedMap[task.id] ?: false
-                                        FlipTaskCard3D(
-                                            task = task,
-                                            isFlipped = isFlipped,
-                                            onToggleFlip = {
-                                                flippedMap = flippedMap + (task.id to !isFlipped)
-                                            },
-                                            onToggleStatus = { handleCheckboxClick(task) },
-                                            onTogglePin = { onTogglePin(task) },
-                                            onClick = { onTaskClick(task) }
-                                        )
-                                    }
-                                }
+                        }
+                    }
+
+                    val rows = visibleCompletedGrid.chunked(2)
+                    items(rows, key = { row -> "done_row_${row.first().id}" }) { rowTasks ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 5.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            CompletedBentoTile(
+                                task = rowTasks[0],
+                                onClick = { onTaskClick(rowTasks[0]) },
+                                onReopen = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onToggleTaskStatus(rowTasks[0])
+                                },
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (rowTasks.size > 1) {
+                                CompletedBentoTile(
+                                    task = rowTasks[1],
+                                    onClick = { onTaskClick(rowTasks[1]) },
+                                    onReopen = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        onToggleTaskStatus(rowTasks[1])
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            } else {
+                                Spacer(modifier = Modifier.weight(1f))
                             }
                         }
                     }
                 }
             }
-
-            // 4. FLOATING GLASS DOCK (Bottom Center Pill)
-            FloatingGlassDock(
-                onOpenLiveCamera = onOpenLiveCamera,
-                onOpenQuickNote = { showQuickNoteSheet = true },
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 20.dp)
-            )
         }
 
-        // Completion Proof Bottom Sheet (when uncompleted task checkbox is tapped)
-        pendingCompleteTask?.let { task ->
-            CompletionProofBottomSheet(
-                task = task,
-                onDismissRequest = { pendingCompleteTask = null },
-                onCaptureProof = {
-                    val target = task
-                    pendingCompleteTask = null
-                    onOpenProofCamera(target)
-                },
-                onQuickComplete = {
-                    val target = task
-                    pendingCompleteTask = null
-                    onQuickComplete(target)
-                }
-            )
-        }
-
-        // Quick Note Bottom Sheet
-        if (showQuickNoteSheet) {
-            QuickNoteBottomSheet(
-                onDismissRequest = { showQuickNoteSheet = false },
-                onSave = { newTask ->
-                    showQuickNoteSheet = false
-                    onSaveQuickNote(newTask)
-                },
-                existingFolders = allFolders
-            )
-        }
-
-        // New Folder Dialog
-        if (showNewFolderDialog) {
-            AlertDialog(
-                onDismissRequest = { showNewFolderDialog = false },
-                containerColor = BgSurface,
-                title = {
-                    Text("Tạo thư mục mới", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                },
-                text = {
-                    OutlinedTextField(
-                        value = newFolderNameInput,
-                        onValueChange = { newFolderNameInput = it },
-                        placeholder = { Text("Tên thư mục (ví dụ: Gym, Dự án X)", color = TextMuted) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary,
-                            focusedContainerColor = BgElevated,
-                            unfocusedContainerColor = BgElevated,
-                            focusedBorderColor = AccentPrimary,
-                            unfocusedBorderColor = BorderSubtle
-                        ),
-                        singleLine = true
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .height(112.dp)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color.Transparent, colors.bg.copy(alpha = 0.94f), colors.bg)
                     )
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            if (newFolderNameInput.isNotBlank()) {
-                                customFoldersList = (customFoldersList + newFolderNameInput.trim()).distinct()
-                                selectedCustomFolder = newFolderNameInput.trim()
-                                newFolderNameInput = ""
-                                showNewFolderDialog = false
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Text("Tạo thư mục", color = Color.White, fontWeight = FontWeight.Bold)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showNewFolderDialog = false }) {
-                        Text("Huỷ", color = TextSecondary)
-                    }
-                }
-            )
-        }
+                )
+        )
+
+        FloatingBottomDock(
+            activeTab = DockTab.TODAY,
+            onSelectTab = onSelectDockTab,
+            onShutterClick = onOpenCamera,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(bottom = 12.dp)
+        )
+    }
+
+    val targetForProof = proofTargetTask
+    if (targetForProof != null) {
+        CompletionProofBottomSheet(
+            task = targetForProof,
+            onDismissRequest = { proofTargetTask = null },
+            onCaptureProof = {
+                val chosen = targetForProof
+                proofTargetTask = null
+                onOpenProofCamera(chosen)
+            },
+            onQuickComplete = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                val chosen = targetForProof
+                proofTargetTask = null
+                onQuickComplete(chosen)
+            }
+        )
+    }
+
+    if (showQuickNoteSheet) {
+        QuickNoteBottomSheet(
+            onDismissRequest = { showQuickNoteSheet = false },
+            onSave = { created ->
+                showQuickNoteSheet = false
+                onSaveQuickNote(created)
+            },
+            existingFolders = folders.map { it.name }
+        )
     }
 }
 
-/**
- * Smart Folders Bento Row: 4 key compartments
- */
 @Composable
-private fun SmartFoldersSection(
+private fun WeekStripRow(
     tasks: List<Task>,
-    selectedFolder: SmartFolderType?,
-    onSelectFolder: (SmartFolderType) -> Unit
+    todayKey: Long,
+    onSelectDay: (Long) -> Unit
 ) {
+    val colors = MaterialTheme.snapColors
+
+    val weekDays = remember(todayKey) {
+        val cal = Calendar.getInstance().apply { timeInMillis = todayKey }
+        val offsetFromMonday = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
+        cal.add(Calendar.DAY_OF_YEAR, -offsetFromMonday)
+        List(7) { idx ->
+            if (idx > 0) cal.add(Calendar.DAY_OF_YEAR, 1)
+            val key = SnapDateHelper.dayKey(cal.timeInMillis)
+            Triple(
+                key,
+                SnapDateHelper.vietnameseWeekdayShort(cal.get(Calendar.DAY_OF_WEEK)),
+                cal.get(Calendar.DAY_OF_MONTH)
+            )
+        }
+    }
+
+    val countsByDay = remember(tasks) {
+        tasks.groupBy { SnapDateHelper.dayKey(SnapDateHelper.taskAnchorMillis(it)) }
+            .mapValues { (_, list) -> list.size }
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 18.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        SmartFolderItem(
-            title = "Tất cả",
-            count = tasks.size,
-            icon = Icons.Filled.AllInclusive,
-            isSelected = selectedFolder == SmartFolderType.ALL,
-            onClick = { onSelectFolder(SmartFolderType.ALL) },
-            modifier = Modifier.weight(1f)
-        )
-        SmartFolderItem(
-            title = "Lên lịch",
-            count = tasks.count { it.hasReminder },
-            icon = Icons.Filled.Alarm,
-            isSelected = selectedFolder == SmartFolderType.SCHEDULED,
-            onClick = { onSelectFolder(SmartFolderType.SCHEDULED) },
-            modifier = Modifier.weight(1f)
-        )
-        SmartFolderItem(
-            title = "Kho ảnh",
-            count = tasks.count { it.hasImage },
-            icon = Icons.Filled.Image,
-            isSelected = selectedFolder == SmartFolderType.GALLERY,
-            onClick = { onSelectFolder(SmartFolderType.GALLERY) },
-            modifier = Modifier.weight(1f)
-        )
-        SmartFolderItem(
-            title = "Đã ghim",
-            count = tasks.count { it.isPinnedToWidget },
-            icon = Icons.Filled.PushPin,
-            isSelected = selectedFolder == SmartFolderType.PINNED,
-            onClick = { onSelectFolder(SmartFolderType.PINNED) },
-            modifier = Modifier.weight(1f)
-        )
-    }
-}
+        weekDays.forEach { (dayKeyMillis, wdShort, dayNum) ->
+            val isToday = dayKeyMillis == todayKey
+            val count = (countsByDay[dayKeyMillis] ?: 0).coerceAtMost(3)
 
-@Composable
-private fun SmartFolderItem(
-    title: String,
-    count: Int,
-    icon: ImageVector,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(if (isSelected) AccentPrimary.copy(alpha = 0.2f) else BgSurface)
-            .border(1.dp, if (isSelected) AccentPrimary else BorderSubtle, RoundedCornerShape(14.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 8.dp, vertical = 8.dp)
-    ) {
-        Column {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(68.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(if (isToday) colors.flash else Color.Transparent)
+                    .clickable(role = Role.Button) { onSelectDay(dayKeyMillis) }
+                    .padding(vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = if (isSelected) AccentPrimary else TextSecondary,
-                    modifier = Modifier.size(15.dp)
-                )
                 Text(
-                    text = count.toString(),
-                    color = if (isSelected) AccentPrimary else TextSecondary,
+                    text = wdShort,
+                    color = if (isToday) colors.onFlash else colors.textMuted,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold
                 )
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = title,
-                color = if (isSelected) TextPrimary else TextSecondary,
-                fontSize = 11.sp,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-    }
-}
-
-/**
- * Custom Folders Row with item counts and "+ Thư mục"
- */
-@Composable
-private fun CustomFoldersRow(
-    folders: List<String>,
-    selectedFolder: String?,
-    tasks: List<Task>,
-    onSelectFolder: (String) -> Unit,
-    onAddNewFolder: () -> Unit
-) {
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        items(folders) { folder ->
-            val isSelected = selectedFolder.equals(folder, ignoreCase = true)
-            val count = tasks.count { it.folderName.equals(folder, ignoreCase = true) }
-            Box(
-                modifier = Modifier
-                    .height(36.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(if (isSelected) AccentPrimary else BgElevated)
-                    .border(1.dp, if (isSelected) AccentPrimary else BorderSubtle, RoundedCornerShape(10.dp))
-                    .clickable { onSelectFolder(folder) }
-                    .padding(horizontal = 16.dp),
-                contentAlignment = Alignment.Center
-            ) {
                 Text(
-                    text = "$folder ($count)",
-                    color = if (isSelected) Color.White else TextSecondary,
-                    fontSize = 12.sp,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                    text = dayNum.toString(),
+                    color = if (isToday) colors.onFlash else colors.text,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.ExtraBold
                 )
-            }
-        }
-
-        item {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(BgElevated)
-                    .border(1.dp, BorderSubtle, RoundedCornerShape(10.dp))
-                    .clickable(onClick = onAddNewFolder),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = SnapTaskIcons.Plus,
-                    contentDescription = "Thêm thư mục",
-                    tint = AccentPrimary,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
-        }
-    }
-}
-
-/**
- * Floating Glass Dock at bottom center
- */
-@Composable
-private fun FloatingGlassDock(
-    onOpenLiveCamera: () -> Unit,
-    onOpenQuickNote: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .shadow(16.dp, RoundedCornerShape(32.dp))
-            .clip(RoundedCornerShape(32.dp))
-            .background(BgSurface.copy(alpha = 0.92f))
-            .border(1.dp, BorderHighlight, RoundedCornerShape(32.dp))
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Center Hero: Shutter Camera Capture Button (56dp circle with Aurora Gradient)
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .background(AuroraDockGradient)
-                    .border(2.5.dp, Color.White.copy(alpha = 0.8f), CircleShape)
-                    .clickable(onClick = onOpenLiveCamera),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.CameraAlt,
-                    contentDescription = "Chụp Task Mới",
-                    tint = Color.White,
-                    modifier = Modifier.size(26.dp)
-                )
-            }
-
-            // Quick Note Button
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(BgElevated)
-                    .clickable(onClick = onOpenQuickNote)
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.EditNote,
-                    contentDescription = "Ghi chú nhanh",
-                    tint = AccentPrimary,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "Ghi chú",
-                    color = TextPrimary,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-        }
-    }
-}
-
-/**
- * Bento Grid Card (Compact 2-Column Mode)
- */
-@Composable
-fun BentoTaskCard(
-    task: Task,
-    onToggleStatus: () -> Unit,
-    onTogglePin: () -> Unit,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val priorityColor = when (task.priorityEnum) {
-        TaskPriority.HIGH -> StatusUrgent
-        TaskPriority.MEDIUM -> StatusAmber
-        TaskPriority.LOW -> Color.Transparent
-    }
-
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = BgSurface),
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            if (task.isCompleted) StatusSuccess.copy(alpha = 0.35f) else BorderSubtle
-        )
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .background(BgElevated)
-        ) {
-            val photoFile = remember(task.beforeImageUri, task.afterImageUri, task.isCompleted) {
-                if (task.hasProof && !task.afterImageUri.isNullOrBlank() && File(task.afterImageUri).exists()) {
-                    File(task.afterImageUri)
-                } else if (task.hasImage) {
-                    File(task.beforeImageUri)
-                } else null
-            }
-
-            if (photoFile != null && photoFile.exists()) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(photoFile)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = task.title,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                // Text-only Bento layout
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(12.dp),
-                    verticalArrangement = Arrangement.SpaceBetween
+                Row(
+                    modifier = Modifier.height(6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .background(BgSurface, RoundedCornerShape(6.dp))
-                                    .border(1.dp, BorderSubtle, RoundedCornerShape(6.dp))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = task.folderName,
-                                    color = TextSecondary,
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                            if (task.priorityEnum == TaskPriority.HIGH || task.priorityEnum == TaskPriority.MEDIUM) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(6.dp)
-                                        .clip(CircleShape)
-                                        .background(priorityColor)
-                                )
-                            }
-                        }
-
+                    repeat(count) {
                         Box(
                             modifier = Modifier
-                                .size(30.dp)
+                                .size(5.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFF15171E))
-                                .border(1.dp, BorderSubtle, CircleShape)
-                                .clickable(onClick = onTogglePin),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = SnapTaskIcons.Pin,
-                                contentDescription = "Ghim",
-                                tint = if (task.isPinnedToWidget) AccentPrimary else TextSecondary,
-                                modifier = Modifier.size(14.dp)
-                            )
-                        }
-                    }
-
-                    Text(
-                        text = task.title,
-                        color = if (task.isCompleted) TextMuted else TextPrimary,
-                        textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(24.dp)
-                                .clickable(onClick = onToggleStatus),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = if (task.isCompleted) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
-                                contentDescription = "Trạng thái",
-                                tint = if (task.isCompleted) StatusSuccess else TextSecondary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-
-                        if (task.parsedSubtasks.isNotEmpty()) {
-                            Text(
-                                text = "${task.completedSubtasksCount}/${task.parsedSubtasks.size}",
-                                color = TextMuted,
-                                fontSize = 10.sp
-                            )
-                        }
+                                .background(if (isToday) colors.onFlash else colors.hm4)
+                        )
                     }
                 }
             }
+        }
+    }
+}
 
-            if (photoFile != null && photoFile.exists()) {
-                // Top Row: Tag badge + 6dp priority dot on Left, 30dp round Pin Button on Right
-                Row(
+@Composable
+private fun PhotoFeedTaskCard(
+    task: Task,
+    folder: CustomFolder?,
+    repeatCadence: RepeatCadence,
+    nowMillis: Long,
+    isStamped: Boolean,
+    stampScale: Float,
+    onCardClick: () -> Unit,
+    onCompleteClick: () -> Unit
+) {
+    val colors = MaterialTheme.snapColors
+    val context = LocalContext.current
+    val imageFile = remember(task.beforeImageUri) { File(task.beforeImageUri) }
+    val validReminder = task.reminderTime?.takeIf { it > 0L }
+    val validDue = task.dueDate?.takeIf { it > 0L }
+    val isReminderOverdue = validReminder != null && validReminder < nowMillis
+    val isDueOverdue = DateTimeUtils.isOverdue(validDue, task.isCompleted, nowMillis)
+    val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f)
+            .clip(RoundedCornerShape(36.dp))
+            .background(colors.surface)
+            .border(1.dp, colors.border, RoundedCornerShape(36.dp))
+            .clickable(onClick = onCardClick)
+    ) {
+        if (imageFile.exists()) {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(imageFile)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = task.title,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFF1A1A18)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Ảnh gốc không còn trên thiết bị",
+                    color = Color(0xFFB0AFA7),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        0.0f to Color(0x400A0A09),
+                        0.45f to Color.Transparent,
+                        1.0f to Color(0xD90A0A09)
+                    )
+                )
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 8.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                when {
+                    isReminderOverdue && validReminder != null -> {
+                        Box(
+                            modifier = Modifier
+                                .height(32.dp)
+                                .clip(CircleShape)
+                                .background(colors.urgent)
+                                .padding(horizontal = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Icon(
+                                    imageVector = SnapTaskIcons.Clock,
+                                    contentDescription = null,
+                                    tint = colors.onUrgent,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = "Trễ ${formatOverdueDuration(nowMillis - validReminder)}",
+                                    color = colors.onUrgent,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                    isDueOverdue && validDue != null -> {
+                        Box(
+                            modifier = Modifier
+                                .height(32.dp)
+                                .clip(CircleShape)
+                                .background(colors.urgent)
+                                .padding(horizontal = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Icon(
+                                    imageVector = SnapTaskIcons.Clock,
+                                    contentDescription = null,
+                                    tint = colors.onUrgent,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = "Quá hạn · ${DateTimeUtils.formatDueLabel(validDue, nowMillis)}",
+                                    color = colors.onUrgent,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                    validReminder != null -> {
+                        Box(
+                            modifier = Modifier
+                                .height(32.dp)
+                                .clip(CircleShape)
+                                .background(colors.bubble)
+                                .border(1.dp, Color(0x22FAFAF6), CircleShape)
+                                .padding(horizontal = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Icon(
+                                    imageVector = SnapTaskIcons.Clock,
+                                    contentDescription = null,
+                                    tint = Color(0xFFFAFAF6),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = timeFormat.format(Date(validReminder)),
+                                    color = Color(0xFFFAFAF6),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                    }
+                    validDue != null -> {
+                        Box(
+                            modifier = Modifier
+                                .height(32.dp)
+                                .clip(CircleShape)
+                                .background(colors.bubble)
+                                .border(1.dp, Color(0x22FAFAF6), CircleShape)
+                                .padding(horizontal = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Icon(
+                                    imageVector = SnapTaskIcons.Clock,
+                                    contentDescription = null,
+                                    tint = Color(0xFFFAFAF6),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = "Hạn ${DateTimeUtils.formatDueLabel(validDue, nowMillis)}",
+                                    color = Color(0xFFFAFAF6),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                    task.priorityEnum == TaskPriority.HIGH -> {
+                        Box(
+                            modifier = Modifier
+                                .height(32.dp)
+                                .clip(CircleShape)
+                                .background(colors.urgent)
+                                .padding(horizontal = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Gấp",
+                                color = colors.onUrgent,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    else -> Spacer(modifier = Modifier.width(4.dp))
+                }
+            }
+
+            if (repeatCadence != RepeatCadence.NONE) {
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .height(32.dp)
+                        .clip(CircleShape)
+                        .background(colors.bubble)
+                        .border(1.dp, Color(0x22FAFAF6), CircleShape)
+                        .padding(horizontal = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Icon(
+                            imageVector = SnapTaskIcons.Repeat,
+                            contentDescription = null,
+                            tint = Color(0xFFFAFAF6),
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Text(
+                            text = repeatCadence.badgeLabel,
+                            color = Color(0xFFFAFAF6),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .height(32.dp)
+                        .clip(CircleShape)
+                        .background(colors.bubble)
+                        .border(1.dp, Color(0x22FAFAF6), CircleShape)
+                        .padding(horizontal = 12.dp),
+                    contentAlignment = Alignment.Center
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -980,78 +975,559 @@ fun BentoTaskCard(
                     ) {
                         Box(
                             modifier = Modifier
-                                .background(if (task.hasProof) StatusSuccess else Color(0xCC000000), RoundedCornerShape(7.dp))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = if (task.hasProof) "AFTER" else task.folderName,
-                                color = if (task.hasProof) BgPrimary else Color.White,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                        if (task.priorityEnum == TaskPriority.HIGH || task.priorityEnum == TaskPriority.MEDIUM) {
-                            Box(
-                                modifier = Modifier
-                                    .size(6.dp)
-                                    .clip(CircleShape)
-                                    .background(priorityColor)
-                            )
-                        }
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .size(30.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF15171E).copy(alpha = 0.85f))
-                            .border(1.dp, BorderSubtle, CircleShape)
-                            .clickable(onClick = onTogglePin),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = SnapTaskIcons.Pin,
-                            contentDescription = "Ghim",
-                            tint = if (task.isPinnedToWidget) AccentPrimary else Color.White,
-                            modifier = Modifier.size(14.dp)
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(Color(folder?.colorHex ?: 0xFFD4FF3A))
+                        )
+                        Text(
+                            text = task.folderName,
+                            color = Color(0xFFFAFAF6),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
+            }
+        }
 
-                // Bottom Scrim Bar: 24dp Checkmark spaced 12dp from title
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.BottomCenter)
-                        .background(CardBottomScrim)
-                        .padding(horizontal = 8.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clickable(onClick = onToggleStatus),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = if (task.isCompleted) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
-                            contentDescription = "Hoàn thành",
-                            tint = if (task.isCompleted) StatusSuccess else TextPrimary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(colors.bubble)
+                    .border(1.dp, Color(0x1FFAFAF6), RoundedCornerShape(22.dp))
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(
                         text = task.title,
-                        color = if (task.isCompleted) TextMuted else TextPrimary,
-                        textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None,
+                        color = Color(0xFFFAFAF6),
+                        fontSize = 18.sp,
+                        lineHeight = 23.sp,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis
+                    )
+                    if (validDue != null && validReminder != null) {
+                        Text(
+                            text = "Hạn ${DateTimeUtils.formatDueLabel(validDue, nowMillis)}",
+                            color = if (isDueOverdue) colors.urgent else Color(0xFFB0AFA7),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(CircleShape)
+                    .background(colors.flash)
+                    .clickable(
+                        role = Role.Button,
+                        onClickLabel = "Đánh dấu hoàn thành",
+                        onClick = onCompleteClick
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = SnapTaskIcons.Check,
+                    contentDescription = "Hoàn thành",
+                    tint = colors.onFlash,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+
+        if (isStamped) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0x550A0A09)),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .graphicsLayer {
+                            scaleX = stampScale
+                            scaleY = stampScale
+                            rotationZ = -8f
+                        }
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(colors.flash)
+                        .border(4.dp, colors.onFlash, RoundedCornerShape(20.dp))
+                        .padding(horizontal = 24.dp, vertical = 10.dp)
+                ) {
+                    Text(
+                        text = "XONG!",
+                        color = colors.onFlash,
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 1.sp
                     )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun QuickNoteFeedCard(
+    task: Task,
+    folder: CustomFolder?,
+    nowMillis: Long,
+    onCardClick: () -> Unit,
+    onFolderClick: () -> Unit,
+    onCompleteClick: () -> Unit
+) {
+    val colors = MaterialTheme.snapColors
+    val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+    val validReminder = task.reminderTime?.takeIf { it > 0L }
+    val validDue = task.dueDate?.takeIf { it > 0L }
+    val isReminderOverdue = validReminder != null && validReminder < nowMillis
+    val isDueOverdue = DateTimeUtils.isOverdue(validDue, task.isCompleted, nowMillis)
+    val isOverdue = isReminderOverdue || isDueOverdue
+    val metaSuffix = when {
+        isReminderOverdue && validReminder != null -> " · Trễ ${formatOverdueDuration(nowMillis - validReminder)}"
+        isDueOverdue && validDue != null -> " · Quá hạn (${DateTimeUtils.formatDueLabel(validDue, nowMillis)})"
+        validReminder != null -> " · ${timeFormat.format(Date(validReminder))}"
+        validDue != null -> " · Hạn ${DateTimeUtils.formatDueLabel(validDue, nowMillis)}"
+        else -> ""
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(28.dp))
+            .background(colors.surface)
+            .border(1.dp, colors.border, RoundedCornerShape(28.dp))
+            .clickable(onClick = onCardClick)
+            .padding(20.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(
+                imageVector = SnapTaskIcons.TextAa,
+                contentDescription = null,
+                tint = if (isOverdue) colors.urgent else colors.textSecondary,
+                modifier = Modifier.size(16.dp)
+            )
+            Text(
+                text = "GHI CHÚ NHANH$metaSuffix",
+                color = if (isOverdue) colors.urgent else colors.textSecondary,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 0.5.sp
+            )
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Text(
+            text = task.title,
+            color = colors.text,
+            fontSize = 22.sp,
+            lineHeight = 28.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = (-0.4).sp
+        )
+
+        if (task.description.isNotBlank()) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = task.description,
+                color = colors.textSecondary,
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        if (validDue != null && validReminder != null) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "Hạn chót: ${DateTimeUtils.formatDueLabel(validDue, nowMillis)}",
+                color = if (isDueOverdue) colors.urgent else colors.textSecondary,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        val subs = task.parsedSubtasks
+        if (subs.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Đã xong ${subs.count { it.isDone }}/${subs.size} bước nhỏ",
+                color = colors.textSecondary,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .widthIn(min = 104.dp)
+                    .height(34.dp)
+                    .clip(CircleShape)
+                    .background(colors.elevated)
+                    .border(1.dp, colors.border, CircleShape)
+                    .clickable(role = Role.Button, onClick = onFolderClick)
+                    .padding(horizontal = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(Color(folder?.colorHex ?: 0xFFD4FF3A))
+                    )
+                    Text(
+                        text = task.folderName,
+                        color = colors.text,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(colors.elevated)
+                    .border(2.dp, colors.borderHighlight, CircleShape)
+                    .clickable(
+                        role = Role.Button,
+                        onClickLabel = "Hoàn thành ghi chú",
+                        onClick = onCompleteClick
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = SnapTaskIcons.Check,
+                    contentDescription = "Hoàn thành",
+                    tint = colors.text,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CompletedBentoTile(
+    task: Task,
+    onClick: () -> Unit,
+    onReopen: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = MaterialTheme.snapColors
+    val context = LocalContext.current
+    val beforeFile = remember(task.beforeImageUri) {
+        if (task.beforeImageUri.isNotBlank()) File(task.beforeImageUri) else null
+    }
+    val afterFile = remember(task.afterImageUri) {
+        if (!task.afterImageUri.isNullOrBlank()) File(task.afterImageUri) else null
+    }
+    val hasBefore = beforeFile != null && beforeFile.exists()
+    val hasAfter = afterFile != null && afterFile.exists()
+    val mins = SnapDateHelper.durationMinutes(task)
+
+    Box(
+        modifier = modifier
+            .aspectRatio(1f)
+            .clip(RoundedCornerShape(24.dp))
+            .background(colors.surface)
+            .border(1.dp, colors.border, RoundedCornerShape(24.dp))
+            .clickable(onClick = onClick)
+    ) {
+        if (hasBefore && hasAfter) {
+            Row(modifier = Modifier.fillMaxSize()) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context).data(beforeFile).crossfade(true).build(),
+                    contentDescription = "Trước",
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    contentScale = ContentScale.Crop
+                )
+                Box(
+                    modifier = Modifier
+                        .width(2.dp)
+                        .fillMaxHeight()
+                        .background(Color(0xFFFAFAF6))
+                )
+                AsyncImage(
+                    model = ImageRequest.Builder(context).data(afterFile).crossfade(true).build(),
+                    contentDescription = "Sau",
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    contentScale = ContentScale.Crop
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            0.45f to Color.Transparent,
+                            1.0f to Color(0xCC0A0A09)
+                        )
+                    )
+            )
+        } else if (hasBefore || hasAfter) {
+            val single = if (hasAfter) afterFile else beforeFile
+            AsyncImage(
+                model = ImageRequest.Builder(context).data(single).crossfade(true).build(),
+                contentDescription = task.title,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            0.45f to Color.Transparent,
+                            1.0f to Color(0xCC0A0A09)
+                        )
+                    )
+            )
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(14.dp),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = SnapTaskIcons.TextAa,
+                    contentDescription = null,
+                    tint = colors.textMuted,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = task.title,
+                    color = colors.text,
+                    fontSize = 14.sp,
+                    lineHeight = 19.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(10.dp)
+                .height(24.dp)
+                .clip(CircleShape)
+                .background(colors.flash)
+                .clickable(role = Role.Button, onClickLabel = "Mở lại việc", onClick = onReopen)
+                .padding(horizontal = 9.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "$mins phút",
+                color = colors.onFlash,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.ExtraBold
+            )
+        }
+
+        if (hasBefore || hasAfter) {
+            Text(
+                text = task.title,
+                color = Color(0xFFFAFAF6),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun FeedEmptyCard(
+    isFirstRun: Boolean,
+    filterKey: String,
+    onClearFilter: () -> Unit,
+    onOpenCamera: () -> Unit,
+    onOpenQuickNote: () -> Unit
+) {
+    val colors = MaterialTheme.snapColors
+    val isFilteredEmpty = !isFirstRun && filterKey != "all"
+    val (headline, body) = when {
+        isFirstRun -> Pair(
+            "Chưa có việc nào",
+            "Chụp nhanh góc cần dọn hoặc viết một ghi chú ngắn để bắt đầu ngày mới."
+        )
+        filterKey == "done" -> Pair(
+            "Chưa có việc nào hoàn thành",
+            "Khi bạn bấm dấu tích trên một việc, ảnh Trước / Sau sẽ lưu vào đây."
+        )
+        filterKey == "urgent" -> Pair(
+            "Không có việc gấp hay trễ hạn",
+            "Mọi lịch nhắc hiện tại đều đang đúng tiến độ."
+        )
+        filterKey == "proof" -> Pair(
+            "Chưa có cặp ảnh Trước / Sau",
+            "Chụp thêm ảnh kết quả lúc hoàn thành việc để tạo thẻ so sánh."
+        )
+        filterKey.startsWith("folder:") -> Pair(
+            "Thư mục này chưa có việc nào",
+            "Chụp ảnh việc mới hoặc xóa bộ lọc để xem toàn bộ danh sách."
+        )
+        else -> Pair(
+            "Hôm nay chưa có việc cần làm",
+            "Các việc trước đây đã hoàn thành. Chụp việc mới hoặc viết ghi chú để tiếp tục."
+        )
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .clip(RoundedCornerShape(28.dp))
+            .background(colors.surface)
+            .border(1.dp, colors.border, RoundedCornerShape(28.dp))
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = headline,
+            color = colors.text,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.ExtraBold,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = body,
+            color = colors.textSecondary,
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(20.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            if (isFilteredEmpty) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .clip(CircleShape)
+                        .background(colors.flash)
+                        .clickable(role = Role.Button, onClick = onClearFilter),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Xóa bộ lọc",
+                        color = colors.onFlash,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .clip(CircleShape)
+                        .background(colors.elevated)
+                        .border(1.dp, colors.border, CircleShape)
+                        .clickable(role = Role.Button, onClick = onOpenCamera),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Chụp việc mới",
+                        color = colors.text,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .clip(CircleShape)
+                        .background(colors.flash)
+                        .clickable(role = Role.Button, onClick = onOpenCamera),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Chụp việc mới",
+                        color = colors.onFlash,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .clip(CircleShape)
+                        .background(colors.elevated)
+                        .border(1.dp, colors.border, CircleShape)
+                        .clickable(role = Role.Button, onClick = onOpenQuickNote),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Ghi chú chữ",
+                        color = colors.text,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun formatOverdueDuration(diffMs: Long): String {
+    val mins = (diffMs / 60_000L).coerceAtLeast(1L)
+    return when {
+        mins < 60L -> "$mins phút"
+        mins < 1440L -> "${mins / 60L} giờ"
+        else -> "${mins / 1440L} ngày"
     }
 }

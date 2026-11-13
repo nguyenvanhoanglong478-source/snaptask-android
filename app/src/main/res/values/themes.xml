@@ -1,17 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Base application theme -->
-    <style name="Theme.SnapTask" parent="android:Theme.Material.NoActionBar">
-        <item name="android:statusBarColor">#0B0C10</item>
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:navigationBarColor">#0B0C10</item>
-        <item name="android:windowLightNavigationBar">false</item>
-        <item name="android:windowBackground">#0B0C10</item>
+    <style name="Base.Theme.SnapTask" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">#F3F2EC</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">#F3F2EC</item>
+        <item name="android:windowBackground">#F3F2EC</item>
     </style>
 
-    <!-- Android 12+ SplashScreen Starting Theme -->
+    <style name="Theme.SnapTask" parent="Base.Theme.SnapTask" />
+
     <style name="Theme.SnapTask.Starting" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">#0B0C10</item>
+        <item name="windowSplashScreenBackground">#0F0F0E</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/avd_snaptask_splash</item>
         <item name="windowSplashScreenAnimationDuration">650</item>
         <item name="postSplashScreenTheme">@style/Theme.SnapTask</item>

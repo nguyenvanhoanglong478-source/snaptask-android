@@ -6,11 +6,19 @@ import coil.ImageLoader
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import com.snaptask.app.data.local.AppDatabase
+import com.snaptask.app.data.preferences.FolderPreferencesRepository
 import com.snaptask.app.data.repository.TaskRepository
 import com.snaptask.app.data.repository.TaskRepositoryImpl
 import com.snaptask.app.util.FileUtils
+import com.snaptask.app.widget.SnapTaskWidgetUpdater
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 class SnapTaskApplication : Application() {
+
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     lateinit var database: AppDatabase
         private set
@@ -18,11 +26,19 @@ class SnapTaskApplication : Application() {
     lateinit var taskRepository: TaskRepository
         private set
 
+    lateinit var folderPreferences: FolderPreferencesRepository
+        private set
+
     override fun onCreate() {
         super.onCreate()
 
         database = AppDatabase.getInstance(this)
-        taskRepository = TaskRepositoryImpl(this, database.taskDao())
+        taskRepository = TaskRepositoryImpl(
+            context = this,
+            taskDao = database.taskDao(),
+            onTasksChanged = { SnapTaskWidgetUpdater.requestUpdate(this) }
+        )
+        folderPreferences = FolderPreferencesRepository(this)
 
         // Low-End RAM Tuning for Coil Image Loader:
         // Set maximum memory cache to 15% of total available RAM
@@ -42,8 +58,11 @@ class SnapTaskApplication : Application() {
             .build()
         Coil.setImageLoader(imageLoader)
 
-        // Background cleanup of stale temp files
-        FileUtils.clearOldTempFiles(this)
+        // Background cleanup of leftover capture temp files and stale cache on IO thread
+        applicationScope.launch {
+            FileUtils.clearTempCache(this@SnapTaskApplication)
+            FileUtils.clearOldTempFiles(this@SnapTaskApplication)
+        }
     }
 
     override fun onTrimMemory(level: Int) {

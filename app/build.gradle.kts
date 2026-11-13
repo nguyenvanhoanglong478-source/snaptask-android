@@ -19,12 +19,6 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
-
-        javaCompileOptions {
-            annotationProcessorOptions {
-                arguments["room.schemaLocation"] = "$projectDir/schemas"
-            }
-        }
     }
 
     // CI/CD Safeguard: Do not abort build on Lint warnings/errors during APK generation
@@ -99,7 +93,6 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation(libs.androidx.material.icons.extended)
     debugImplementation(libs.androidx.ui.tooling)
 
     // CameraX
@@ -120,7 +113,17 @@ dependencies {
     // Coil Image Loading (Optimized for Low RAM)
     implementation(libs.coil.compose)
 
-    // Coroutines & WorkManager
+    // Coroutines
     implementation(libs.kotlinx.coroutines.android)
-    implementation(libs.androidx.work.runtime.ktx)
+
+    // Unit Testing (Pure JVM only — excluded from APK)
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.jsonTest)
+}
+
+kapt {
+    arguments {
+        arg("room.schemaLocation", "$projectDir/schemas")
+    }
 }

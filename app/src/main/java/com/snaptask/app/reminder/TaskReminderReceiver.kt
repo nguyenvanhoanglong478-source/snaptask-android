@@ -1,5 +1,6 @@
 package com.snaptask.app.reminder
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -22,46 +23,46 @@ class TaskReminderReceiver : BroadcastReceiver() {
 
     companion object {
         const val CHANNEL_NOTIFICATION = "snaptask_channel_notification"
-        const val CHANNEL_ALARM = "snaptask_channel_alarm"
+        const val CHANNEL_ALARM = "snaptask_channel_alarm_v3"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        val incomingAction = intent.action ?: ""
         val pendingResult = goAsync()
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                handleReminder(context, intent, incomingAction)
+                handleReminder(context, intent)
+            } catch (_: Exception) {
+                // Guard background broadcast receiver coroutine
             } finally {
                 pendingResult.finish()
             }
         }
     }
 
-    private suspend fun handleReminder(context: Context, intent: Intent, incomingAction: String) {
-        // 1. Device reboot: restore all reminders from database
-        if (incomingAction == Intent.ACTION_BOOT_COMPLETED || incomingAction == Intent.ACTION_MY_PACKAGE_REPLACED) {
-            val db = AppDatabase.getInstance(context)
-            val pending = db.taskDao().getPendingTasksForWidget()
-            for (entity in pending) {
-                val task = entity.toDomain()
-                if (task.hasReminder) {
-                    TaskReminderScheduler.scheduleReminder(context, task)
-                }
-            }
-            return
-        }
-
-        // 2. Read task reminder data directly from intent extras
+    private suspend fun handleReminder(context: Context, intent: Intent) {
+        // Read task reminder data directly from intent extras
         val taskId = intent.getLongExtra(TaskReminderScheduler.EXTRA_TASK_ID, -1L)
         if (taskId == -1L) return
 
-        val taskTitle = intent.getStringExtra(TaskReminderScheduler.EXTRA_TASK_TITLE) ?: "Việc cần làm"
-        val taskDesc = intent.getStringExtra(TaskReminderScheduler.EXTRA_TASK_DESC) ?: ""
-        val taskImage = intent.getStringExtra(TaskReminderScheduler.EXTRA_TASK_IMAGE) ?: ""
-        val reminderType = intent.getStringExtra(TaskReminderScheduler.EXTRA_REMINDER_TYPE) ?: "NOTIFICATION"
+        // Verify task exists and is not completed before alerting
+        val db = AppDatabase.getInstance(context)
+        val taskEntity = db.taskDao().getTaskById(taskId)
+        if (taskEntity == null || taskEntity.isCompleted) {
+            return
+        }
 
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val taskTitle = intent.getStringExtra(TaskReminderScheduler.EXTRA_TASK_TITLE)?.takeIf { it.isNotBlank() }
+            ?: taskEntity.title.ifBlank { "Việc cần làm" }
+        val taskDesc = intent.getStringExtra(TaskReminderScheduler.EXTRA_TASK_DESC)
+            ?: taskEntity.description
+        val taskImage = intent.getStringExtra(TaskReminderScheduler.EXTRA_TASK_IMAGE)?.takeIf { it.isNotBlank() }
+            ?: taskEntity.beforeImageUri
+        val reminderType = intent.getStringExtra(TaskReminderScheduler.EXTRA_REMINDER_TYPE)?.takeIf { it.isNotBlank() }
+            ?: taskEntity.reminderType
+
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+            ?: return
         createChannels(notificationManager)
 
         val isAlarmMode = reminderType == "ALARM"
@@ -119,17 +120,20 @@ class TaskReminderReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Optional: BigPicture before photo preview
-        val photoBitmap = WidgetBitmapHelper.loadOptimizedBitmap(taskImage, maxSize = 600)
+        // Optional: BigPicture before photo preview (never recycle prematurely while notify() parcels it)
+        val photoBitmap = runCatching {
+            WidgetBitmapHelper.loadOptimizedBitmap(taskImage, maxSize = 600)
+        }.getOrNull()
 
         val builder = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.ic_launcher)
+            .setSmallIcon(R.drawable.ic_stat_snaptask)
+            .setColor(0xFFFFD23F.toInt()) // System notification accent tint color: #FFD23F
             .setContentTitle(if (isAlarmMode) "Báo thức: $taskTitle" else "Đến giờ làm: $taskTitle")
             .setContentText(if (taskDesc.isNotBlank()) taskDesc else "Chạm để chụp ảnh hoàn thành (After Proof)")
             .setContentIntent(contentPendingIntent)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
 
-        if (photoBitmap != null) {
+        if (photoBitmap != null && !photoBitmap.isRecycled) {
             builder.setLargeIcon(photoBitmap)
             builder.setStyle(
                 NotificationCompat.BigPictureStyle()
@@ -145,9 +149,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
             builder.setOngoing(true)
             builder.setAutoCancel(false)
             builder.setFullScreenIntent(contentPendingIntent, true)
-
-            // Real physical sound & vibration
-            AlarmSoundPlayer.playAlarm(context)
+            builder.setTimeoutAfter(60_000)
 
             builder.addAction(0, "Tắt chuông", stopAlarmPendingIntent)
             builder.addAction(0, "Hoàn thành", completePendingIntent)
@@ -161,7 +163,15 @@ class TaskReminderReceiver : BroadcastReceiver() {
             builder.addAction(0, "Báo lại sau 10p", snoozePendingIntent)
         }
 
-        notificationManager.notify(taskId.toInt(), builder.build())
+        val notification = builder.build()
+        if (isAlarmMode) {
+            notification.flags = notification.flags or Notification.FLAG_INSISTENT
+        }
+        try {
+            notificationManager.notify(taskId.toInt(), notification)
+        } catch (_: SecurityException) {
+            // Notification permission may have been revoked after scheduling
+        }
     }
 
     private fun createChannels(notificationManager: NotificationManager) {
@@ -180,12 +190,16 @@ class TaskReminderReceiver : BroadcastReceiver() {
             }
             notificationManager.createNotificationChannel(notifChannel)
 
-            // Alarm Channel
-            val alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+            // Delete legacy alarm channels
+            notificationManager.deleteNotificationChannel("snaptask_channel_alarm")
+            notificationManager.deleteNotificationChannel("snaptask_channel_alarm_v2")
+
+            // Alarm Channel V3: System-managed loud alarm audio with USAGE_ALARM
+            val alarmSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
                 ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
             val audioAttributes = AudioAttributes.Builder()
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build()
 
             val alarmChannel = NotificationChannel(
@@ -194,7 +208,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Chuông báo thức lớn nhắc nhở nhiệm vụ khẩn cấp"
-                setSound(alarmSound, audioAttributes)
+                setSound(alarmSoundUri, audioAttributes)
                 enableVibration(true)
                 vibrationPattern = longArrayOf(0, 800, 400, 800, 400, 1000)
                 setShowBadge(true)
