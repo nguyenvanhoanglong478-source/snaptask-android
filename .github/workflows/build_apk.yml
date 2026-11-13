@@ -2,12 +2,12 @@ name: Build Android APK (SnapTask)
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, 'design/*', 'fix/*' ]
   workflow_dispatch:
 
 jobs:
   build:
-    name: Build Debug APK
+    name: Test, Lint & Build APKs
     runs-on: ubuntu-latest
 
     steps:
@@ -31,11 +31,91 @@ jobs:
       - name: Grant Execute Permission
         run: chmod +x gradlew
 
+      - name: Run JVM Unit Tests
+        run: ./gradlew testDebugUnitTest --no-configuration-cache --stacktrace
+
+      - name: Run Android Lint
+        run: ./gradlew lintDebug --no-configuration-cache --stacktrace
+
       - name: Build Debug APK
         run: ./gradlew assembleDebug --no-configuration-cache --stacktrace
 
+      - name: Build Release APK
+        run: ./gradlew assembleRelease --no-configuration-cache --stacktrace
+
+      - name: Verify APK Sizes (Per-ABI Release < 12 MiB)
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          MAX_PER_ABI_BYTES=12582912
+          failed=0
+          found_release_abi=0
+
+          echo "=== Debug APKs ==="
+          debug_apks=(app/build/outputs/apk/debug/*.apk)
+          if [ ${#debug_apks[@]} -eq 0 ]; then
+            echo "::error::No Debug APKs found under app/build/outputs/apk/debug/"
+            failed=1
+          else
+            for apk in "${debug_apks[@]}"; do
+              bytes=$(stat -c%s "$apk")
+              mb=$(awk -v b="$bytes" 'BEGIN { printf "%.2f", b / 1048576 }')
+              echo "  $apk -> ${mb} MB (${bytes} bytes)"
+            done
+          fi
+
+          echo "=== Release APKs ==="
+          release_apks=(app/build/outputs/apk/release/*.apk)
+          if [ ${#release_apks[@]} -eq 0 ]; then
+            echo "::error::No Release APKs found under app/build/outputs/apk/release/"
+            failed=1
+          else
+            for apk in "${release_apks[@]}"; do
+              bytes=$(stat -c%s "$apk")
+              mb=$(awk -v b="$bytes" 'BEGIN { printf "%.2f", b / 1048576 }')
+              echo "  $apk -> ${mb} MB (${bytes} bytes)"
+              base=$(basename "$apk")
+              if [[ "$base" == *armeabi-v7a* || "$base" == *arm64-v8a* ]]; then
+                found_release_abi=1
+                if [ "$bytes" -ge "$MAX_PER_ABI_BYTES" ]; then
+                  echo "::error::Per-ABI Release APK $base is ${bytes} bytes (>= ${MAX_PER_ABI_BYTES} bytes / 12 MiB limit)"
+                  failed=1
+                fi
+              fi
+            done
+          fi
+
+          if [ "$found_release_abi" -eq 0 ]; then
+            echo "::error::No per-ABI release APKs (*armeabi-v7a* or *arm64-v8a*) found under app/build/outputs/apk/release/"
+            failed=1
+          fi
+
+          exit "$failed"
+
+      - name: Upload Unit Test & Lint Reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: SnapTask-Reports
+          if-no-files-found: ignore
+          path: |
+            app/build/reports/
+            app/build/test-results/
+
       - name: Upload Debug APK
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: SnapTask-Debug-APK
+          if-no-files-found: ignore
           path: app/build/outputs/apk/debug/*.apk
+
+      - name: Upload Release APK
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: SnapTask-Release-APK
+          if-no-files-found: ignore
+          path: app/build/outputs/apk/release/*.apk

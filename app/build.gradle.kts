@@ -115,6 +115,11 @@ dependencies {
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
+
+    // Unit Testing (Pure JVM only — excluded from APK)
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.jsonTest)
 }
 
 kapt {
